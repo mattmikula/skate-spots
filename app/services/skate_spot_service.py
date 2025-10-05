@@ -1,4 +1,3 @@
-
 """Service layer for skate spot operations backed by SQLite."""
 
 from __future__ import annotations

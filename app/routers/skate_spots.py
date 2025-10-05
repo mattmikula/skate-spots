@@ -1,4 +1,3 @@
-
 """REST API endpoints for skate spots."""
 
 from typing import Annotated

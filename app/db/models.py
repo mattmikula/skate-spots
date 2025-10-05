@@ -1,4 +1,3 @@
-
 """SQLAlchemy ORM models for the application."""
 
 from __future__ import annotations
@@ -29,9 +28,7 @@ class SkateSpotORM(Base):
     country: Mapped[str] = mapped_column(String(100), nullable=False)
     is_public: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     requires_permission: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
