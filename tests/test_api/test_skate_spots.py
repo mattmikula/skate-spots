@@ -3,16 +3,7 @@
 from uuid import uuid4
 
 import pytest
-from fastapi.testclient import TestClient
-
 from app.models.skate_spot import Difficulty, SpotType
-from main import app
-
-
-@pytest.fixture
-def client():
-    """Create test client for FastAPI app."""
-    return TestClient(app)
 
 
 @pytest.fixture

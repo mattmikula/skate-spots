@@ -1,34 +1,63 @@
+
 """Shared test fixtures and configuration."""
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
-from app.services.skate_spot_service import SkateSpotRepository, SkateSpotService
+from app.db.database import Base
+from app.services.skate_spot_service import (
+    SkateSpotRepository,
+    SkateSpotService,
+    get_skate_spot_service,
+)
 from main import app
 
 
-@pytest.fixture(scope="session")
-def test_client():
-    """Create a test client that persists for the entire test session."""
-    with TestClient(app) as client:
-        yield client
+@pytest.fixture
+def session_factory():
+    """Create an in-memory SQLite session factory for tests."""
 
-
-@pytest.fixture(autouse=True)
-def clean_global_repository():
-    """Clean the global repository before each test to ensure isolation."""
-    # Import the global service and clear its repository
-    from app.services.skate_spot_service import _repository
-
-    _repository._spots.clear()
-    yield
-    # Clean up after test as well
-    _repository._spots.clear()
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+        future=True,
+    )
+    Base.metadata.create_all(engine)
+    TestSessionLocal = sessionmaker(
+        bind=engine,
+        autoflush=False,
+        autocommit=False,
+        expire_on_commit=False,
+    )
+    try:
+        yield TestSessionLocal
+    finally:
+        Base.metadata.drop_all(engine)
+        engine.dispose()
 
 
 @pytest.fixture
-def fresh_service():
-    """Create a fresh service with isolated repository for testing."""
-    repository = SkateSpotRepository()
+def fresh_service(session_factory):
+    """Return a service wired to the test session factory."""
+
+    repository = SkateSpotRepository(session_factory=session_factory)
+    return SkateSpotService(repository)
+
+
+@pytest.fixture
+def client(session_factory):
+    """Create a FastAPI test client with a test database."""
+
+    repository = SkateSpotRepository(session_factory=session_factory)
     service = SkateSpotService(repository)
-    return service
+
+    app.dependency_overrides[get_skate_spot_service] = lambda: service
+    try:
+        with TestClient(app) as test_client:
+            yield test_client
+    finally:
+        app.dependency_overrides.pop(get_skate_spot_service, None)
