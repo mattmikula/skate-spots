@@ -11,7 +11,8 @@ from app.models.skate_spot import (
     SkateSpotUpdate,
     SpotType,
 )
-from app.services.skate_spot_service import SkateSpotRepository, SkateSpotService
+from app.repositories.skate_spot_repository import SkateSpotRepository
+from app.services.skate_spot_service import SkateSpotService
 
 
 # Repository tests

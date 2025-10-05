@@ -8,8 +8,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.db.database import Base
+from app.repositories.skate_spot_repository import SkateSpotRepository
 from app.services.skate_spot_service import (
-    SkateSpotRepository,
     SkateSpotService,
     get_skate_spot_service,
 )
