@@ -1,6 +1,7 @@
 
 """REST API endpoints for skate spots."""
 
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -18,7 +19,7 @@ router = APIRouter(prefix="/skate-spots", tags=["skate-spots"])
 @router.post("/", response_model=SkateSpot, status_code=status.HTTP_201_CREATED)
 async def create_skate_spot(
     spot_data: SkateSpotCreate,
-    service: SkateSpotService = Depends(get_skate_spot_service),
+    service: Annotated[SkateSpotService, Depends(get_skate_spot_service)],
 ) -> SkateSpot:
     """Create a new skate spot."""
 
@@ -27,7 +28,7 @@ async def create_skate_spot(
 
 @router.get("/", response_model=list[SkateSpot])
 async def list_skate_spots(
-    service: SkateSpotService = Depends(get_skate_spot_service),
+    service: Annotated[SkateSpotService, Depends(get_skate_spot_service)],
 ) -> list[SkateSpot]:
     """Get all skate spots."""
 
@@ -37,7 +38,7 @@ async def list_skate_spots(
 @router.get("/{spot_id}", response_model=SkateSpot)
 async def get_skate_spot(
     spot_id: UUID,
-    service: SkateSpotService = Depends(get_skate_spot_service),
+    service: Annotated[SkateSpotService, Depends(get_skate_spot_service)],
 ) -> SkateSpot:
     """Get a specific skate spot by ID."""
 
@@ -54,7 +55,7 @@ async def get_skate_spot(
 async def update_skate_spot(
     spot_id: UUID,
     update_data: SkateSpotUpdate,
-    service: SkateSpotService = Depends(get_skate_spot_service),
+    service: Annotated[SkateSpotService, Depends(get_skate_spot_service)],
 ) -> SkateSpot:
     """Update an existing skate spot."""
 
@@ -70,7 +71,7 @@ async def update_skate_spot(
 @router.delete("/{spot_id}")
 async def delete_skate_spot(
     spot_id: UUID,
-    service: SkateSpotService = Depends(get_skate_spot_service),
+    service: Annotated[SkateSpotService, Depends(get_skate_spot_service)],
 ) -> JSONResponse:
     """Delete a skate spot."""
 

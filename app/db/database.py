@@ -1,4 +1,3 @@
-
 """Database configuration and session management."""
 
 from __future__ import annotations
@@ -7,7 +6,6 @@ from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
-
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 DATABASE_FILE = BASE_DIR / "skate_spots.db"
