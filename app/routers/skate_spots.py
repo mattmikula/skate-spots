@@ -23,39 +23,58 @@ from app.services.skate_spot_service import (
 router = APIRouter(prefix="/skate-spots", tags=["skate-spots"])
 
 
+async def _parse_location_from_form(form) -> Location:
+    """Parse Location object from form data."""
+    return Location(
+        latitude=float(form.get("latitude")),
+        longitude=float(form.get("longitude")),
+        city=str(form.get("city")),
+        country=str(form.get("country")),
+        address=form.get("address") or None,
+    )
+
+
+async def _parse_create_from_form(form) -> SkateSpotCreate:
+    """Parse SkateSpotCreate object from form data."""
+    location = await _parse_location_from_form(form)
+    return SkateSpotCreate(
+        name=str(form.get("name")),
+        description=str(form.get("description")),
+        spot_type=SpotType(form.get("spot_type")),
+        difficulty=Difficulty(form.get("difficulty")),
+        location=location,
+        is_public=form.get("is_public", "true").lower() in ("true", "on", "1"),
+        requires_permission=form.get("requires_permission", "false").lower() in ("true", "on", "1"),
+    )
+
+
+async def _parse_update_from_form(form) -> SkateSpotUpdate:
+    """Parse SkateSpotUpdate object from form data."""
+    location = await _parse_location_from_form(form)
+    return SkateSpotUpdate(
+        name=str(form.get("name")),
+        description=str(form.get("description")),
+        spot_type=SpotType(form.get("spot_type")),
+        difficulty=Difficulty(form.get("difficulty")),
+        location=location,
+        is_public=form.get("is_public", "").lower() in ("true", "on", "1"),
+        requires_permission=form.get("requires_permission", "").lower() in ("true", "on", "1"),
+    )
+
+
 @router.post("/", response_model=SkateSpot, status_code=status.HTTP_201_CREATED)
 async def create_skate_spot(
     request: Request,
     service: Annotated[SkateSpotService, Depends(get_skate_spot_service)],
 ) -> SkateSpot:
     """Create a new skate spot."""
-    content_type = request.headers.get("content-type", "")
-
     try:
-        if "application/json" in content_type:
-            # Handle JSON request
-            body = await request.json()
-            spot_data = SkateSpotCreate(**body)
-        else:
-            # Handle form data
-            form = await request.form()
-            location = Location(
-                latitude=float(form.get("latitude")),
-                longitude=float(form.get("longitude")),
-                city=str(form.get("city")),
-                country=str(form.get("country")),
-                address=form.get("address") or None,
-            )
-            spot_data = SkateSpotCreate(
-                name=str(form.get("name")),
-                description=str(form.get("description")),
-                spot_type=SpotType(form.get("spot_type")),
-                difficulty=Difficulty(form.get("difficulty")),
-                location=location,
-                is_public=form.get("is_public", "true").lower() in ("true", "on", "1"),
-                requires_permission=form.get("requires_permission", "false").lower()
-                in ("true", "on", "1"),
-            )
+        content_type = request.headers.get("content-type", "")
+        spot_data = (
+            SkateSpotCreate(**(await request.json()))
+            if "application/json" in content_type
+            else await _parse_create_from_form(await request.form())
+        )
     except ValidationError as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=e.errors()
@@ -96,33 +115,13 @@ async def update_skate_spot(
     service: Annotated[SkateSpotService, Depends(get_skate_spot_service)],
 ) -> SkateSpot:
     """Update an existing skate spot."""
-    content_type = request.headers.get("content-type", "")
-
     try:
-        if "application/json" in content_type:
-            # Handle JSON request
-            body = await request.json()
-            update_data = SkateSpotUpdate(**body)
-        else:
-            # Handle form data
-            form = await request.form()
-            location = Location(
-                latitude=float(form.get("latitude")),
-                longitude=float(form.get("longitude")),
-                city=str(form.get("city")),
-                country=str(form.get("country")),
-                address=form.get("address") or None,
-            )
-            update_data = SkateSpotUpdate(
-                name=str(form.get("name")),
-                description=str(form.get("description")),
-                spot_type=SpotType(form.get("spot_type")),
-                difficulty=Difficulty(form.get("difficulty")),
-                location=location,
-                is_public=form.get("is_public", "").lower() in ("true", "on", "1"),
-                requires_permission=form.get("requires_permission", "").lower()
-                in ("true", "on", "1"),
-            )
+        content_type = request.headers.get("content-type", "")
+        update_data = (
+            SkateSpotUpdate(**(await request.json()))
+            if "application/json" in content_type
+            else await _parse_update_from_form(await request.form())
+        )
     except ValidationError as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=e.errors()
