@@ -13,10 +13,10 @@ def client():
 
 
 def test_root_endpoint(client):
-    """Test the root endpoint returns welcome message."""
+    """Test the root endpoint returns HTML home page."""
     response = client.get("/")
     assert response.status_code == 200
-    assert response.json() == {"message": "Welcome to the Skate Spots API"}
+    assert "text/html" in response.headers["content-type"]
 
 
 def test_openapi_json(client):

@@ -8,6 +8,7 @@ A modern FastAPI application for sharing and discovering skateboarding spots aro
 
 ## 🛹 Features
 
+- **Interactive Web Frontend** built with HTMX for dynamic user interactions
 - **REST API** for managing skate spots with full CRUD operations
 - **Rich Data Model** with locations, difficulty levels, and spot types
 - **Comprehensive Validation** using Pydantic models
@@ -16,6 +17,7 @@ A modern FastAPI application for sharing and discovering skateboarding spots aro
 - **Auto-generated Documentation** with OpenAPI/Swagger
 - **Code Quality** tools with ruff linting and formatting
 - **Modern Tooling** with uv package manager and Makefile commands
+- **Database Integration** with SQLAlchemy and SQLite
 
 ## 🚀 Quick Start
 
@@ -43,9 +45,10 @@ make serve
 # Or directly: uv run uvicorn main:app --reload
 ```
 
-The API will be available at:
-- **API Base**: http://localhost:8000
-- **Interactive Docs**: http://localhost:8000/docs
+The application will be available at:
+- **Web Frontend**: http://localhost:8000/skate-spots
+- **API Base**: http://localhost:8000/api/v1
+- **Interactive API Docs**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
 
 ### Development Commands
@@ -69,17 +72,28 @@ make check         # Run both lint and tests
 make help          # Show all available commands
 ```
 
-## 📋 API Endpoints
+## 📋 Endpoints
 
-### Skate Spots
+### Web Frontend Routes
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/api/v1/skate-spots/` | List all skate spots |
-| `POST` | `/api/v1/skate-spots/` | Create a new skate spot |
-| `GET` | `/api/v1/skate-spots/{id}` | Get a specific skate spot |
-| `PUT` | `/api/v1/skate-spots/{id}` | Update a skate spot |
+| `GET` | `/` | Home page |
+| `GET` | `/skate-spots` | View all skate spots (HTML) |
+| `GET` | `/skate-spots/new` | Create new spot form |
+| `GET` | `/skate-spots/{id}/edit` | Edit spot form |
+
+### REST API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/skate-spots/` | List all skate spots (JSON) |
+| `POST` | `/api/v1/skate-spots/` | Create a new skate spot (JSON or form data) |
+| `GET` | `/api/v1/skate-spots/{id}` | Get a specific skate spot (JSON) |
+| `PUT` | `/api/v1/skate-spots/{id}` | Update a skate spot (JSON or form data) |
 | `DELETE` | `/api/v1/skate-spots/{id}` | Delete a skate spot |
+
+**Note**: The API endpoints accept both JSON payloads and HTML form data, making them compatible with both traditional API clients and HTMX-powered forms.
 
 ### Example Usage
 
@@ -116,14 +130,28 @@ This project follows **Clean Architecture** principles with clear separation of 
 ```
 skate-spots/
 ├── app/
+│   ├── db/               # Database layer
+│   │   ├── database.py          # Database configuration
+│   │   └── models.py            # SQLAlchemy models
 │   ├── models/           # Pydantic data models
 │   │   └── skate_spot.py
+│   ├── repositories/     # Data access layer
+│   │   └── skate_spot_repository.py
 │   ├── services/         # Business logic layer
 │   │   └── skate_spot_service.py
 │   └── routers/          # FastAPI route handlers
-│       └── skate_spots.py
+│       ├── frontend.py          # HTML/HTMX routes
+│       └── skate_spots.py       # REST API routes
+├── static/               # Static assets
+│   └── style.css         # Application styles
+├── templates/            # Jinja2 HTML templates
+│   ├── base.html         # Base template
+│   ├── index.html        # Spots list page
+│   ├── spot_card.html    # Spot card component
+│   └── spot_form.html    # Create/edit form
 ├── tests/                # Test suite (organized by app structure)
 │   ├── test_api/         # API integration tests
+│   │   ├── test_frontend.py     # Frontend route tests
 │   │   ├── test_root.py         # Root & docs endpoints
 │   │   └── test_skate_spots.py  # CRUD endpoint tests
 │   ├── test_models/      # Model validation tests
@@ -138,28 +166,46 @@ skate-spots/
 
 ### Architecture Layers
 
-1. **Models Layer** (`app/models/`)
+1. **Database Layer** (`app/db/`)
+   - SQLAlchemy ORM models
+   - Database session management
+   - SQLite database configuration
+
+2. **Models Layer** (`app/models/`)
    - Pydantic models for data validation
    - Type definitions and enums
    - Schema definitions for API contracts
 
-2. **Services Layer** (`app/services/`)
+3. **Repository Layer** (`app/repositories/`)
+   - Data access abstraction
+   - CRUD operations on database
+   - Repository pattern implementation
+
+4. **Services Layer** (`app/services/`)
    - Business logic and rules
-   - Repository pattern for data access
+   - Coordinates between repositories and routers
    - Service classes for operations
 
-3. **API Layer** (`app/routers/`)
+5. **API Layer** (`app/routers/`)
+   - **REST API** (`skate_spots.py`): JSON endpoints with form data support
+   - **Frontend** (`frontend.py`): HTML pages with Jinja2 templates
    - HTTP request/response handling
-   - Route definitions
-   - API documentation
+
+6. **Presentation Layer** (`templates/` & `static/`)
+   - Jinja2 templates for server-side rendering
+   - HTMX for dynamic interactions
+   - CSS styling
 
 ### Key Design Decisions
 
-- **Repository Pattern**: Abstracts data storage (currently in-memory, easily replaceable)
-- **Dependency Injection Ready**: Services can be easily swapped for different implementations
+- **Repository Pattern**: Abstracts data storage with SQLAlchemy ORM
+- **SQLite Database**: Persistent storage with SQLAlchemy
+- **HTMX Frontend**: Progressive enhancement for dynamic UI without heavy JavaScript
+- **Hybrid API**: Endpoints accept both JSON and form data for flexibility
+- **Dependency Injection**: Services and repositories use FastAPI dependency injection
 - **Pydantic Models**: Strong typing and automatic validation
 - **Single Responsibility**: Each class has a focused purpose
-- **Small Functions**: Functions are kept small and focused
+- **Component-Based Templates**: Reusable Jinja2 template components
 
 ## 🧪 Testing Strategy
 
@@ -167,10 +213,11 @@ Following **focused, single-responsibility testing** principles:
 
 ### Test Organization
 Tests are organized into packages that mirror the app structure:
-- **`tests/test_models/`**: Model validation and business rules (17 tests)
-- **`tests/test_services/`**: Repository and service layer logic (25 tests)  
-- **`tests/test_api/`**: HTTP endpoints and integration workflows (16 tests)
-- **Total: 58 tests** with comprehensive coverage
+- **`tests/test_models/`**: Model validation and business rules
+- **`tests/test_services/`**: Repository and service layer logic
+- **`tests/test_api/`**: HTTP endpoints and integration workflows
+  - REST API tests (JSON and form data)
+  - Frontend route tests (HTML rendering)
 
 ### Test Philosophy
 - **Small & Focused**: Each test validates a single piece of functionality
@@ -194,8 +241,10 @@ Tests are organized into packages that mirror the app structure:
 - Service layer isolation
 
 **API Tests (`tests/test_api/`)**
-- HTTP request/response cycles
-- Individual endpoint functionality
+- REST API: HTTP request/response cycles with JSON
+- REST API: Form data submission handling
+- Frontend: HTML page rendering
+- Frontend: Template integration
 - Error responses (404, 422)
 - OpenAPI documentation generation
 
@@ -265,15 +314,16 @@ Tests are configured in `pyproject.toml` with:
 
 ### Production Considerations
 
-Currently uses in-memory storage. For production:
+Currently uses SQLite database. For production:
 
-1. **Database Integration**: Replace repository with PostgreSQL/MongoDB
+1. **Database Migration**: Upgrade from SQLite to PostgreSQL for better concurrency
 2. **Authentication**: Add JWT or OAuth2 authentication
 3. **Rate Limiting**: Implement API rate limiting
 4. **Caching**: Add Redis for improved performance
 5. **Logging**: Structured logging with correlation IDs
 6. **Monitoring**: Health checks and metrics
 7. **Docker**: Containerization for deployment
+8. **CDN**: Serve static assets from CDN
 
 ### Environment Variables
 
@@ -349,6 +399,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Built with [FastAPI](https://fastapi.tiangolo.com/)
 - Powered by [Pydantic](https://pydantic.dev/)
+- Database with [SQLAlchemy](https://www.sqlalchemy.org/)
+- Dynamic UI with [HTMX](https://htmx.org/)
+- Templates with [Jinja2](https://jinja.palletsprojects.com/)
 - Code quality by [Ruff](https://github.com/astral-sh/ruff)
 - Package management by [uv](https://github.com/astral-sh/uv)
 

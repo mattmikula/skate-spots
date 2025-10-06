@@ -189,7 +189,7 @@ def test_update_spot_invalid_data(client, created_spot_id):
 def test_delete_spot(client, created_spot_id):
     """Test deleting an existing spot."""
     delete_response = client.delete(f"/api/v1/skate-spots/{created_spot_id}")
-    assert delete_response.status_code == 204
+    assert delete_response.status_code == 200
 
 
 def test_get_deleted_spot_returns_404(client, deleted_spot_id):
@@ -205,3 +205,56 @@ def test_delete_nonexistent_spot(client):
 
     assert response.status_code == 404
     assert f"Skate spot with id {fake_id} not found" in response.json()["detail"]
+
+
+# Form data tests
+def test_create_spot_with_form_data(client):
+    """Test creating a spot with form data instead of JSON."""
+    form_data = {
+        "name": "Form Test Spot",
+        "description": "A spot created via form submission",
+        "spot_type": "park",
+        "difficulty": "beginner",
+        "latitude": 34.0522,
+        "longitude": -118.2437,
+        "city": "Los Angeles",
+        "country": "USA",
+        "address": "456 Form St",
+        "is_public": True,
+        "requires_permission": False,
+    }
+
+    response = client.post("/api/v1/skate-spots/", data=form_data)
+    assert response.status_code == 201
+
+    data = response.json()
+    assert data["name"] == "Form Test Spot"
+    assert data["spot_type"] == "park"
+    assert data["difficulty"] == "beginner"
+    assert data["location"]["city"] == "Los Angeles"
+
+
+def test_update_spot_with_form_data(client, created_spot_id):
+    """Test updating a spot with form data instead of JSON."""
+    form_data = {
+        "name": "Updated via Form",
+        "description": "Updated description",
+        "spot_type": "bowl",
+        "difficulty": "expert",
+        "latitude": 34.0522,
+        "longitude": -118.2437,
+        "city": "Los Angeles",
+        "country": "USA",
+        "is_public": False,
+        "requires_permission": True,
+    }
+
+    response = client.put(f"/api/v1/skate-spots/{created_spot_id}", data=form_data)
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["name"] == "Updated via Form"
+    assert data["spot_type"] == "bowl"
+    assert data["difficulty"] == "expert"
+    assert data["is_public"] is False
+    assert data["requires_permission"] is True
