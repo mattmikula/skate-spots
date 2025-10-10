@@ -2,20 +2,18 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
-BASE_DIR = Path(__file__).resolve().parents[2]
-DATABASE_FILE = BASE_DIR / "skate_spots.db"
-DATABASE_URL = f"sqlite:///{DATABASE_FILE}"
+from app.core.config import get_settings
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    future=True,
-)
+settings = get_settings()
+
+_engine_kwargs: dict[str, object] = {"future": True}
+if settings.database_url.startswith("sqlite"):
+    _engine_kwargs["connect_args"] = {"check_same_thread": False}
+
+engine = create_engine(settings.database_url, **_engine_kwargs)
 
 SessionLocal = sessionmaker(
     bind=engine,
@@ -29,11 +27,7 @@ class Base(DeclarativeBase):
     """Base class for SQLAlchemy models."""
 
 
-# Ensure the database file exists early for local development
-DATABASE_FILE.touch(exist_ok=True)
+def get_engine():
+    """Return the configured SQLAlchemy engine."""
 
-
-def init_db() -> None:
-    """Create database tables if they do not yet exist."""
-
-    Base.metadata.create_all(bind=engine)
+    return engine

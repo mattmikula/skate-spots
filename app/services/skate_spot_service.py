@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from app.db.database import init_db
 from app.repositories.skate_spot_repository import SkateSpotRepository
 
 if TYPE_CHECKING:
@@ -43,10 +42,6 @@ class SkateSpotService:
         """Delete a skate spot by ID."""
 
         return self._repository.delete(spot_id)
-
-
-# Ensure database schema exists before creating global service instances
-init_db()
 
 _repository = SkateSpotRepository()
 skate_spot_service = SkateSpotService(_repository)

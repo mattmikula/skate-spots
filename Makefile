@@ -1,4 +1,4 @@
-.PHONY: help install dev lint format test serve clean check
+.PHONY: help install dev lint format test serve clean check migrate revision downgrade
 
 help:
 	@echo "Available commands:"
@@ -9,6 +9,9 @@ help:
 	@echo "  test       - Run tests with pytest"
 	@echo "  serve      - Start development server"
 	@echo "  check      - Run lint and tests"
+	@echo "  migrate    - Apply database migrations"
+	@echo "  revision   - Create a new Alembic revision (msg=\"description\")"
+	@echo "  downgrade  - Roll back the last Alembic migration"
 	@echo "  clean      - Clean cache files"
 
 install:
@@ -30,6 +33,19 @@ serve:
 	uv run uvicorn main:app --reload
 
 check: lint test
+
+migrate:
+	uv run alembic upgrade head
+
+revision:
+	@if [ -z "$(msg)" ]; then \
+		echo "Usage: make revision msg=\"Short description\""; \
+		exit 1; \
+	fi
+	uv run alembic revision --autogenerate -m "$(msg)"
+
+downgrade:
+	uv run alembic downgrade -1
 
 clean:
 	find . -type d -name __pycache__ -delete

@@ -40,6 +40,9 @@ uv sync
 ### Running the Application
 
 ```bash
+# Apply database migrations
+make migrate
+
 # Start the development server with hot reload
 make serve
 # Or directly: uv run uvicorn main:app --reload
@@ -68,9 +71,22 @@ make lint          # Check code with ruff
 make format        # Format code with ruff
 make check         # Run both lint and tests
 
+# Database migrations
+make migrate       # Apply the latest migrations
+make revision msg="add new feature"  # Generate a migration skeleton
+make downgrade     # Roll back the last migration
+
 # Available make commands
 make help          # Show all available commands
 ```
+
+## ⚙️ Configuration
+
+The application reads runtime settings via `app/core/config.py`, powered by Pydantic. Set environment variables with the `SKATE_SPOTS_` prefix (for example, `SKATE_SPOTS_DATABASE_URL`) or provide them in a local `.env` file. By default the API stores data in `sqlite:///skate_spots.db` in the project root.
+
+## 🗃️ Database Migrations
+
+Database schema changes are managed with [Alembic](https://alembic.sqlalchemy.org/). Run `make migrate` after pulling new code to ensure your database schema is up to date. Use `make revision msg="describe change"` to generate migration skeletons when evolving the schema.
 
 ## 📋 Endpoints
 
@@ -129,7 +145,14 @@ This project follows **Clean Architecture** principles with clear separation of 
 
 ```
 skate-spots/
+├── alembic/              # Database migrations
+│   ├── env.py            # Alembic environment configuration
+│   ├── script.py.mako    # Migration file template
+│   └── versions/         # Individual migration revisions
+│       └── 0001_create_skate_spots_table.py
 ├── app/
+│   ├── core/             # Shared configuration helpers
+│   │   └── config.py
 │   ├── db/               # Database layer
 │   │   ├── database.py          # Database configuration
 │   │   └── models.py            # SQLAlchemy models
@@ -166,32 +189,37 @@ skate-spots/
 
 ### Architecture Layers
 
-1. **Database Layer** (`app/db/`)
+1. **Configuration Layer** (`app/core/`)
+   - Centralised Pydantic settings
+   - Environment-specific database URLs
+   - `.env` support for local development
+
+2. **Database Layer** (`app/db/`)
    - SQLAlchemy ORM models
    - Database session management
-   - SQLite database configuration
+   - SQLite (or configured database) integration
 
-2. **Models Layer** (`app/models/`)
+3. **Models Layer** (`app/models/`)
    - Pydantic models for data validation
    - Type definitions and enums
    - Schema definitions for API contracts
 
-3. **Repository Layer** (`app/repositories/`)
+4. **Repository Layer** (`app/repositories/`)
    - Data access abstraction
    - CRUD operations on database
    - Repository pattern implementation
 
-4. **Services Layer** (`app/services/`)
+5. **Services Layer** (`app/services/`)
    - Business logic and rules
    - Coordinates between repositories and routers
    - Service classes for operations
 
-5. **API Layer** (`app/routers/`)
+6. **API Layer** (`app/routers/`)
    - **REST API** (`skate_spots.py`): JSON endpoints with form data support
    - **Frontend** (`frontend.py`): HTML pages with Jinja2 templates
    - HTTP request/response handling
 
-6. **Presentation Layer** (`templates/` & `static/`)
+7. **Presentation Layer** (`templates/` & `static/`)
    - Jinja2 templates for server-side rendering
    - HTMX for dynamic interactions
    - CSS styling
