@@ -43,6 +43,7 @@ class SkateSpotService:
 
         return self._repository.delete(spot_id)
 
+
 _repository = SkateSpotRepository()
 skate_spot_service = SkateSpotService(_repository)
 

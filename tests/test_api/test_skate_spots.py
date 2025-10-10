@@ -258,3 +258,122 @@ def test_update_spot_with_form_data(client, created_spot_id):
     assert data["difficulty"] == "expert"
     assert data["is_public"] is False
     assert data["requires_permission"] is True
+
+
+# GeoJSON endpoint tests
+def test_get_geojson_empty(client):
+    """Test GeoJSON endpoint with no spots."""
+    response = client.get("/api/v1/skate-spots/geojson")
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["type"] == "FeatureCollection"
+    assert data["features"] == []
+
+
+def test_get_geojson_with_single_spot(client, created_spot_id):  # noqa: ARG001
+    """Test GeoJSON endpoint with one spot."""
+    response = client.get("/api/v1/skate-spots/geojson")
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["type"] == "FeatureCollection"
+    assert len(data["features"]) == 1
+
+    feature = data["features"][0]
+    assert feature["type"] == "Feature"
+    assert feature["geometry"]["type"] == "Point"
+    assert feature["geometry"]["coordinates"] == [-74.0060, 40.7128]
+    assert feature["properties"]["name"] == "API Test Spot"
+    assert feature["properties"]["spot_type"] == "rail"
+    assert feature["properties"]["difficulty"] == "intermediate"
+
+
+def test_get_geojson_with_multiple_spots(client, sample_spot_payload):
+    """Test GeoJSON endpoint with multiple spots."""
+    # Create first spot
+    client.post("/api/v1/skate-spots/", json=sample_spot_payload)
+
+    # Create second spot with different coordinates
+    second_payload = sample_spot_payload.copy()
+    second_payload["name"] = "Second Spot"
+    second_payload["location"] = {
+        "latitude": 34.0522,
+        "longitude": -118.2437,
+        "city": "Los Angeles",
+        "country": "USA",
+    }
+    client.post("/api/v1/skate-spots/", json=second_payload)
+
+    # Create third spot
+    third_payload = sample_spot_payload.copy()
+    third_payload["name"] = "Third Spot"
+    third_payload["location"] = {
+        "latitude": 51.5074,
+        "longitude": -0.1278,
+        "city": "London",
+        "country": "UK",
+    }
+    client.post("/api/v1/skate-spots/", json=third_payload)
+
+    response = client.get("/api/v1/skate-spots/geojson")
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["type"] == "FeatureCollection"
+    assert len(data["features"]) == 3
+
+    # Verify all features have proper structure
+    for feature in data["features"]:
+        assert feature["type"] == "Feature"
+        assert "geometry" in feature
+        assert "properties" in feature
+        assert feature["geometry"]["type"] == "Point"
+        assert len(feature["geometry"]["coordinates"]) == 2
+
+
+def test_geojson_feature_properties(client, sample_spot_payload):
+    """Test that GeoJSON features include all required properties."""
+    # Create a spot with all fields populated
+    full_payload = sample_spot_payload.copy()
+    full_payload["location"]["address"] = "456 Test Avenue"
+    client.post("/api/v1/skate-spots/", json=full_payload)
+
+    response = client.get("/api/v1/skate-spots/geojson")
+    assert response.status_code == 200
+
+    feature = response.json()["features"][0]
+    props = feature["properties"]
+
+    # Check all required properties exist
+    assert "id" in props
+    assert "name" in props
+    assert "description" in props
+    assert "spot_type" in props
+    assert "difficulty" in props
+    assert "city" in props
+    assert "country" in props
+    assert "address" in props
+    assert "is_public" in props
+    assert "requires_permission" in props
+
+    # Verify values
+    assert props["name"] == "API Test Spot"
+    assert props["city"] == "New York"
+    assert props["address"] == "456 Test Avenue"
+
+
+def test_geojson_coordinates_order(client, sample_spot_payload):
+    """Test that GeoJSON coordinates are in [longitude, latitude] order."""
+    # GeoJSON spec requires [longitude, latitude], not [latitude, longitude]
+    payload = sample_spot_payload.copy()
+    payload["location"]["latitude"] = 45.5231
+    payload["location"]["longitude"] = -122.6765
+    client.post("/api/v1/skate-spots/", json=payload)
+
+    response = client.get("/api/v1/skate-spots/geojson")
+    feature = response.json()["features"][0]
+
+    coords = feature["geometry"]["coordinates"]
+    assert coords[0] == -122.6765  # longitude first
+    assert coords[1] == 45.5231  # latitude second

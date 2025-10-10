@@ -102,3 +102,71 @@ class SkateSpot(SkateSpotBase):
             }
         }
     }
+
+
+class GeoJSONPoint(BaseModel):
+    """GeoJSON Point geometry."""
+
+    type: str = Field(default="Point", description="Geometry type")
+    coordinates: tuple[float, float] = Field(
+        ..., description="Coordinates as [longitude, latitude]"
+    )
+
+
+class GeoJSONFeatureProperties(BaseModel):
+    """Properties for a GeoJSON feature representing a skate spot."""
+
+    id: str = Field(..., description="Unique identifier as string")
+    name: str = Field(..., description="Name of the skate spot")
+    description: str = Field(..., description="Detailed description")
+    spot_type: str = Field(..., description="Type of skate spot")
+    difficulty: str = Field(..., description="Difficulty level")
+    city: str = Field(..., description="City name")
+    country: str = Field(..., description="Country name")
+    address: str | None = Field(None, description="Human-readable address")
+    is_public: bool = Field(..., description="Whether the spot is publicly accessible")
+    requires_permission: bool = Field(..., description="Whether permission is needed to skate")
+
+
+class GeoJSONFeature(BaseModel):
+    """A GeoJSON Feature representing a skate spot."""
+
+    type: str = Field(default="Feature", description="Feature type")
+    geometry: GeoJSONPoint = Field(..., description="Point geometry")
+    properties: GeoJSONFeatureProperties = Field(..., description="Feature properties")
+
+
+class GeoJSONFeatureCollection(BaseModel):
+    """A GeoJSON FeatureCollection of skate spots."""
+
+    type: str = Field(default="FeatureCollection", description="Collection type")
+    features: list[GeoJSONFeature] = Field(..., description="List of features")
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "Point",
+                            "coordinates": [-74.0060, 40.7128],
+                        },
+                        "properties": {
+                            "id": "123e4567-e89b-12d3-a456-426614174000",
+                            "name": "Downtown Rails",
+                            "description": "Great rails for grinding",
+                            "spot_type": "rail",
+                            "difficulty": "intermediate",
+                            "city": "New York",
+                            "country": "USA",
+                            "address": "123 Main St",
+                            "is_public": True,
+                            "requires_permission": False,
+                        },
+                    }
+                ],
+            }
+        }
+    }

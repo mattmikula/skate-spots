@@ -37,6 +37,14 @@ def test_home_page(client):
     response = client.get("/")
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
+    assert b"All Skate Spots" in response.content
+
+
+def test_home_page_with_data(client, created_spot_id):  # noqa: ARG001
+    """Test that the home page shows spots when they exist."""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert b"Frontend Test Spot" in response.content
 
 
 def test_list_spots_page(client):
@@ -79,3 +87,22 @@ def test_edit_spot_page_nonexistent(client):
     response = client.get(f"/skate-spots/{fake_id}/edit")
     # The page should still render, but the spot will be None
     assert response.status_code == 200
+
+
+def test_map_view_page(client):
+    """Test that the map view page returns HTML."""
+    response = client.get("/map")
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert b"Skate Spots Map" in response.content
+    assert b"leaflet" in response.content.lower()
+
+
+def test_map_view_includes_leaflet(client):
+    """Test that the map view includes Leaflet.js dependencies."""
+    response = client.get("/map")
+    assert response.status_code == 200
+    # Check for Leaflet map container
+    assert b'id="map"' in response.content
+    # Check for GeoJSON endpoint fetch
+    assert b"/api/v1/skate-spots/geojson" in response.content

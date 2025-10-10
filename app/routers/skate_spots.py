@@ -9,6 +9,10 @@ from pydantic import ValidationError
 
 from app.models.skate_spot import (
     Difficulty,
+    GeoJSONFeature,
+    GeoJSONFeatureCollection,
+    GeoJSONFeatureProperties,
+    GeoJSONPoint,
     Location,
     SkateSpot,
     SkateSpotCreate,
@@ -90,6 +94,35 @@ async def list_skate_spots(
     """Get all skate spots."""
 
     return service.list_spots()
+
+
+@router.get("/geojson", response_model=GeoJSONFeatureCollection)
+async def get_spots_geojson(
+    service: Annotated[SkateSpotService, Depends(get_skate_spot_service)],
+) -> GeoJSONFeatureCollection:
+    """Get all skate spots in GeoJSON format for map visualization."""
+    spots = service.list_spots()
+
+    features = [
+        GeoJSONFeature(
+            geometry=GeoJSONPoint(coordinates=(spot.location.longitude, spot.location.latitude)),
+            properties=GeoJSONFeatureProperties(
+                id=str(spot.id),
+                name=spot.name,
+                description=spot.description,
+                spot_type=spot.spot_type.value,
+                difficulty=spot.difficulty.value,
+                city=spot.location.city,
+                country=spot.location.country,
+                address=spot.location.address,
+                is_public=spot.is_public,
+                requires_permission=spot.requires_permission,
+            ),
+        )
+        for spot in spots
+    ]
+
+    return GeoJSONFeatureCollection(features=features)
 
 
 @router.get("/{spot_id}", response_model=SkateSpot)
