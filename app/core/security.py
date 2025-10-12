@@ -10,10 +10,13 @@ import bcrypt
 from jose import JWTError, jwt
 
 from app.core.config import get_settings
+from app.core.logging import get_logger
 
 # JWT settings
 ALGORITHM = "HS256"
 _BCRYPT_SHA256_PREFIX = "bcrypt_sha256$"
+
+logger = get_logger(__name__)
 
 
 def _hash_password_bytes(password: str) -> bytes:
@@ -69,5 +72,6 @@ def decode_access_token(token: str) -> dict[str, Any] | None:
         settings = get_settings()
         payload = jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
         return payload
-    except JWTError:
+    except JWTError as exc:
+        logger.warning("access token decode failed", error=str(exc))
         return None

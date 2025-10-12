@@ -10,6 +10,7 @@ from fastapi.responses import RedirectResponse
 
 from app.core.config import get_settings
 from app.core.dependencies import get_current_user, get_user_repository
+from app.core.logging import get_logger
 from app.core.rate_limiter import (
     AUTH_LOGIN_LIMIT,
     AUTH_REGISTER_LIMIT,
@@ -28,6 +29,7 @@ UserORM = db_models.UserORM
 UserRepository = user_repository.UserRepository
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+logger = get_logger(__name__)
 
 
 @router.post(
@@ -42,13 +44,16 @@ async def register(
 ) -> User:
     """Register a new user."""
     # Check if user already exists
+    logger.info("registration attempt", username=user_data.username, email=user_data.email)
     if user_repo.get_by_email(user_data.email):
+        logger.warning("registration email already exists", email=user_data.email)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered",
         )
 
     if user_repo.get_by_username(user_data.username):
+        logger.warning("registration username already exists", username=user_data.username)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username already taken",
@@ -57,6 +62,7 @@ async def register(
     # Create user
     hashed_password = get_password_hash(user_data.password)
     db_user = user_repo.create(user_data, hashed_password)
+    logger.info("user registered", user_id=str(db_user.id), username=db_user.username)
 
     return User.model_validate(db_user)
 
@@ -75,8 +81,10 @@ async def login(
     settings = get_settings()
 
     # Get user by username
+    logger.info("login attempt", username=user_data.username)
     user = user_repo.get_by_username(user_data.username)
     if not user or not verify_password(user_data.password, user.hashed_password):
+        logger.warning("login failed", username=user_data.username, reason="invalid_credentials")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -84,6 +92,7 @@ async def login(
         )
 
     if not user.is_active:
+        logger.warning("login failed", username=user.username, reason="inactive_user")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Inactive user",
@@ -105,6 +114,7 @@ async def login(
         samesite="lax",
     )
 
+    logger.info("login successful", user_id=str(user.id), username=user.username)
     return Token(access_token=access_token)
 
 
@@ -112,6 +122,7 @@ async def login(
 async def logout(response: Response) -> dict[str, str]:
     """Logout by clearing the access token cookie."""
     response.delete_cookie(key="access_token")
+    logger.info("logout successful")
     return {"message": "Successfully logged out"}
 
 
@@ -136,15 +147,18 @@ async def login_form(
     settings = get_settings()
 
     # Get user by username
+    logger.info("form login attempt", username=username)
     user = user_repo.get_by_username(username)
     if not user or not verify_password(password, user.hashed_password):
         # In production, redirect to login page with error message
+        logger.warning("form login failed", username=username, reason="invalid_credentials")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
         )
 
     if not user.is_active:
+        logger.warning("form login failed", username=username, reason="inactive_user")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Inactive user",
@@ -169,6 +183,7 @@ async def login_form(
         samesite="lax",
     )
 
+    logger.info("form login successful", user_id=str(user.id), username=user.username)
     return redirect_response
 
 
@@ -186,13 +201,16 @@ async def register_form(
     settings = get_settings()
 
     # Check if user already exists
+    logger.info("form registration attempt", username=username, email=email)
     if user_repo.get_by_email(email):
+        logger.warning("form registration email exists", email=email)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered",
         )
 
     if user_repo.get_by_username(username):
+        logger.warning("form registration username exists", username=username)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username already taken",
@@ -222,4 +240,5 @@ async def register_form(
         samesite="lax",
     )
 
+    logger.info("form registration successful", user_id=str(db_user.id), username=db_user.username)
     return redirect_response
