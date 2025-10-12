@@ -8,6 +8,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import ValidationError
 
 from app.core.dependencies import get_current_user
+from app.core.rate_limiter import SKATE_SPOT_WRITE_LIMIT, rate_limited
 from app.db.models import UserORM
 from app.models.skate_spot import (
     Difficulty,
@@ -68,7 +69,12 @@ async def _parse_update_from_form(form) -> SkateSpotUpdate:
     )
 
 
-@router.post("/", response_model=SkateSpot, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=SkateSpot,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[rate_limited(SKATE_SPOT_WRITE_LIMIT)],
+)
 async def create_skate_spot(
     request: Request,
     service: Annotated[SkateSpotService, Depends(get_skate_spot_service)],
@@ -144,7 +150,11 @@ async def get_skate_spot(
     return spot
 
 
-@router.put("/{spot_id}", response_model=SkateSpot)
+@router.put(
+    "/{spot_id}",
+    response_model=SkateSpot,
+    dependencies=[rate_limited(SKATE_SPOT_WRITE_LIMIT)],
+)
 async def update_skate_spot(
     spot_id: UUID,
     request: Request,
@@ -188,7 +198,11 @@ async def update_skate_spot(
     return updated_spot
 
 
-@router.delete("/{spot_id}", response_class=HTMLResponse)
+@router.delete(
+    "/{spot_id}",
+    response_class=HTMLResponse,
+    dependencies=[rate_limited(SKATE_SPOT_WRITE_LIMIT)],
+)
 async def delete_skate_spot(
     spot_id: UUID,
     service: Annotated[SkateSpotService, Depends(get_skate_spot_service)],

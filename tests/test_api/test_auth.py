@@ -236,3 +236,27 @@ class TestRegisterForm:
         )
 
         assert response.status_code == 400
+
+
+class TestRateLimiting:
+    """Tests covering rate limit behaviour on authentication endpoints."""
+
+    def test_login_rate_limit_exceeded(self, client, test_user):
+        """Multiple failed login attempts should trigger a 429 response."""
+
+        for _ in range(5):
+            response = client.post(
+                "/api/v1/auth/login",
+                json={"username": "testuser", "password": "wrongpassword"},
+            )
+            assert response.status_code == 401
+
+        blocked = client.post(
+            "/api/v1/auth/login",
+            json={"username": "testuser", "password": "wrongpassword"},
+        )
+
+        assert blocked.status_code == 429
+        assert "rate limit" in blocked.json()["detail"].lower()
+        assert "Retry-After" in blocked.headers
+        assert int(blocked.headers["Retry-After"]) >= 1

@@ -3,6 +3,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from app.core.rate_limiter import rate_limiter
 from app.routers import auth, frontend, skate_spots
 
 app = FastAPI(
@@ -10,6 +11,8 @@ app = FastAPI(
     description="An API for sharing and discovering skateboarding spots",
     version="0.1.0",
 )
+
+app.state.rate_limiter = rate_limiter
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
