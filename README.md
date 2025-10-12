@@ -8,9 +8,10 @@ A modern FastAPI application for sharing and discovering skateboarding spots aro
 
 ## 🛹 Features
 
+- **Secure Authentication** with JWT access tokens stored in HTTP-only cookies
 - **Interactive Web Frontend** built with HTMX for dynamic user interactions
 - **REST API** for managing skate spots with full CRUD operations
-- **Rich Data Model** with locations, difficulty levels, and spot types
+- **Rich Data Model** with locations, difficulty levels, spot types, and ownership
 - **Comprehensive Validation** using Pydantic models
 - **Clean Architecture** with separation of concerns
 - **Extensive Testing** with focused, single-responsibility tests
@@ -82,7 +83,17 @@ make help          # Show all available commands
 
 ## ⚙️ Configuration
 
-The application reads runtime settings via `app/core/config.py`, powered by Pydantic. Set environment variables with the `SKATE_SPOTS_` prefix (for example, `SKATE_SPOTS_DATABASE_URL`) or provide them in a local `.env` file. By default the API stores data in `sqlite:///skate_spots.db` in the project root.
+The application reads runtime settings via `app/core/config.py`, powered by Pydantic. Set environment variables with the `SKATE_SPOTS_` prefix (for example, `SKATE_SPOTS_DATABASE_URL`) or provide them in a local `.env` file.
+
+Key settings:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SKATE_SPOTS_DATABASE_URL` | `sqlite:///skate_spots.db` | SQLAlchemy database URL |
+| `SKATE_SPOTS_SECRET_KEY` | `"change-this-secret-key-in-production-use-strong-random-value"` | Secret key used to sign JWTs – **override in production** |
+| `SKATE_SPOTS_ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | Lifetime of the access token cookie |
+
+Passwords are hashed using bcrypt with an internal SHA-256 digest step (`bcrypt_sha256`) to support long passphrases while maintaining bcrypt’s adaptive hashing.
 
 ## 🗃️ Database Migrations
 
@@ -96,27 +107,54 @@ Database schema changes are managed with [Alembic](https://alembic.sqlalchemy.or
 |--------|----------|-------------|
 | `GET` | `/` | Home page |
 | `GET` | `/skate-spots` | View all skate spots (HTML) |
-| `GET` | `/skate-spots/new` | Create new spot form |
-| `GET` | `/skate-spots/{id}/edit` | Edit spot form |
+| `GET` | `/skate-spots/new` | Create new spot form (requires authentication) |
+| `GET` | `/skate-spots/{id}/edit` | Edit spot form (requires authentication) |
+| `GET` | `/map` | Interactive map view |
+| `GET` | `/login` | Login page |
+| `GET` | `/register` | Registration page |
 
 ### REST API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/api/v1/skate-spots/` | List all skate spots (JSON) |
-| `POST` | `/api/v1/skate-spots/` | Create a new skate spot (JSON or form data) |
+| `POST` | `/api/v1/skate-spots/` | Create a new skate spot (JSON or form data, requires authentication) |
 | `GET` | `/api/v1/skate-spots/{id}` | Get a specific skate spot (JSON) |
-| `PUT` | `/api/v1/skate-spots/{id}` | Update a skate spot (JSON or form data) |
-| `DELETE` | `/api/v1/skate-spots/{id}` | Delete a skate spot |
+| `PUT` | `/api/v1/skate-spots/{id}` | Update a skate spot (JSON or form data, requires authentication) |
+| `DELETE` | `/api/v1/skate-spots/{id}` | Delete a skate spot (requires authentication) |
 
-**Note**: The API endpoints accept both JSON payloads and HTML form data, making them compatible with both traditional API clients and HTMX-powered forms.
+**Note**: The API endpoints accept both JSON payloads and HTML form data, making them compatible with both traditional API clients and HTMX-powered forms. Mutating operations require a valid access-token cookie created via the authentication endpoints.
+
+### Authentication Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/auth/register` | Register a new user and receive a JSON response |
+| `POST` | `/api/v1/auth/login` | Authenticate and receive a JWT token + cookie |
+| `POST` | `/api/v1/auth/logout` | Clear the access-token cookie |
+| `GET` | `/api/v1/auth/me` | Retrieve the current authenticated user |
+| `POST` | `/api/v1/auth/register/form` | Register via HTML form (sets cookie and redirects) |
+| `POST` | `/api/v1/auth/login/form` | Login via HTML form (sets cookie and redirects) |
 
 ### Example Usage
+
+**Register and Login (store cookie):**
+```bash
+curl -X POST "http://localhost:8000/api/v1/auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "skater@example.com",
+    "username": "sk8er",
+    "password": "superSecurePass123"
+  }' \
+  -c cookies.txt
+```
 
 **Create a Skate Spot:**
 ```bash
 curl -X POST "http://localhost:8000/api/v1/skate-spots/" \
   -H "Content-Type: application/json" \
+  -b cookies.txt \
   -d '{
     "name": "Downtown Rails",
     "description": "Great set of rails perfect for grinding practice",
@@ -145,54 +183,70 @@ This project follows **Clean Architecture** principles with clear separation of 
 
 ```
 skate-spots/
-├── alembic/              # Database migrations
-│   ├── env.py            # Alembic environment configuration
-│   ├── script.py.mako    # Migration file template
-│   └── versions/         # Individual migration revisions
-│       └── 0001_create_skate_spots_table.py
+├── alembic/                      # Database migrations
+│   ├── env.py                    # Alembic environment configuration
+│   ├── script.py.mako            # Migration file template
+│   └── versions/                 # Individual migration revisions
+│       ├── 0001_create_skate_spots_table.py
+│       └── 0002_add_user_authentication.py
 ├── app/
-│   ├── core/             # Shared configuration helpers
-│   │   └── config.py
-│   ├── db/               # Database layer
-│   │   ├── database.py          # Database configuration
-│   │   └── models.py            # SQLAlchemy models
-│   ├── models/           # Pydantic data models
-│   │   └── skate_spot.py
-│   ├── repositories/     # Data access layer
-│   │   └── skate_spot_repository.py
-│   ├── services/         # Business logic layer
+│   ├── core/                     # Shared configuration & security helpers
+│   │   ├── config.py
+│   │   ├── dependencies.py
+│   │   └── security.py
+│   ├── db/
+│   │   ├── database.py           # Database configuration & session helpers
+│   │   └── models.py             # SQLAlchemy models (users, skate spots)
+│   ├── models/                   # Pydantic data models
+│   │   ├── skate_spot.py
+│   │   └── user.py
+│   ├── repositories/             # Data access layer
+│   │   ├── skate_spot_repository.py
+│   │   └── user_repository.py
+│   ├── services/                 # Business logic layer
 │   │   └── skate_spot_service.py
-│   └── routers/          # FastAPI route handlers
-│       ├── frontend.py          # HTML/HTMX routes
-│       └── skate_spots.py       # REST API routes
-├── static/               # Static assets
-│   └── style.css         # Application styles
-├── templates/            # Jinja2 HTML templates
-│   ├── base.html         # Base template
-│   ├── index.html        # Spots list page
-│   ├── spot_card.html    # Spot card component
-│   └── spot_form.html    # Create/edit form
-├── tests/                # Test suite (organized by app structure)
-│   ├── test_api/         # API integration tests
-│   │   ├── test_frontend.py     # Frontend route tests
-│   │   ├── test_root.py         # Root & docs endpoints
-│   │   └── test_skate_spots.py  # CRUD endpoint tests
-│   ├── test_models/      # Model validation tests
-│   │   └── test_skate_spot.py   # All model tests
-│   ├── test_services/    # Service layer tests
-│   │   └── test_skate_spot_service.py  # Repository & service tests
-│   └── conftest.py       # Test configuration
-├── main.py               # Application entry point
-├── Makefile              # Development commands
-└── pyproject.toml        # Project configuration
+│   └── routers/                  # FastAPI route handlers
+│       ├── auth.py               # Authentication endpoints
+│       ├── frontend.py           # HTML/HTMX routes
+│       └── skate_spots.py        # REST API routes
+├── static/                       # Static assets
+│   └── style.css
+├── templates/                    # Jinja2 HTML templates
+│   ├── base.html
+│   ├── index.html
+│   ├── login.html
+│   ├── map.html
+│   ├── register.html
+│   ├── spot_card.html
+│   └── spot_form.html
+├── tests/                        # Test suite (organized by app structure)
+│   ├── conftest.py               # Shared fixtures & wiring
+│   ├── test_api/
+│   │   ├── test_auth.py
+│   │   ├── test_auth_skate_spots.py
+│   │   ├── test_frontend.py
+│   │   ├── test_root.py
+│   │   └── test_skate_spots.py
+│   ├── test_core/
+│   │   └── test_security.py
+│   ├── test_models/
+│   │   └── test_skate_spot.py
+│   ├── test_repositories/
+│   │   ├── test_skate_spot_repository.py
+│   │   └── test_user_repository.py
+│   └── test_services/
+│       └── test_skate_spot_service.py
+├── main.py                       # Application entry point
+├── Makefile                      # Development commands
+└── pyproject.toml                # Project configuration
 ```
 
 ### Architecture Layers
 
-1. **Configuration Layer** (`app/core/`)
-   - Centralised Pydantic settings
-   - Environment-specific database URLs
-   - `.env` support for local development
+1. **Configuration & Security Layer** (`app/core/`)
+   - Centralised Pydantic settings and environment management
+   - JWT helpers, password hashing utilities, and dependency wiring
+   - `.env` support for local development and secret management
 
 2. **Database Layer** (`app/db/`)
    - SQLAlchemy ORM models
@@ -205,7 +259,7 @@ skate-spots/
    - Schema definitions for API contracts
 
 4. **Repository Layer** (`app/repositories/`)
-   - Data access abstraction
+   - Data access abstraction for users and skate spots
    - CRUD operations on database
    - Repository pattern implementation
 
@@ -215,7 +269,8 @@ skate-spots/
    - Service classes for operations
 
 6. **API Layer** (`app/routers/`)
-   - **REST API** (`skate_spots.py`): JSON endpoints with form data support
+   - **REST API** (`skate_spots.py`): JSON endpoints with form data support and auth checks
+   - **Authentication** (`auth.py`): Registration, login, logout, and current-user endpoints
    - **Frontend** (`frontend.py`): HTML pages with Jinja2 templates
    - HTTP request/response handling
 
