@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     """Runtime configuration sourced from environment variables."""
 
     database_url: str = Field(default_factory=_default_sqlite_url, alias="DATABASE_URL")
+    secret_key: str = Field(
+        default="change-this-secret-key-in-production-use-strong-random-value",
+        alias="SECRET_KEY",
+    )
+    access_token_expire_minutes: int = Field(default=30, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
 
     model_config = {
         "env_prefix": "SKATE_SPOTS_",

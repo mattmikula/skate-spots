@@ -13,6 +13,9 @@ dependencies = [
     "sqlalchemy>=2.0.36",
     "jinja2>=3.1.6",
     "python-multipart>=0.0.20",
+    "python-jose[cryptography]>=3.5.0",
+    "bcrypt>=4.1.2,<5.0",
+    "email-validator>=2.3.0",
 ]
 
 [tool.ruff]
@@ -32,7 +35,18 @@ select = [
     "SIM", # flake8-simplify
     "TCH", # flake8-type-checking
 ]
-ignore = ["E501"]  # line too long (handled by line-length setting)
+ignore = [
+    "E501",  # line too long (handled by line-length setting)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "ARG002",  # Unused method argument (fixtures are intentional)
+    "B017",    # Blind exception assertion (acceptable in tests)
+]
+"app/models/*.py" = [
+    "TCH003",  # Standard library imports needed at runtime for Pydantic
+]
 
 [tool.ruff.format]
 quote-style = "double"
