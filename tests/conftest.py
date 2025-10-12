@@ -16,6 +16,7 @@ from app.services.skate_spot_service import (
     SkateSpotService,
     get_skate_spot_service,
 )
+from app.core.rate_limiter import rate_limiter
 from main import app
 
 
@@ -41,6 +42,15 @@ def session_factory():
     finally:
         Base.metadata.drop_all(engine)
         engine.dispose()
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limits():
+    """Ensure rate limiter state is cleared between tests."""
+
+    rate_limiter.reset()
+    yield
+    rate_limiter.reset()
 
 
 @pytest.fixture

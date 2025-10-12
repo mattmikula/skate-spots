@@ -101,6 +101,29 @@ Key configuration values:
 - `SKATE_SPOTS_SECRET_KEY` – Secret used to sign JWT access tokens (change this in production).
 - `SKATE_SPOTS_ACCESS_TOKEN_EXPIRE_MINUTES` – Lifetime of authentication tokens (default 30 minutes).
 
+## 🚦 Rate Limiting
+
+The application protects sensitive endpoints with lightweight, in-memory rate limiting:
+
+- `POST /api/v1/auth/login` and `POST /api/v1/auth/login/form` share a budget of **5 requests per minute per IP address**.
+- `POST /api/v1/auth/register` and `POST /api/v1/auth/register/form` share the same **5 requests per minute** window.
+- Mutating skate spot endpoints (`POST`, `PUT`, and `DELETE` under `/api/v1/skate-spots/`) allow up to **50 requests per minute per IP**.
+
+When a limit is exceeded, the API returns HTTP 429 with a descriptive error and a `Retry-After` header indicating when it is safe to retry. Limits can be adjusted centrally in `app/core/rate_limiter.py`.
+
+To apply an existing limit to an endpoint, add the `rate_limited(...)` dependency to the router decorator. For example:
+
+```python
+from app.core.rate_limiter import SKATE_SPOT_WRITE_LIMIT, rate_limited
+
+
+@router.post("/api/v1/skate-spots/", dependencies=[rate_limited(SKATE_SPOT_WRITE_LIMIT)])
+async def create_spot(...):
+    ...
+```
+
+Creating a brand new limit requires defining a `RateLimitRule` and reusing it with `rate_limited(...)`, keeping configuration in one place and avoiding placeholder parameters in route handlers.
+
 ## 🗃️ Database Migrations
 
 Database schema changes are managed with [Alembic](https://alembic.sqlalchemy.org/). Run `make migrate` after pulling new code to ensure your database schema is up to date. Use `make revision msg="describe change"` to generate migration skeletons when evolving the schema.

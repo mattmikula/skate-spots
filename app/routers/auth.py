@@ -10,6 +10,11 @@ from fastapi.responses import RedirectResponse
 
 from app.core.config import get_settings
 from app.core.dependencies import get_current_user, get_user_repository
+from app.core.rate_limiter import (
+    AUTH_LOGIN_LIMIT,
+    AUTH_REGISTER_LIMIT,
+    rate_limited,
+)
 from app.core.security import (
     create_access_token,
     get_password_hash,
@@ -25,7 +30,12 @@ UserRepository = user_repository.UserRepository
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=User, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register",
+    response_model=User,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[rate_limited(AUTH_REGISTER_LIMIT)],
+)
 async def register(
     user_data: UserCreate,
     user_repo: Annotated[UserRepository, Depends(get_user_repository)],
@@ -51,7 +61,11 @@ async def register(
     return User.model_validate(db_user)
 
 
-@router.post("/login", response_model=Token)
+@router.post(
+    "/login",
+    response_model=Token,
+    dependencies=[rate_limited(AUTH_LOGIN_LIMIT)],
+)
 async def login(
     response: Response,
     user_data: UserLogin,
@@ -109,7 +123,10 @@ async def get_current_user_info(
     return User.model_validate(current_user)
 
 
-@router.post("/login/form")
+@router.post(
+    "/login/form",
+    dependencies=[rate_limited(AUTH_LOGIN_LIMIT)],
+)
 async def login_form(
     username: Annotated[str, Form(...)],
     password: Annotated[str, Form(...)],
@@ -155,7 +172,10 @@ async def login_form(
     return redirect_response
 
 
-@router.post("/register/form")
+@router.post(
+    "/register/form",
+    dependencies=[rate_limited(AUTH_REGISTER_LIMIT)],
+)
 async def register_form(
     email: Annotated[str, Form(...)],
     username: Annotated[str, Form(...)],
