@@ -10,6 +10,7 @@ A modern FastAPI application for sharing and discovering skateboarding spots aro
 
 - **Interactive Web Frontend** built with HTMX for dynamic user interactions
 - **REST API** for managing skate spots with full CRUD operations
+- **Secure Authentication** with registration, login, and cookie-based JWT tokens
 - **Rich Data Model** with locations, difficulty levels, and spot types
 - **Comprehensive Validation** using Pydantic models
 - **Clean Architecture** with separation of concerns
@@ -50,9 +51,19 @@ make serve
 
 The application will be available at:
 - **Web Frontend**: http://localhost:8000/skate-spots
+- **Authentication Pages**: http://localhost:8000/login and http://localhost:8000/register
 - **API Base**: http://localhost:8000/api/v1
 - **Interactive API Docs**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
+
+### Authentication Workflow
+
+1. **Register** using the HTML form at `/register` or the API endpoint `POST /api/v1/auth/register`.
+2. **Login** via `/login` or `POST /api/v1/auth/login` to receive an access token stored in an HTTP-only cookie.
+3. Authenticated requests automatically include the cookie; access the current user with `GET /api/v1/auth/me`.
+4. **Logout** using the button in the UI or `POST /api/v1/auth/logout` to clear the cookie.
+
+The JSON API endpoints also accept traditional form submissions for HTMX-driven pages.
 
 ### Development Commands
 
@@ -84,6 +95,12 @@ make help          # Show all available commands
 
 The application reads runtime settings via `app/core/config.py`, powered by Pydantic. Set environment variables with the `SKATE_SPOTS_` prefix (for example, `SKATE_SPOTS_DATABASE_URL`) or provide them in a local `.env` file. By default the API stores data in `sqlite:///skate_spots.db` in the project root.
 
+Key configuration values:
+
+- `SKATE_SPOTS_DATABASE_URL` – Database connection string.
+- `SKATE_SPOTS_SECRET_KEY` – Secret used to sign JWT access tokens (change this in production).
+- `SKATE_SPOTS_ACCESS_TOKEN_EXPIRE_MINUTES` – Lifetime of authentication tokens (default 30 minutes).
+
 ## 🗃️ Database Migrations
 
 Database schema changes are managed with [Alembic](https://alembic.sqlalchemy.org/). Run `make migrate` after pulling new code to ensure your database schema is up to date. Use `make revision msg="describe change"` to generate migration skeletons when evolving the schema.
@@ -98,6 +115,9 @@ Database schema changes are managed with [Alembic](https://alembic.sqlalchemy.or
 | `GET` | `/skate-spots` | View all skate spots (HTML) |
 | `GET` | `/skate-spots/new` | Create new spot form |
 | `GET` | `/skate-spots/{id}/edit` | Edit spot form |
+| `GET` | `/map` | Interactive map view |
+| `GET` | `/login` | Login form (redirects if already authenticated) |
+| `GET` | `/register` | Registration form (redirects if already authenticated) |
 
 ### REST API Endpoints
 
@@ -110,6 +130,15 @@ Database schema changes are managed with [Alembic](https://alembic.sqlalchemy.or
 | `DELETE` | `/api/v1/skate-spots/{id}` | Delete a skate spot |
 
 **Note**: The API endpoints accept both JSON payloads and HTML form data, making them compatible with both traditional API clients and HTMX-powered forms.
+
+### Authentication Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/auth/register` | Create a new user account (JSON or form data) |
+| `POST` | `/api/v1/auth/login` | Authenticate and receive a JWT access token cookie |
+| `POST` | `/api/v1/auth/logout` | Clear the authentication cookie |
+| `GET` | `/api/v1/auth/me` | Retrieve the currently authenticated user |
 
 ### Example Usage
 
@@ -139,6 +168,33 @@ curl -X POST "http://localhost:8000/api/v1/skate-spots/" \
 curl http://localhost:8000/api/v1/skate-spots/
 ```
 
+**Register a User:**
+```bash
+curl -X POST "http://localhost:8000/api/v1/auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "skater@example.com",
+    "username": "kickflip_master",
+    "password": "super-secure-password"
+  }'
+```
+
+**Login and Store Cookie:**
+```bash
+curl -X POST "http://localhost:8000/api/v1/auth/login" \
+  -H "Content-Type: application/json" \
+  -c cookies.txt \
+  -d '{
+    "username": "kickflip_master",
+    "password": "super-secure-password"
+  }'
+```
+
+**Fetch Current User:**
+```bash
+curl "http://localhost:8000/api/v1/auth/me" -b cookies.txt
+```
+
 ## 🏗️ Architecture
 
 This project follows **Clean Architecture** principles with clear separation of concerns:
@@ -151,34 +207,44 @@ skate-spots/
 │   └── versions/         # Individual migration revisions
 │       └── 0001_create_skate_spots_table.py
 ├── app/
-│   ├── core/             # Shared configuration helpers
-│   │   └── config.py
+│   ├── core/             # Shared configuration & security helpers
+│   │   ├── config.py
+│   │   ├── dependencies.py
+│   │   └── security.py
 │   ├── db/               # Database layer
 │   │   ├── database.py          # Database configuration
 │   │   └── models.py            # SQLAlchemy models
 │   ├── models/           # Pydantic data models
-│   │   └── skate_spot.py
+│   │   ├── skate_spot.py
+│   │   └── user.py
 │   ├── repositories/     # Data access layer
-│   │   └── skate_spot_repository.py
-│   ├── services/         # Business logic layer
-│   │   └── skate_spot_service.py
-│   └── routers/          # FastAPI route handlers
-│       ├── frontend.py          # HTML/HTMX routes
-│       └── skate_spots.py       # REST API routes
+│   │   ├── skate_spot_repository.py
+│   │   └── user_repository.py
+│   ├── routers/          # FastAPI route handlers
+│   │   ├── auth.py              # Authentication API
+│   │   ├── frontend.py          # HTML/HTMX routes
+│   │   └── skate_spots.py       # REST API routes
+│   └── services/         # Business logic layer
+│       └── skate_spot_service.py
 ├── static/               # Static assets
 │   └── style.css         # Application styles
 ├── templates/            # Jinja2 HTML templates
 │   ├── base.html         # Base template
 │   ├── index.html        # Spots list page
+│   ├── login.html        # Login form
+│   ├── map.html          # Interactive map view
+│   ├── register.html     # Registration form
 │   ├── spot_card.html    # Spot card component
 │   └── spot_form.html    # Create/edit form
 ├── tests/                # Test suite (organized by app structure)
 │   ├── test_api/         # API integration tests
+│   │   ├── test_auth.py         # Authentication endpoint tests
 │   │   ├── test_frontend.py     # Frontend route tests
 │   │   ├── test_root.py         # Root & docs endpoints
 │   │   └── test_skate_spots.py  # CRUD endpoint tests
 │   ├── test_models/      # Model validation tests
-│   │   └── test_skate_spot.py   # All model tests
+│   │   ├── test_skate_spot.py   # Skate spot model tests
+│   │   └── test_user.py         # User model tests
 │   ├── test_services/    # Service layer tests
 │   │   └── test_skate_spot_service.py  # Repository & service tests
 │   └── conftest.py       # Test configuration
@@ -190,9 +256,9 @@ skate-spots/
 ### Architecture Layers
 
 1. **Configuration Layer** (`app/core/`)
-   - Centralised Pydantic settings
-   - Environment-specific database URLs
-   - `.env` support for local development
+   - Centralised Pydantic settings and environment management
+   - Security utilities for password hashing and JWT creation
+   - Dependency helpers for resolving authenticated users
 
 2. **Database Layer** (`app/db/`)
    - SQLAlchemy ORM models
@@ -202,12 +268,12 @@ skate-spots/
 3. **Models Layer** (`app/models/`)
    - Pydantic models for data validation
    - Type definitions and enums
-   - Schema definitions for API contracts
+   - Schema definitions for skate spots, users, and tokens
 
 4. **Repository Layer** (`app/repositories/`)
    - Data access abstraction
    - CRUD operations on database
-   - Repository pattern implementation
+   - Repository pattern implementation for skate spots and users
 
 5. **Services Layer** (`app/services/`)
    - Business logic and rules
@@ -215,12 +281,13 @@ skate-spots/
    - Service classes for operations
 
 6. **API Layer** (`app/routers/`)
+   - **Authentication** (`auth.py`): Registration, login, logout, and user info
    - **REST API** (`skate_spots.py`): JSON endpoints with form data support
    - **Frontend** (`frontend.py`): HTML pages with Jinja2 templates
    - HTTP request/response handling
 
 7. **Presentation Layer** (`templates/` & `static/`)
-   - Jinja2 templates for server-side rendering
+   - Jinja2 templates for server-side rendering of skate spot and auth flows
    - HTMX for dynamic interactions
    - CSS styling
 
@@ -234,6 +301,7 @@ skate-spots/
 - **Pydantic Models**: Strong typing and automatic validation
 - **Single Responsibility**: Each class has a focused purpose
 - **Component-Based Templates**: Reusable Jinja2 template components
+- **Cookie-Based Auth**: JWT access tokens issued via HTTP-only cookies for secure browser sessions
 
 ## 🧪 Testing Strategy
 
@@ -246,6 +314,7 @@ Tests are organized into packages that mirror the app structure:
 - **`tests/test_api/`**: HTTP endpoints and integration workflows
   - REST API tests (JSON and form data)
   - Frontend route tests (HTML rendering)
+  - Authentication flows (registration, login, logout)
 
 ### Test Philosophy
 - **Small & Focused**: Each test validates a single piece of functionality
@@ -256,11 +325,11 @@ Tests are organized into packages that mirror the app structure:
 
 ### Test Categories
 
-**Model Tests (`tests/test_models/test_skate_spot.py`)**
-- Pydantic validation rules
-- Field constraints and bounds  
-- Enum validation
-- Default values and auto-generation
+**Model Tests (`tests/test_models/`)**
+- Skate spot validation rules (`test_skate_spot.py`)
+- User schema constraints (`test_user.py`)
+- Geographic helpers (`test_geojson.py`)
+- Enum validation and default generation
 
 **Service Tests (`tests/test_services/test_skate_spot_service.py`)**
 - Repository CRUD operations
@@ -271,6 +340,7 @@ Tests are organized into packages that mirror the app structure:
 **API Tests (`tests/test_api/`)**
 - REST API: HTTP request/response cycles with JSON
 - REST API: Form data submission handling
+- Authentication: Cookie-based login, logout, and access control
 - Frontend: HTML page rendering
 - Frontend: Template integration
 - Error responses (404, 422)
@@ -345,7 +415,7 @@ Tests are configured in `pyproject.toml` with:
 Currently uses SQLite database. For production:
 
 1. **Database Migration**: Upgrade from SQLite to PostgreSQL for better concurrency
-2. **Authentication**: Add JWT or OAuth2 authentication
+2. **Secret Management**: Store JWT secret keys and credentials securely
 3. **Rate Limiting**: Implement API rate limiting
 4. **Caching**: Add Redis for improved performance
 5. **Logging**: Structured logging with correlation IDs
