@@ -26,9 +26,13 @@ def sample_spot_payload():
 
 
 @pytest.fixture
-def created_spot_id(client, sample_spot_payload):
+def created_spot_id(client, sample_spot_payload, auth_token):
     """Create a spot and return its ID for testing."""
-    response = client.post("/api/v1/skate-spots/", json=sample_spot_payload)
+    response = client.post(
+        "/api/v1/skate-spots/",
+        json=sample_spot_payload,
+        cookies={"access_token": auth_token},
+    )
     return response.json()["id"]
 
 
@@ -62,17 +66,19 @@ def test_list_spots_page_with_data(client, created_spot_id):  # noqa: ARG001
     assert b"Frontend Test Spot" in response.content
 
 
-def test_new_spot_page(client):
+def test_new_spot_page(client, auth_token):
     """Test that the new spot form page returns HTML."""
-    response = client.get("/skate-spots/new")
+    response = client.get("/skate-spots/new", cookies={"access_token": auth_token})
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
     assert b"Add New Skate Spot" in response.content
 
 
-def test_edit_spot_page(client, created_spot_id):
+def test_edit_spot_page(client, created_spot_id, auth_token):
     """Test that the edit spot form page returns HTML."""
-    response = client.get(f"/skate-spots/{created_spot_id}/edit")
+    response = client.get(
+        f"/skate-spots/{created_spot_id}/edit", cookies={"access_token": auth_token}
+    )
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
     assert b"Edit Skate Spot" in response.content

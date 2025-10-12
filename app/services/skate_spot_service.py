@@ -18,10 +18,10 @@ class SkateSpotService:
     def __init__(self, repository: SkateSpotRepository) -> None:
         self._repository = repository
 
-    def create_spot(self, spot_data: SkateSpotCreate) -> SkateSpot:
+    def create_spot(self, spot_data: SkateSpotCreate, user_id: str) -> SkateSpot:
         """Create a new skate spot with validation."""
 
-        return self._repository.create(spot_data)
+        return self._repository.create(spot_data, user_id)
 
     def get_spot(self, spot_id: UUID) -> SkateSpot | None:
         """Get a skate spot by ID."""
@@ -42,6 +42,11 @@ class SkateSpotService:
         """Delete a skate spot by ID."""
 
         return self._repository.delete(spot_id)
+
+    def is_owner(self, spot_id: UUID, user_id: str) -> bool:
+        """Check if a user owns a skate spot."""
+
+        return self._repository.is_owner(spot_id, user_id)
 
 
 _repository = SkateSpotRepository()

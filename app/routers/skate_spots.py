@@ -7,6 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
 from pydantic import ValidationError
 
+from app.core.dependencies import get_current_user
+from app.db.models import UserORM
 from app.models.skate_spot import (
     Difficulty,
     GeoJSONFeature,
@@ -70,6 +72,7 @@ async def _parse_update_from_form(form) -> SkateSpotUpdate:
 async def create_skate_spot(
     request: Request,
     service: Annotated[SkateSpotService, Depends(get_skate_spot_service)],
+    current_user: Annotated[UserORM, Depends(get_current_user)],
 ) -> SkateSpot:
     """Create a new skate spot."""
     try:
@@ -84,7 +87,7 @@ async def create_skate_spot(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=e.errors()
         ) from None
 
-    return service.create_spot(spot_data)
+    return service.create_spot(spot_data, current_user.id)
 
 
 @router.get("/", response_model=list[SkateSpot])
@@ -146,8 +149,24 @@ async def update_skate_spot(
     spot_id: UUID,
     request: Request,
     service: Annotated[SkateSpotService, Depends(get_skate_spot_service)],
+    current_user: Annotated[UserORM, Depends(get_current_user)],
 ) -> SkateSpot:
     """Update an existing skate spot."""
+    # Check if spot exists
+    spot = service.get_spot(spot_id)
+    if not spot:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Skate spot with id {spot_id} not found",
+        )
+
+    # Check ownership (admins can update any spot)
+    if not current_user.is_admin and not service.is_owner(spot_id, current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to update this spot",
+        )
+
     try:
         content_type = request.headers.get("content-type", "")
         update_data = (
@@ -173,8 +192,23 @@ async def update_skate_spot(
 async def delete_skate_spot(
     spot_id: UUID,
     service: Annotated[SkateSpotService, Depends(get_skate_spot_service)],
+    current_user: Annotated[UserORM, Depends(get_current_user)],
 ) -> HTMLResponse:
     """Delete a skate spot."""
+    # Check if spot exists
+    spot = service.get_spot(spot_id)
+    if not spot:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Skate spot with id {spot_id} not found",
+        )
+
+    # Check ownership (admins can delete any spot)
+    if not current_user.is_admin and not service.is_owner(spot_id, current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this spot",
+        )
 
     success = service.delete_spot(spot_id)
     if not success:

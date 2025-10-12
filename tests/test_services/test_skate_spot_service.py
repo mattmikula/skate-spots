@@ -47,7 +47,7 @@ def sample_spot_data():
 def created_spot(repository, sample_spot_data):
     """Create a spot in repository and return it."""
 
-    return repository.create(sample_spot_data)
+    return repository.create(sample_spot_data, user_id="test-user-id")
 
 
 @pytest.fixture
@@ -55,14 +55,14 @@ def second_spot(repository, sample_spot_data):
     """Create a second spot in repository and return it."""
 
     modified = sample_spot_data.model_copy(update={"name": "Second Spot"})
-    return repository.create(modified)
+    return repository.create(modified, user_id="test-user-id")
 
 
 @pytest.fixture
 def deleted_spot_id(repository, sample_spot_data):
     """Create a spot, delete it, and return its ID."""
 
-    spot = repository.create(sample_spot_data)
+    spot = repository.create(sample_spot_data, user_id="test-user-id")
     repository.delete(spot.id)
     return spot.id
 
@@ -71,7 +71,7 @@ def deleted_spot_id(repository, sample_spot_data):
 def test_create_spot(repository, sample_spot_data):
     """Test creating a new spot."""
 
-    spot = repository.create(sample_spot_data)
+    spot = repository.create(sample_spot_data, user_id="test-user-id")
 
     assert spot.name == "Test Spot"
     assert spot.spot_type == SpotType.RAIL
@@ -196,7 +196,7 @@ def service_spot_data():
 def created_service_spot(service, service_spot_data):
     """Create a spot through service and return it."""
 
-    return service.create_spot(service_spot_data)
+    return service.create_spot(service_spot_data, user_id="test-user-id")
 
 
 @pytest.fixture
@@ -204,14 +204,14 @@ def second_service_spot(service, service_spot_data):
     """Create a second spot through service and return it."""
 
     modified = service_spot_data.model_copy(update={"name": "Second Service Spot"})
-    return service.create_spot(modified)
+    return service.create_spot(modified, user_id="test-user-id")
 
 
 @pytest.fixture
 def deleted_service_spot_id(service, service_spot_data):
     """Create a spot through service, delete it, and return its ID."""
 
-    spot = service.create_spot(service_spot_data)
+    spot = service.create_spot(service_spot_data, user_id="test-user-id")
     service.delete_spot(spot.id)
     return spot.id
 
@@ -220,7 +220,7 @@ def deleted_service_spot_id(service, service_spot_data):
 def test_service_create_spot(service, service_spot_data):
     """Test creating a spot through service."""
 
-    spot = service.create_spot(service_spot_data)
+    spot = service.create_spot(service_spot_data, user_id="test-user-id")
 
     assert spot.name == "Service Test Spot"
     assert spot.spot_type == SpotType.PARK
@@ -332,7 +332,7 @@ def test_service_repository_shared_database(session_factory):
         ),
     )
 
-    created = service1.create_spot(spot_data)
+    created = service1.create_spot(spot_data, user_id="test-user-id")
 
     assert service1.get_spot(created.id) is not None
     assert service2.get_spot(created.id) is not None

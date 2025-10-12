@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from app.routers import frontend, skate_spots
+from app.routers import auth, frontend, skate_spots
 
 app = FastAPI(
     title="Skate Spots API",
@@ -16,6 +16,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Include routers
 app.include_router(frontend.router)
+app.include_router(auth.router, prefix="/api/v1")
 app.include_router(skate_spots.router, prefix="/api/v1")
 
 

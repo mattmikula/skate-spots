@@ -12,6 +12,7 @@ class SpotType(str, Enum):
 
     STREET = "street"
     PARK = "park"
+    SKATEPARK = "skatepark"
     BOWL = "bowl"
     VERT = "vert"
     MINI_RAMP = "mini_ramp"

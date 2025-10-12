@@ -67,7 +67,7 @@ class SkateSpotRepository:
     def __init__(self, session_factory: SessionFactory | None = None) -> None:
         self._session_factory = session_factory or SessionLocal
 
-    def create(self, spot_data: SkateSpotCreate) -> SkateSpot:
+    def create(self, spot_data: SkateSpotCreate, user_id: str) -> SkateSpot:
         """Create a new skate spot."""
 
         payload = spot_data.model_dump()
@@ -79,6 +79,7 @@ class SkateSpotRepository:
             address=location_data.get("address"),
             city=location_data["city"],
             country=location_data["country"],
+            user_id=user_id,
         )
 
         with self._session_factory() as session:
@@ -102,6 +103,15 @@ class SkateSpotRepository:
         with self._session_factory() as session:
             spots = session.scalars(select(SkateSpotORM)).all()
             return [_orm_to_pydantic(spot) for spot in spots]
+
+    def is_owner(self, spot_id: UUID, user_id: str) -> bool:
+        """Check if a user owns a skate spot."""
+
+        with self._session_factory() as session:
+            orm_spot = session.get(SkateSpotORM, str(spot_id))
+            if orm_spot is None:
+                return False
+            return orm_spot.user_id == user_id
 
     def update(self, spot_id: UUID, update_data: SkateSpotUpdate) -> SkateSpot | None:
         """Update an existing skate spot."""

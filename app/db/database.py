@@ -31,3 +31,12 @@ def get_engine():
     """Return the configured SQLAlchemy engine."""
 
     return engine
+
+
+def get_db():
+    """Get a database session."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

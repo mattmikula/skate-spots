@@ -16,6 +16,15 @@
             <a href="/">Home</a>
             <a href="/skate-spots">All Spots</a>
             <a href="/map">Map</a>
+            {% if current_user %}
+            <a href="/profile">{{ current_user.username }}</a>
+            <form action="/api/v1/auth/logout" method="post" style="display: inline;">
+                <button type="submit" class="btn-link">Logout</button>
+            </form>
+            {% else %}
+            <a href="/login">Login</a>
+            <a href="/register">Register</a>
+            {% endif %}
         </nav>
     </header>
 

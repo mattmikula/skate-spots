@@ -28,36 +28,52 @@ def sample_spot_payload():
 
 
 @pytest.fixture
-def created_spot_id(client, sample_spot_payload):
+def created_spot_id(client, sample_spot_payload, auth_token):
     """Create a spot and return its ID for testing."""
-    response = client.post("/api/v1/skate-spots/", json=sample_spot_payload)
+    response = client.post(
+        "/api/v1/skate-spots/",
+        json=sample_spot_payload,
+        cookies={"access_token": auth_token},
+    )
     return response.json()["id"]
 
 
 @pytest.fixture
-def second_spot_id(client, sample_spot_payload):
+def second_spot_id(client, sample_spot_payload, auth_token):
     """Create a second spot and return its ID for testing."""
     second_payload = sample_spot_payload.copy()
     second_payload["name"] = "Second Spot"
-    response = client.post("/api/v1/skate-spots/", json=second_payload)
+    response = client.post(
+        "/api/v1/skate-spots/",
+        json=second_payload,
+        cookies={"access_token": auth_token},
+    )
     return response.json()["id"]
 
 
 @pytest.fixture
-def deleted_spot_id(client, sample_spot_payload):
+def deleted_spot_id(client, sample_spot_payload, auth_token):
     """Create a spot, delete it, and return its ID for testing."""
     # Create spot
-    response = client.post("/api/v1/skate-spots/", json=sample_spot_payload)
+    response = client.post(
+        "/api/v1/skate-spots/",
+        json=sample_spot_payload,
+        cookies={"access_token": auth_token},
+    )
     spot_id = response.json()["id"]
     # Delete it
-    client.delete(f"/api/v1/skate-spots/{spot_id}")
+    client.delete(f"/api/v1/skate-spots/{spot_id}", cookies={"access_token": auth_token})
     return spot_id
 
 
 # Create tests
-def test_create_spot(client, sample_spot_payload):
+def test_create_spot(client, sample_spot_payload, auth_token):
     """Test creating a new spot."""
-    response = client.post("/api/v1/skate-spots/", json=sample_spot_payload)
+    response = client.post(
+        "/api/v1/skate-spots/",
+        json=sample_spot_payload,
+        cookies={"access_token": auth_token},
+    )
 
     assert response.status_code == 201
     data = response.json()
@@ -82,7 +98,7 @@ def test_create_spot(client, sample_spot_payload):
     assert location["city"] == "New York"
 
 
-def test_create_spot_invalid_data(client):
+def test_create_spot_invalid_data(client, auth_token):
     """Test creating a spot with invalid data."""
     invalid_payload = {
         "name": "",  # Invalid: empty name
@@ -97,7 +113,11 @@ def test_create_spot_invalid_data(client):
         },
     }
 
-    response = client.post("/api/v1/skate-spots/", json=invalid_payload)
+    response = client.post(
+        "/api/v1/skate-spots/",
+        json=invalid_payload,
+        cookies={"access_token": auth_token},
+    )
     assert response.status_code == 422  # Validation error
 
 
@@ -147,14 +167,18 @@ def test_list_spots_with_existing_data(client, created_spot_id, second_spot_id):
 
 
 # Update tests
-def test_update_spot(client, created_spot_id):
+def test_update_spot(client, created_spot_id, auth_token):
     """Test updating an existing spot."""
     update_payload = {
         "name": "Updated Spot Name",
         "difficulty": "advanced",
     }
 
-    update_response = client.put(f"/api/v1/skate-spots/{created_spot_id}", json=update_payload)
+    update_response = client.put(
+        f"/api/v1/skate-spots/{created_spot_id}",
+        json=update_payload,
+        cookies={"access_token": auth_token},
+    )
     assert update_response.status_code == 200
 
     updated_spot = update_response.json()
@@ -164,31 +188,42 @@ def test_update_spot(client, created_spot_id):
     assert updated_spot["id"] == created_spot_id
 
 
-def test_update_nonexistent_spot(client):
+def test_update_nonexistent_spot(client, auth_token):
     """Test updating a spot that doesn't exist."""
     fake_id = str(uuid4())
     update_payload = {"name": "Won't work"}
 
-    response = client.put(f"/api/v1/skate-spots/{fake_id}", json=update_payload)
+    response = client.put(
+        f"/api/v1/skate-spots/{fake_id}",
+        json=update_payload,
+        cookies={"access_token": auth_token},
+    )
     assert response.status_code == 404
     assert f"Skate spot with id {fake_id} not found" in response.json()["detail"]
 
 
-def test_update_spot_invalid_data(client, created_spot_id):
+def test_update_spot_invalid_data(client, created_spot_id, auth_token):
     """Test updating with invalid data."""
     invalid_update = {
         "name": "",  # Invalid: empty name
         "difficulty": "invalid_difficulty",  # Invalid: not in enum
     }
 
-    response = client.put(f"/api/v1/skate-spots/{created_spot_id}", json=invalid_update)
+    response = client.put(
+        f"/api/v1/skate-spots/{created_spot_id}",
+        json=invalid_update,
+        cookies={"access_token": auth_token},
+    )
     assert response.status_code == 422  # Validation error
 
 
 # Delete tests
-def test_delete_spot(client, created_spot_id):
+def test_delete_spot(client, created_spot_id, auth_token):
     """Test deleting an existing spot."""
-    delete_response = client.delete(f"/api/v1/skate-spots/{created_spot_id}")
+    delete_response = client.delete(
+        f"/api/v1/skate-spots/{created_spot_id}",
+        cookies={"access_token": auth_token},
+    )
     assert delete_response.status_code == 200
 
 
@@ -198,17 +233,20 @@ def test_get_deleted_spot_returns_404(client, deleted_spot_id):
     assert get_response.status_code == 404
 
 
-def test_delete_nonexistent_spot(client):
+def test_delete_nonexistent_spot(client, auth_token):
     """Test deleting a spot that doesn't exist."""
     fake_id = str(uuid4())
-    response = client.delete(f"/api/v1/skate-spots/{fake_id}")
+    response = client.delete(
+        f"/api/v1/skate-spots/{fake_id}",
+        cookies={"access_token": auth_token},
+    )
 
     assert response.status_code == 404
     assert f"Skate spot with id {fake_id} not found" in response.json()["detail"]
 
 
 # Form data tests
-def test_create_spot_with_form_data(client):
+def test_create_spot_with_form_data(client, auth_token):
     """Test creating a spot with form data instead of JSON."""
     form_data = {
         "name": "Form Test Spot",
@@ -224,7 +262,11 @@ def test_create_spot_with_form_data(client):
         "requires_permission": False,
     }
 
-    response = client.post("/api/v1/skate-spots/", data=form_data)
+    response = client.post(
+        "/api/v1/skate-spots/",
+        data=form_data,
+        cookies={"access_token": auth_token},
+    )
     assert response.status_code == 201
 
     data = response.json()
@@ -234,7 +276,7 @@ def test_create_spot_with_form_data(client):
     assert data["location"]["city"] == "Los Angeles"
 
 
-def test_update_spot_with_form_data(client, created_spot_id):
+def test_update_spot_with_form_data(client, created_spot_id, auth_token):
     """Test updating a spot with form data instead of JSON."""
     form_data = {
         "name": "Updated via Form",
@@ -249,7 +291,11 @@ def test_update_spot_with_form_data(client, created_spot_id):
         "requires_permission": True,
     }
 
-    response = client.put(f"/api/v1/skate-spots/{created_spot_id}", data=form_data)
+    response = client.put(
+        f"/api/v1/skate-spots/{created_spot_id}",
+        data=form_data,
+        cookies={"access_token": auth_token},
+    )
     assert response.status_code == 200
 
     data = response.json()
@@ -289,10 +335,14 @@ def test_get_geojson_with_single_spot(client, created_spot_id):  # noqa: ARG001
     assert feature["properties"]["difficulty"] == "intermediate"
 
 
-def test_get_geojson_with_multiple_spots(client, sample_spot_payload):
+def test_get_geojson_with_multiple_spots(client, sample_spot_payload, auth_token):
     """Test GeoJSON endpoint with multiple spots."""
     # Create first spot
-    client.post("/api/v1/skate-spots/", json=sample_spot_payload)
+    client.post(
+        "/api/v1/skate-spots/",
+        json=sample_spot_payload,
+        cookies={"access_token": auth_token},
+    )
 
     # Create second spot with different coordinates
     second_payload = sample_spot_payload.copy()
@@ -303,7 +353,11 @@ def test_get_geojson_with_multiple_spots(client, sample_spot_payload):
         "city": "Los Angeles",
         "country": "USA",
     }
-    client.post("/api/v1/skate-spots/", json=second_payload)
+    client.post(
+        "/api/v1/skate-spots/",
+        json=second_payload,
+        cookies={"access_token": auth_token},
+    )
 
     # Create third spot
     third_payload = sample_spot_payload.copy()
@@ -314,7 +368,11 @@ def test_get_geojson_with_multiple_spots(client, sample_spot_payload):
         "city": "London",
         "country": "UK",
     }
-    client.post("/api/v1/skate-spots/", json=third_payload)
+    client.post(
+        "/api/v1/skate-spots/",
+        json=third_payload,
+        cookies={"access_token": auth_token},
+    )
 
     response = client.get("/api/v1/skate-spots/geojson")
     assert response.status_code == 200
@@ -332,12 +390,16 @@ def test_get_geojson_with_multiple_spots(client, sample_spot_payload):
         assert len(feature["geometry"]["coordinates"]) == 2
 
 
-def test_geojson_feature_properties(client, sample_spot_payload):
+def test_geojson_feature_properties(client, sample_spot_payload, auth_token):
     """Test that GeoJSON features include all required properties."""
     # Create a spot with all fields populated
     full_payload = sample_spot_payload.copy()
     full_payload["location"]["address"] = "456 Test Avenue"
-    client.post("/api/v1/skate-spots/", json=full_payload)
+    client.post(
+        "/api/v1/skate-spots/",
+        json=full_payload,
+        cookies={"access_token": auth_token},
+    )
 
     response = client.get("/api/v1/skate-spots/geojson")
     assert response.status_code == 200
@@ -363,13 +425,17 @@ def test_geojson_feature_properties(client, sample_spot_payload):
     assert props["address"] == "456 Test Avenue"
 
 
-def test_geojson_coordinates_order(client, sample_spot_payload):
+def test_geojson_coordinates_order(client, sample_spot_payload, auth_token):
     """Test that GeoJSON coordinates are in [longitude, latitude] order."""
     # GeoJSON spec requires [longitude, latitude], not [latitude, longitude]
     payload = sample_spot_payload.copy()
     payload["location"]["latitude"] = 45.5231
     payload["location"]["longitude"] = -122.6765
-    client.post("/api/v1/skate-spots/", json=payload)
+    client.post(
+        "/api/v1/skate-spots/",
+        json=payload,
+        cookies={"access_token": auth_token},
+    )
 
     response = client.get("/api/v1/skate-spots/geojson")
     feature = response.json()["features"][0]
