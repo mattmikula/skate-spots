@@ -7,6 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.dependencies import get_user_repository
+from app.core.rate_limiter import rate_limiter
 from app.core.security import create_access_token, get_password_hash
 from app.db.database import Base, get_db
 from app.models.user import UserCreate
@@ -16,7 +17,6 @@ from app.services.skate_spot_service import (
     SkateSpotService,
     get_skate_spot_service,
 )
-from app.core.rate_limiter import rate_limiter
 from main import app
 
 

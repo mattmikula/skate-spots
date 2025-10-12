@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import math
 import time
-from collections import defaultdict, deque
+from collections import abc, defaultdict, deque
 from dataclasses import dataclass
 from threading import Lock
-from typing import Callable, Deque, DefaultDict
 
 from fastapi import Depends, HTTPException, Request, status
 
@@ -26,7 +25,7 @@ class RateLimiter:
 
     def __init__(self) -> None:
         self._lock = Lock()
-        self._events: DefaultDict[tuple[str, str], Deque[float]] = defaultdict(deque)
+        self._events: defaultdict[tuple[str, str], deque[float]] = defaultdict(deque)
 
     def check(
         self,
@@ -68,7 +67,7 @@ AUTH_REGISTER_LIMIT = RateLimitRule(scope="auth:register", limit=5, window_secon
 SKATE_SPOT_WRITE_LIMIT = RateLimitRule(scope="skate-spots:write", limit=50, window_seconds=60)
 
 
-def rate_limit_dependency(rule: RateLimitRule) -> Callable[[Request], None]:
+def rate_limit_dependency(rule: RateLimitRule) -> abc.Callable[[Request], None]:
     """Create a FastAPI dependency that enforces a rate limit rule."""
 
     async def _dependency(request: Request) -> None:

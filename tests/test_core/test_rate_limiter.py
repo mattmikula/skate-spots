@@ -4,7 +4,12 @@ import pytest
 from fastapi import HTTPException
 from starlette.requests import Request
 
-from app.core.rate_limiter import RateLimitRule, RateLimiter, rate_limit_dependency, rate_limited
+from app.core.rate_limiter import (
+    RateLimiter,
+    RateLimitRule,
+    rate_limit_dependency,
+    rate_limited,
+)
 
 
 def test_rate_limiter_blocks_after_limit() -> None:
