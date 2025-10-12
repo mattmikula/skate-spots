@@ -7,6 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.dependencies import get_user_repository
+from app.core.rate_limiter import rate_limiter
 from app.core.security import create_access_token, get_password_hash
 from app.db.database import Base, get_db
 from app.models.user import UserCreate
@@ -41,6 +42,15 @@ def session_factory():
     finally:
         Base.metadata.drop_all(engine)
         engine.dispose()
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limits():
+    """Ensure rate limiter state is cleared between tests."""
+
+    rate_limiter.reset()
+    yield
+    rate_limiter.reset()
 
 
 @pytest.fixture
