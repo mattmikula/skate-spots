@@ -92,6 +92,9 @@ def setup_logging(settings: Settings | None = None, *, force: bool = False) -> N
 def get_logger(name: str | None = None) -> FilteringBoundLogger:
     """Return a structlog logger bound to the given name."""
 
+    if not structlog.is_configured():
+        setup_logging()
+
     if name is None:
         return structlog.get_logger()
     return structlog.get_logger(name)
