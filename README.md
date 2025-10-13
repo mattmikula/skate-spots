@@ -441,10 +441,9 @@ Currently uses SQLite database. For production:
 2. **Secret Management**: Store JWT secret keys and credentials securely
 3. **Rate Limiting**: Implement API rate limiting
 4. **Caching**: Add Redis for improved performance
-5. **Logging**: Structured logging with correlation IDs
-6. **Monitoring**: Health checks and metrics
-7. **Docker**: Containerization for deployment
-8. **CDN**: Serve static assets from CDN
+5. **Monitoring**: Health checks and metrics
+6. **Docker**: Containerization for deployment
+7. **CDN**: Serve static assets from CDN
 
 ### Environment Variables
 
@@ -453,8 +452,19 @@ Currently uses SQLite database. For production:
 DATABASE_URL=postgresql://user:pass@localhost/skate_spots
 REDIS_URL=redis://localhost:6379
 SECRET_KEY=your-secret-key
-LOG_LEVEL=INFO
+SKATE_SPOTS_LOG_LEVEL=INFO
+SKATE_SPOTS_LOG_JSON=false
 ```
+
+## 🪵 Logging
+
+The API uses [structlog](https://www.structlog.org/) for structured logs and request context enrichment.
+
+- Per-request correlation identifiers are returned via the `X-Request-ID` response header and included in log events.
+- Configure verbosity with `SKATE_SPOTS_LOG_LEVEL` (for example: `DEBUG`, `INFO`, `WARNING`).
+- Emit JSON logs for log aggregation platforms by setting `SKATE_SPOTS_LOG_JSON=true`.
+
+Logs from FastAPI and Uvicorn are routed through the same configuration so they share formatting and context fields.
 
 ## 🔄 CI Workflow
 

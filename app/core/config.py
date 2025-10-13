@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings
@@ -25,6 +26,11 @@ class Settings(BaseSettings):
         alias="SECRET_KEY",
     )
     access_token_expire_minutes: int = Field(default=30, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
+    log_level: Literal["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"] = Field(
+        default="INFO",
+        alias="LOG_LEVEL",
+    )
+    log_json: bool = Field(default=False, alias="LOG_JSON")
 
     model_config = {
         "env_prefix": "SKATE_SPOTS_",

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from app.core.logging import get_logger
 from app.repositories.skate_spot_repository import SkateSpotRepository
 
 if TYPE_CHECKING:
@@ -17,36 +18,58 @@ class SkateSpotService:
 
     def __init__(self, repository: SkateSpotRepository) -> None:
         self._repository = repository
+        self._logger = get_logger(__name__)
 
     def create_spot(self, spot_data: SkateSpotCreate, user_id: str) -> SkateSpot:
         """Create a new skate spot with validation."""
 
-        return self._repository.create(spot_data, user_id)
+        spot = self._repository.create(spot_data, user_id)
+        self._logger.info("skate spot created", spot_id=str(spot.id), owner_id=user_id)
+        return spot
 
     def get_spot(self, spot_id: UUID) -> SkateSpot | None:
         """Get a skate spot by ID."""
 
-        return self._repository.get_by_id(spot_id)
+        spot = self._repository.get_by_id(spot_id)
+        if spot is None:
+            self._logger.warning("skate spot not found", spot_id=str(spot_id))
+        return spot
 
     def list_spots(self) -> list[SkateSpot]:
         """Get all skate spots."""
 
-        return self._repository.get_all()
+        spots = self._repository.get_all()
+        self._logger.debug("listed skate spots", count=len(spots))
+        return spots
 
     def update_spot(self, spot_id: UUID, update_data: SkateSpotUpdate) -> SkateSpot | None:
         """Update an existing skate spot."""
 
-        return self._repository.update(spot_id, update_data)
+        spot = self._repository.update(spot_id, update_data)
+        if spot is None:
+            self._logger.warning("failed to update missing skate spot", spot_id=str(spot_id))
+            return None
+        self._logger.info("skate spot updated", spot_id=str(spot.id))
+        return spot
 
     def delete_spot(self, spot_id: UUID) -> bool:
         """Delete a skate spot by ID."""
 
-        return self._repository.delete(spot_id)
+        deleted = self._repository.delete(spot_id)
+        if deleted:
+            self._logger.info("skate spot deleted", spot_id=str(spot_id))
+        else:
+            self._logger.warning("delete requested for missing skate spot", spot_id=str(spot_id))
+        return deleted
 
     def is_owner(self, spot_id: UUID, user_id: str) -> bool:
         """Check if a user owns a skate spot."""
 
-        return self._repository.is_owner(spot_id, user_id)
+        is_owner = self._repository.is_owner(spot_id, user_id)
+        self._logger.debug(
+            "ownership check", spot_id=str(spot_id), user_id=user_id, is_owner=is_owner
+        )
+        return is_owner
 
 
 _repository = SkateSpotRepository()
