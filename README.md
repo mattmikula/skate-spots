@@ -439,7 +439,7 @@ Currently uses SQLite database. For production:
 
 1. **Database Migration**: Upgrade from SQLite to PostgreSQL for better concurrency
 2. **Secret Management**: Store JWT secret keys and credentials securely
-3. **Rate Limiting**: Implement API rate limiting
+3. **Rate Limiting**: Replace the built-in in-memory limiter with a distributed solution (e.g. Redis) for multi-instance deployments
 4. **Caching**: Add Redis for improved performance
 5. **Monitoring**: Health checks and metrics
 6. **Docker**: Containerization for deployment
