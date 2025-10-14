@@ -8,6 +8,7 @@ from app.models.skate_spot import (
     Difficulty,
     Location,
     SkateSpotCreate,
+    SkateSpotFilters,
     SkateSpotUpdate,
     SpotType,
 )
@@ -112,6 +113,50 @@ def test_get_all_with_spots(repository, created_spot, second_spot):
     assert len(all_spots) == 2
     assert created_spot in all_spots
     assert second_spot in all_spots
+
+
+def test_get_all_with_filters(repository, sample_spot_data):
+    """Repository returns only spots that match provided filters."""
+
+    repository.create(sample_spot_data, user_id="test-user-id")
+
+    advanced_location = Location(
+        latitude=34.0522,
+        longitude=-118.2437,
+        city="Los Angeles",
+        country="USA",
+    )
+    advanced_data = sample_spot_data.model_copy(
+        update={
+            "name": "Advanced Bowl",
+            "description": "Deep bowl requiring permission",
+            "spot_type": SpotType.BOWL,
+            "difficulty": Difficulty.ADVANCED,
+            "location": advanced_location,
+            "is_public": False,
+            "requires_permission": True,
+        }
+    )
+    repository.create(advanced_data, user_id="test-user-id")
+
+    filters = SkateSpotFilters(
+        difficulties=[Difficulty.ADVANCED],
+        spot_types=[SpotType.BOWL],
+        city="los angeles",
+        is_public=False,
+        requires_permission=True,
+    )
+
+    filtered_spots = repository.get_all(filters)
+
+    assert len(filtered_spots) == 1
+    assert filtered_spots[0].name == "Advanced Bowl"
+
+    search_filters = SkateSpotFilters(search="los")
+    search_results = repository.get_all(search_filters)
+
+    assert len(search_results) == 1
+    assert search_results[0].name == "Advanced Bowl"
 
 
 # Repository update tests
@@ -260,6 +305,37 @@ def test_service_list_spots_with_data(service, created_service_spot, second_serv
     spot_ids = [spot.id for spot in spots]
     assert created_service_spot.id in spot_ids
     assert second_service_spot.id in spot_ids
+
+
+def test_service_list_spots_with_filters(service, service_spot_data):
+    """Service honours filters when listing spots."""
+
+    service.create_spot(service_spot_data, user_id="test-user-id")
+
+    advanced_location = Location(
+        latitude=34.0522,
+        longitude=-118.2437,
+        city="Los Angeles",
+        country="USA",
+    )
+    advanced_data = service_spot_data.model_copy(
+        update={
+            "name": "Advanced Bowl",
+            "description": "Deep bowl requiring permission",
+            "spot_type": SpotType.BOWL,
+            "difficulty": Difficulty.ADVANCED,
+            "location": advanced_location,
+            "is_public": False,
+            "requires_permission": True,
+        }
+    )
+    created = service.create_spot(advanced_data, user_id="test-user-id")
+
+    filters = SkateSpotFilters(search="bowl", is_public=False)
+    spots = service.list_spots(filters)
+
+    assert len(spots) == 1
+    assert spots[0].id == created.id
 
 
 # Service update tests

@@ -166,6 +166,61 @@ def test_list_spots_with_existing_data(client, created_spot_id, second_spot_id):
     assert second_spot_id in spot_ids
 
 
+def test_list_spots_with_filters(client, sample_spot_payload, auth_token):
+    """Query parameters filter the skate spot collection."""
+
+    client.post(
+        "/api/v1/skate-spots/",
+        json=sample_spot_payload,
+        cookies={"access_token": auth_token},
+    )
+
+    advanced_payload = sample_spot_payload.copy()
+    advanced_payload["name"] = "Advanced Bowl"
+    advanced_payload["description"] = "Deep bowl requiring permission"
+    advanced_payload["spot_type"] = SpotType.BOWL.value
+    advanced_payload["difficulty"] = Difficulty.ADVANCED.value
+    advanced_payload["is_public"] = False
+    advanced_payload["requires_permission"] = True
+    advanced_payload["location"] = {
+        **sample_spot_payload["location"],
+        "city": "Los Angeles",
+    }
+
+    client.post(
+        "/api/v1/skate-spots/",
+        json=advanced_payload,
+        cookies={"access_token": auth_token},
+    )
+
+    difficulty_response = client.get(
+        "/api/v1/skate-spots/",
+        params={"difficulty": Difficulty.ADVANCED.value},
+    )
+    assert difficulty_response.status_code == 200
+    filtered = difficulty_response.json()
+    assert len(filtered) == 1
+    assert filtered[0]["name"] == "Advanced Bowl"
+
+    search_response = client.get(
+        "/api/v1/skate-spots/",
+        params={"search": "los"},
+    )
+    assert search_response.status_code == 200
+    search_results = search_response.json()
+    assert len(search_results) == 1
+    assert search_results[0]["name"] == "Advanced Bowl"
+
+    permissions_response = client.get(
+        "/api/v1/skate-spots/",
+        params={"requires_permission": "true", "is_public": "false"},
+    )
+    assert permissions_response.status_code == 200
+    permission_results = permissions_response.json()
+    assert len(permission_results) == 1
+    assert permission_results[0]["name"] == "Advanced Bowl"
+
+
 # Update tests
 def test_update_spot(client, created_spot_id, auth_token):
     """Test updating an existing spot."""
@@ -388,6 +443,43 @@ def test_get_geojson_with_multiple_spots(client, sample_spot_payload, auth_token
         assert "properties" in feature
         assert feature["geometry"]["type"] == "Point"
         assert len(feature["geometry"]["coordinates"]) == 2
+
+
+def test_geojson_filters(client, sample_spot_payload, auth_token):
+    """GeoJSON endpoint should honour query parameters."""
+
+    client.post(
+        "/api/v1/skate-spots/",
+        json=sample_spot_payload,
+        cookies={"access_token": auth_token},
+    )
+
+    restricted_payload = sample_spot_payload.copy()
+    restricted_payload["name"] = "Restricted Bowl"
+    restricted_payload["spot_type"] = SpotType.BOWL.value
+    restricted_payload["difficulty"] = Difficulty.ADVANCED.value
+    restricted_payload["is_public"] = False
+    restricted_payload["requires_permission"] = True
+    restricted_payload["location"] = {
+        **sample_spot_payload["location"],
+        "city": "Los Angeles",
+    }
+
+    client.post(
+        "/api/v1/skate-spots/",
+        json=restricted_payload,
+        cookies={"access_token": auth_token},
+    )
+
+    response = client.get(
+        "/api/v1/skate-spots/geojson",
+        params={"requires_permission": "true", "is_public": "false"},
+    )
+    assert response.status_code == 200
+
+    data = response.json()
+    assert len(data["features"]) == 1
+    assert data["features"][0]["properties"]["name"] == "Restricted Bowl"
 
 
 def test_geojson_feature_properties(client, sample_spot_payload, auth_token):

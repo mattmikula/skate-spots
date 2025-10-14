@@ -10,7 +10,12 @@ from app.repositories.skate_spot_repository import SkateSpotRepository
 if TYPE_CHECKING:
     from uuid import UUID
 
-    from app.models.skate_spot import SkateSpot, SkateSpotCreate, SkateSpotUpdate
+    from app.models.skate_spot import (
+        SkateSpot,
+        SkateSpotCreate,
+        SkateSpotFilters,
+        SkateSpotUpdate,
+    )
 
 
 class SkateSpotService:
@@ -35,10 +40,10 @@ class SkateSpotService:
             self._logger.warning("skate spot not found", spot_id=str(spot_id))
         return spot
 
-    def list_spots(self) -> list[SkateSpot]:
-        """Get all skate spots."""
+    def list_spots(self, filters: SkateSpotFilters | None = None) -> list[SkateSpot]:
+        """Get all skate spots with optional filtering."""
 
-        spots = self._repository.get_all()
+        spots = self._repository.get_all(filters)
         self._logger.debug("listed skate spots", count=len(spots))
         return spots
 

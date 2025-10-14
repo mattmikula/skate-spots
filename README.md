@@ -9,7 +9,7 @@ A modern FastAPI application for sharing and discovering skateboarding spots aro
 ## 🛹 Features
 
 - **Interactive Web Frontend** built with HTMX for dynamic user interactions
-- **REST API** for managing skate spots with full CRUD operations
+- **REST API** for managing skate spots with full CRUD operations and rich filtering
 - **Secure Authentication** with registration, login, and cookie-based JWT tokens
 - **Rich Data Model** with locations, difficulty levels, and spot types
 - **Comprehensive Validation** using Pydantic models
@@ -55,6 +55,35 @@ The application will be available at:
 - **API Base**: http://localhost:8000/api/v1
 - **Interactive API Docs**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
+
+### Filtering Skate Spots via the API
+
+Both the REST and GeoJSON skate spot endpoints accept optional query parameters so you can narrow down results without fetching
+the full catalogue. Combine any of the following parameters on `GET /api/v1/skate-spots/` or `GET /api/v1/skate-spots/geojson`:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `search` | `str` | Case-insensitive substring match applied to name, description, city, and country. |
+| `spot_type` | `SpotType` or repeated | Filter by one or more spot types (e.g. `spot_type=park&spot_type=street`). |
+| `difficulty` | `Difficulty` or repeated | Filter by one or more difficulty levels. |
+| `city` | `str` | Exact match (case-insensitive) on the city name. |
+| `country` | `str` | Exact match (case-insensitive) on the country. |
+| `is_public` | `bool` | Restrict to publicly accessible spots. |
+| `requires_permission` | `bool` | Restrict to spots that require special permission. |
+
+Example: fetch all intermediate or advanced street spots in Barcelona that are publicly accessible:
+
+```bash
+curl \
+  --get "http://localhost:8000/api/v1/skate-spots" \
+  --data-urlencode "city=Barcelona" \
+  --data-urlencode "is_public=true" \
+  --data-urlencode "spot_type=street" \
+  --data-urlencode "difficulty=intermediate" \
+  --data-urlencode "difficulty=advanced"
+```
+
+The same parameters can be used with the GeoJSON endpoint to power filtered map views without downloading unnecessary data.
 
 ### Authentication Workflow
 
