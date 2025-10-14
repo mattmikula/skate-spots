@@ -79,16 +79,12 @@ class SkateSpotFilters(BaseModel):
         default=None,
         description="Search term applied to name, description, city, and country",
     )
-    spot_types: list[SpotType] | None = Field(
-        default=None, description="Allowed spot types"
-    )
+    spot_types: list[SpotType] | None = Field(default=None, description="Allowed spot types")
     difficulties: list[Difficulty] | None = Field(
         default=None, description="Allowed difficulty levels"
     )
     city: str | None = Field(default=None, description="Filter by city (case-insensitive)")
-    country: str | None = Field(
-        default=None, description="Filter by country (case-insensitive)"
-    )
+    country: str | None = Field(default=None, description="Filter by country (case-insensitive)")
     is_public: bool | None = Field(
         default=None, description="Whether the spot must be publicly accessible"
     )
