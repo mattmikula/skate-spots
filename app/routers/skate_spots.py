@@ -19,8 +19,8 @@ from app.models.skate_spot import (
     Location,
     SkateSpot,
     SkateSpotCreate,
-    SkateSpotUpdate,
     SkateSpotFilters,
+    SkateSpotUpdate,
     SpotType,
 )
 from app.services.skate_spot_service import (
