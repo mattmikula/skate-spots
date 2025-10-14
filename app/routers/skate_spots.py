@@ -3,7 +3,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse
 from pydantic import ValidationError
 
@@ -20,6 +20,7 @@ from app.models.skate_spot import (
     SkateSpot,
     SkateSpotCreate,
     SkateSpotUpdate,
+    SkateSpotFilters,
     SpotType,
 )
 from app.services.skate_spot_service import (
@@ -96,21 +97,76 @@ async def create_skate_spot(
     return service.create_spot(spot_data, current_user.id)
 
 
+def _build_filters(
+    search: str | None,
+    spot_types: list[SpotType] | None,
+    difficulties: list[Difficulty] | None,
+    city: str | None,
+    country: str | None,
+    is_public: bool | None,
+    requires_permission: bool | None,
+) -> SkateSpotFilters | None:
+    filters = SkateSpotFilters(
+        search=search,
+        spot_types=spot_types or None,
+        difficulties=difficulties or None,
+        city=city,
+        country=country,
+        is_public=is_public,
+        requires_permission=requires_permission,
+    )
+    return filters if filters.has_filters() else None
+
+
 @router.get("/", response_model=list[SkateSpot])
 async def list_skate_spots(
     service: Annotated[SkateSpotService, Depends(get_skate_spot_service)],
+    search: str | None = None,
+    spot_type: Annotated[list[SpotType] | None, Query()] = None,
+    difficulty: Annotated[list[Difficulty] | None, Query()] = None,
+    city: str | None = None,
+    country: str | None = None,
+    is_public: Annotated[bool | None, Query()] = None,
+    requires_permission: Annotated[bool | None, Query()] = None,
 ) -> list[SkateSpot]:
-    """Get all skate spots."""
+    """Get skate spots, optionally filtered by query parameters."""
 
-    return service.list_spots()
+    filters = _build_filters(
+        search=search,
+        spot_types=spot_type,
+        difficulties=difficulty,
+        city=city,
+        country=country,
+        is_public=is_public,
+        requires_permission=requires_permission,
+    )
+
+    return service.list_spots(filters)
 
 
 @router.get("/geojson", response_model=GeoJSONFeatureCollection)
 async def get_spots_geojson(
     service: Annotated[SkateSpotService, Depends(get_skate_spot_service)],
+    search: str | None = None,
+    spot_type: Annotated[list[SpotType] | None, Query()] = None,
+    difficulty: Annotated[list[Difficulty] | None, Query()] = None,
+    city: str | None = None,
+    country: str | None = None,
+    is_public: Annotated[bool | None, Query()] = None,
+    requires_permission: Annotated[bool | None, Query()] = None,
 ) -> GeoJSONFeatureCollection:
-    """Get all skate spots in GeoJSON format for map visualization."""
-    spots = service.list_spots()
+    """Get skate spots in GeoJSON format, honoring optional filters."""
+    spots = service.list_spots(
+        _build_filters(
+            search=search,
+            spot_types=spot_type,
+            difficulties=difficulty,
+            city=city,
+            country=country,
+            is_public=is_public,
+            requires_permission=requires_permission,
+        )
+    )
 
     features = [
         GeoJSONFeature(

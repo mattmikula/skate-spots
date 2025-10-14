@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class SpotType(str, Enum):
@@ -70,6 +70,52 @@ class SkateSpotUpdate(BaseModel):
     location: Location | None = None
     is_public: bool | None = None
     requires_permission: bool | None = None
+
+
+class SkateSpotFilters(BaseModel):
+    """Query parameters that can be used to filter skate spots."""
+
+    search: str | None = Field(
+        default=None,
+        description="Search term applied to name, description, city, and country",
+    )
+    spot_types: list[SpotType] | None = Field(
+        default=None, description="Allowed spot types"
+    )
+    difficulties: list[Difficulty] | None = Field(
+        default=None, description="Allowed difficulty levels"
+    )
+    city: str | None = Field(default=None, description="Filter by city (case-insensitive)")
+    country: str | None = Field(
+        default=None, description="Filter by country (case-insensitive)"
+    )
+    is_public: bool | None = Field(
+        default=None, description="Whether the spot must be publicly accessible"
+    )
+    requires_permission: bool | None = Field(
+        default=None, description="Whether the spot requires permission"
+    )
+
+    @field_validator("search", "city", "country", mode="before")
+    @classmethod
+    def _strip_blank_strings(cls, value: str | None) -> str | None:
+        """Normalise blank strings into ``None`` for easier downstream checks."""
+
+        if isinstance(value, str):
+            stripped = value.strip()
+            return stripped or None
+        return value
+
+    def has_filters(self) -> bool:
+        """Return ``True`` when at least one filter value has been provided."""
+
+        for value in self.model_dump().values():
+            if isinstance(value, list):
+                if value:
+                    return True
+            elif value is not None:
+                return True
+        return False
 
 
 class SkateSpot(SkateSpotBase):
