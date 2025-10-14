@@ -120,7 +120,9 @@ class SkateSpotRepository:
 
                 if filters.spot_types:
                     conditions.append(
-                        SkateSpotORM.spot_type.in_([spot_type.value for spot_type in filters.spot_types])
+                        SkateSpotORM.spot_type.in_(
+                            [spot_type.value for spot_type in filters.spot_types]
+                        )
                     )
 
                 if filters.difficulties:
@@ -131,14 +133,10 @@ class SkateSpotRepository:
                     )
 
                 if filters.city:
-                    conditions.append(
-                        func.lower(SkateSpotORM.city) == filters.city.lower()
-                    )
+                    conditions.append(func.lower(SkateSpotORM.city) == filters.city.lower())
 
                 if filters.country:
-                    conditions.append(
-                        func.lower(SkateSpotORM.country) == filters.country.lower()
-                    )
+                    conditions.append(func.lower(SkateSpotORM.country) == filters.country.lower())
 
                 if filters.is_public is not None:
                     conditions.append(SkateSpotORM.is_public == filters.is_public)
