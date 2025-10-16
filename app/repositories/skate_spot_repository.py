@@ -11,7 +11,8 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.db.database import SessionLocal
-from app.db.models import SkateSpotORM
+from app.db.models import RatingORM, SkateSpotORM
+from app.models.rating import RatingSummary
 from app.models.skate_spot import (
     Difficulty,
     Location,
@@ -39,9 +40,13 @@ def _location_dict(location: Location | dict[str, Any]) -> dict[str, Any]:
     return dict(location)
 
 
-def _orm_to_pydantic(orm_spot: SkateSpotORM) -> SkateSpot:
-    """Convert an ORM instance into a Pydantic model."""
+def _orm_to_pydantic(
+    orm_spot: SkateSpotORM,
+    summary: RatingSummary | None = None,
+) -> SkateSpot:
+    """Convert an ORM instance into a Pydantic model, including rating metadata."""
 
+    rating_summary = summary or RatingSummary(average_score=None, ratings_count=0)
     return SkateSpot(
         id=UUID(orm_spot.id),
         name=orm_spot.name,
@@ -59,6 +64,8 @@ def _orm_to_pydantic(orm_spot: SkateSpotORM) -> SkateSpot:
         requires_permission=orm_spot.requires_permission,
         created_at=orm_spot.created_at,
         updated_at=orm_spot.updated_at,
+        average_rating=rating_summary.average_score,
+        ratings_count=rating_summary.ratings_count,
     )
 
 
@@ -87,7 +94,10 @@ class SkateSpotRepository:
             session.add(orm_spot)
             session.commit()
             session.refresh(orm_spot)
-            return _orm_to_pydantic(orm_spot)
+            return _orm_to_pydantic(
+                orm_spot,
+                summary=RatingSummary(average_score=None, ratings_count=0),
+            )
 
     def get_by_id(self, spot_id: UUID) -> SkateSpot | None:
         """Get a skate spot by ID."""
@@ -96,7 +106,10 @@ class SkateSpotRepository:
             orm_spot = session.get(SkateSpotORM, str(spot_id))
             if orm_spot is None:
                 return None
-            return _orm_to_pydantic(orm_spot)
+            summary = self._rating_summary_for_spots(session, [str(spot_id)]).get(
+                str(spot_id), RatingSummary(average_score=None, ratings_count=0)
+            )
+            return _orm_to_pydantic(orm_spot, summary=summary)
 
     def get_all(self, filters: SkateSpotFilters | None = None) -> list[SkateSpot]:
         """Get all skate spots, optionally filtering by provided criteria."""
@@ -150,7 +163,17 @@ class SkateSpotRepository:
                     stmt = stmt.where(*conditions)
 
             spots = session.scalars(stmt).all()
-            return [_orm_to_pydantic(spot) for spot in spots]
+            spot_ids = [spot.id for spot in spots]
+            summaries = self._rating_summary_for_spots(session, spot_ids)
+            return [
+                _orm_to_pydantic(
+                    spot,
+                    summary=summaries.get(
+                        spot.id, RatingSummary(average_score=None, ratings_count=0)
+                    ),
+                )
+                for spot in spots
+            ]
 
     def is_owner(self, spot_id: UUID, user_id: str) -> bool:
         """Check if a user owns a skate spot."""
@@ -186,7 +209,10 @@ class SkateSpotRepository:
             session.add(orm_spot)
             session.commit()
             session.refresh(orm_spot)
-            return _orm_to_pydantic(orm_spot)
+            summary = self._rating_summary_for_spots(session, [str(spot_id)]).get(
+                str(spot_id), RatingSummary(average_score=None, ratings_count=0)
+            )
+            return _orm_to_pydantic(orm_spot, summary=summary)
 
     def delete(self, spot_id: UUID) -> bool:
         """Delete a skate spot by ID."""
@@ -198,3 +224,34 @@ class SkateSpotRepository:
             session.delete(orm_spot)
             session.commit()
             return True
+
+    def _rating_summary_for_spots(
+        self,
+        session: Session,
+        spot_ids: list[str],
+    ) -> dict[str, RatingSummary]:
+        """Return a mapping of spot ID to rating summary for the given spot IDs."""
+
+        if not spot_ids:
+            return {}
+
+        normalised_ids = [str(spot_id) for spot_id in spot_ids]
+        stmt = (
+            select(
+                RatingORM.spot_id,
+                func.count(RatingORM.id),
+                func.avg(RatingORM.score),
+            )
+            .where(RatingORM.spot_id.in_(normalised_ids))
+            .group_by(RatingORM.spot_id)
+        )
+
+        summaries: dict[str, RatingSummary] = {}
+        for spot_id, count, average in session.execute(stmt):
+            average_score = round(float(average), 2) if average is not None else None
+            count_value = int(count) if count is not None else 0
+            summaries[spot_id] = RatingSummary(
+                average_score=average_score,
+                ratings_count=count_value,
+            )
+        return summaries

@@ -5,7 +5,16 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import uuid4
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, String
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.database import Base
@@ -33,6 +42,9 @@ class UserORM(Base):
     # Relationships
     skate_spots: Mapped[list[SkateSpotORM]] = relationship(
         "SkateSpotORM", back_populates="owner", cascade="all, delete-orphan"
+    )
+    ratings: Mapped[list[RatingORM]] = relationship(
+        "RatingORM", back_populates="user", cascade="all, delete-orphan"
     )
 
 
@@ -66,3 +78,36 @@ class SkateSpotORM(Base):
 
     # Relationships
     owner: Mapped[UserORM] = relationship("UserORM", back_populates="skate_spots")
+    ratings: Mapped[list[RatingORM]] = relationship(
+        "RatingORM", back_populates="spot", cascade="all, delete-orphan"
+    )
+
+
+class RatingORM(Base):
+    """Database model representing a user rating for a skate spot."""
+
+    __tablename__ = "spot_ratings"
+    __table_args__ = (
+        UniqueConstraint("spot_id", "user_id", name="uq_spot_ratings_user_spot"),
+        CheckConstraint("score BETWEEN 1 AND 5", name="ck_spot_ratings_score_range"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    spot_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("skate_spots.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    score: Mapped[int] = mapped_column(Integer, nullable=False)
+    comment: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+    )
+
+    spot: Mapped[SkateSpotORM] = relationship("SkateSpotORM", back_populates="ratings")
+    user: Mapped[UserORM] = relationship("UserORM", back_populates="ratings")
