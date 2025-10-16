@@ -182,6 +182,8 @@ async def get_spots_geojson(
                 address=spot.location.address,
                 is_public=spot.is_public,
                 requires_permission=spot.requires_permission,
+                average_rating=spot.rating_stats.average_score if spot.rating_stats else None,
+                total_ratings=spot.rating_stats.total_ratings if spot.rating_stats else None,
             ),
         )
         for spot in spots

@@ -114,6 +114,13 @@ class SkateSpotFilters(BaseModel):
         return False
 
 
+class RatingStatsSimple(BaseModel):
+    """Simple rating statistics model to avoid circular imports."""
+
+    average_score: float = Field(..., ge=0, le=5, description="Average rating score")
+    total_ratings: int = Field(..., ge=0, description="Total number of ratings")
+
+
 class SkateSpot(SkateSpotBase):
     """Complete skate spot model with database fields."""
 
@@ -121,6 +128,9 @@ class SkateSpot(SkateSpotBase):
     created_at: datetime = Field(default_factory=datetime.utcnow, description="Creation timestamp")
     updated_at: datetime = Field(
         default_factory=datetime.utcnow, description="Last update timestamp"
+    )
+    rating_stats: RatingStatsSimple | None = Field(
+        None, description="Rating statistics for this spot"
     )
 
     model_config = {
@@ -169,6 +179,8 @@ class GeoJSONFeatureProperties(BaseModel):
     address: str | None = Field(None, description="Human-readable address")
     is_public: bool = Field(..., description="Whether the spot is publicly accessible")
     requires_permission: bool = Field(..., description="Whether permission is needed to skate")
+    average_rating: float | None = Field(None, description="Average rating score (1-5)")
+    total_ratings: int | None = Field(None, description="Total number of ratings")
 
 
 class GeoJSONFeature(BaseModel):

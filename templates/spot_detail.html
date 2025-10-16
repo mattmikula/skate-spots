@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}{{ spot.name }} - Skate Spots{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 900px; margin: 0 auto; padding: 2rem 1rem;">
+    <!-- Back button -->
+    <a href="/" style="display: inline-block; margin-bottom: 1rem; color: #0066cc; text-decoration: none;">← Back to all spots</a>
+
+    <!-- Spot header -->
+    <div style="background-color: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 2rem;">
+        <h1 style="margin: 0 0 1rem 0;">{{ spot.name }}</h1>
+
+        <div class="spot-meta" style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+            <span class="badge badge-type" style="display: inline-block; padding: 0.25rem 0.75rem; background-color: #e3f2fd; color: #1976d2; border-radius: 20px; font-size: 0.85rem;">
+                {{ spot.spot_type }}
+            </span>
+            <span class="badge badge-difficulty {{ spot.difficulty }}" style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.85rem;">
+                {{ spot.difficulty }}
+            </span>
+        </div>
+
+        <p style="font-size: 1.1rem; line-height: 1.6; color: #333;">{{ spot.description }}</p>
+
+        <div style="margin: 1rem 0; font-size: 1rem; color: #666;">
+            <div style="margin: 0.5rem 0;">📍 {{ spot.location.city }}, {{ spot.location.country }}</div>
+            {% if spot.location.address %}
+            <div style="margin: 0.5rem 0;">📮 {{ spot.location.address }}</div>
+            {% endif %}
+        </div>
+
+        <div style="font-size: 0.95rem; color: #777; margin: 1rem 0;">
+            {% if spot.is_public %}✅ Public{% else %}🔒 Private{% endif %}
+            {% if spot.requires_permission %} • ⚠️ Permission required{% endif %}
+        </div>
+
+        <!-- Rating stats -->
+        {% if spot.rating_stats %}
+        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #eee;">
+            <div style="font-size: 1.3rem; font-weight: bold;">
+                <span style="color: #ffc107;">
+                    {% for i in range(5) %}
+                        {% if i < (spot.rating_stats.average_score | int) %}★{% else %}☆{% endif %}
+                    {% endfor %}
+                </span>
+                <span style="margin-left: 0.5rem; color: #333;">
+                    {{ spot.rating_stats.average_score }}/5
+                    <span style="color: #999; font-weight: normal; font-size: 0.95rem;">
+                        ({{ spot.rating_stats.total_ratings }} rating{{ "s" if spot.rating_stats.total_ratings != 1 else "" }})
+                    </span>
+                </span>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Edit button for owner/admin -->
+        {% if current_user and (current_user.is_admin or current_user.id == spot.owner.id) %}
+        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #eee;">
+            <a href="/skate-spots/{{ spot.id }}/edit" class="btn btn-edit" style="display: inline-block; padding: 0.5rem 1.5rem; background-color: #4CAF50; color: white; border-radius: 4px; text-decoration: none;">
+                ✏️ Edit Spot
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Ratings section -->
+    <div style="background-color: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <!-- Rating form for authenticated users -->
+        {% if current_user %}
+            {% if user_rating %}
+                <!-- Show user's existing rating -->
+                <div style="background-color: #e8f5e9; padding: 1rem; border-radius: 4px; margin-bottom: 2rem;">
+                    <h4 style="margin-top: 0;">Your rating:</h4>
+                    <div style="font-size: 1.1rem; margin: 0.5rem 0;">
+                        <span style="color: #ffc107;">
+                            {% for i in range(5) %}
+                                {% if i < user_rating.score %}★{% else %}☆{% endif %}
+                            {% endfor %}
+                        </span>
+                        <span style="margin-left: 0.5rem; color: #333; font-weight: bold;">{{ user_rating.score }}/5</span>
+                    </div>
+                    {% if user_rating.review %}
+                    <p style="margin: 0.5rem 0; color: #333;">{{ user_rating.review }}</p>
+                    {% endif %}
+                </div>
+            {% else %}
+                <!-- Show rating form if user hasn't rated yet -->
+                {% include "rating_form.html" %}
+            {% endif %}
+        {% else %}
+            <!-- Show message to login -->
+            <div style="background-color: #fff3cd; padding: 1rem; border-radius: 4px; margin-bottom: 2rem;">
+                <p style="margin: 0;">
+                    <a href="/login" style="color: #0066cc; text-decoration: none;">Sign in</a> to rate this spot
+                </p>
+            </div>
+        {% endif %}
+
+        <!-- Ratings list -->
+        <div id="ratings-list-{{ spot.id }}">
+            {% include "ratings_list.html" %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .btn {
+        padding: 0.5rem 1.5rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 1rem;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-primary {
+        background-color: #0066cc;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background-color: #0052a3;
+    }
+
+    .btn-edit {
+        background-color: #4CAF50;
+        color: white;
+    }
+
+    .btn-edit:hover {
+        background-color: #45a049;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    textarea, input[type="range"] {
+        font-family: inherit;
+    }
+</style>
+{% endblock %}

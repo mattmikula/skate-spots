@@ -15,6 +15,7 @@ from app.db.models import SkateSpotORM
 from app.models.skate_spot import (
     Difficulty,
     Location,
+    RatingStatsSimple,
     SkateSpot,
     SkateSpotCreate,
     SkateSpotFilters,
@@ -42,6 +43,16 @@ def _location_dict(location: Location | dict[str, Any]) -> dict[str, Any]:
 def _orm_to_pydantic(orm_spot: SkateSpotORM) -> SkateSpot:
     """Convert an ORM instance into a Pydantic model."""
 
+    # Calculate rating stats from related ratings
+    rating_stats = None
+    if orm_spot.ratings:
+        scores = [rating.score for rating in orm_spot.ratings]
+        average = sum(scores) / len(scores)
+        rating_stats = RatingStatsSimple(
+            average_score=round(average, 2),
+            total_ratings=len(orm_spot.ratings),
+        )
+
     return SkateSpot(
         id=UUID(orm_spot.id),
         name=orm_spot.name,
@@ -59,6 +70,7 @@ def _orm_to_pydantic(orm_spot: SkateSpotORM) -> SkateSpot:
         requires_permission=orm_spot.requires_permission,
         created_at=orm_spot.created_at,
         updated_at=orm_spot.updated_at,
+        rating_stats=rating_stats,
     )
 
 

@@ -1,0 +1,30 @@
+<div class="ratings-list" style="margin-top: 1rem;">
+    {% if ratings %}
+    <h4 style="margin-bottom: 1rem;">Reviews ({{ ratings|length }})</h4>
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        {% for rating in ratings %}
+        <div class="rating-item" style="padding: 1rem; border: 1px solid #e0e0e0; border-radius: 4px; background-color: #fafafa;">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+                <div>
+                    <div style="font-weight: bold; font-size: 1.1rem;">
+                        {% for i in range(5) %}
+                            {% if i < rating.score %}★{% else %}☆{% endif %}
+                        {% endfor %}
+                        <span style="margin-left: 0.5rem; color: #666; font-weight: normal;">({{ rating.score }}/5)</span>
+                    </div>
+                </div>
+                <div style="font-size: 0.85rem; color: #999;">
+                    {{ rating.created_at.strftime('%Y-%m-%d %H:%M') }}
+                </div>
+            </div>
+
+            {% if rating.review %}
+            <p style="margin: 0.5rem 0; color: #333;">{{ rating.review }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="color: #999; text-align: center; padding: 2rem 0;">No reviews yet. Be the first to rate this spot!</p>
+    {% endif %}
+</div>

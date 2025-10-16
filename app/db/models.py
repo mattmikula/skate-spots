@@ -34,6 +34,9 @@ class UserORM(Base):
     skate_spots: Mapped[list[SkateSpotORM]] = relationship(
         "SkateSpotORM", back_populates="owner", cascade="all, delete-orphan"
     )
+    ratings: Mapped[list[RatingORM]] = relationship(
+        "RatingORM", back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class SkateSpotORM(Base):
@@ -66,3 +69,33 @@ class SkateSpotORM(Base):
 
     # Relationships
     owner: Mapped[UserORM] = relationship("UserORM", back_populates="skate_spots")
+    ratings: Mapped[list[RatingORM]] = relationship(
+        "RatingORM", back_populates="spot", cascade="all, delete-orphan"
+    )
+
+
+class RatingORM(Base):
+    """Database model representing a rating for a skate spot."""
+
+    __tablename__ = "ratings"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    spot_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("skate_spots.id"), nullable=False, index=True
+    )
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id"), nullable=False, index=True
+    )
+    score: Mapped[int] = mapped_column(nullable=False)  # 1-5 star rating
+    review: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+    )
+
+    # Relationships
+    spot: Mapped[SkateSpotORM] = relationship("SkateSpotORM", back_populates="ratings")
+    user: Mapped[UserORM] = relationship("UserORM", back_populates="ratings")

@@ -1,5 +1,5 @@
 <div class="spot-card" id="spot-{{ spot.id }}">
-    <h3>{{ spot.name }}</h3>
+    <h3><a href="/skate-spots/{{ spot.id }}" style="color: inherit; text-decoration: none;">{{ spot.name }}</a></h3>
     <p>{{ spot.description }}</p>
 
     <div class="spot-meta">
@@ -18,6 +18,29 @@
         {% if spot.is_public %}✅ Public{% else %}🔒 Private{% endif %}
         {% if spot.requires_permission %} • ⚠️ Permission required{% endif %}
     </div>
+
+    <!-- Rating section -->
+    {% if spot.rating_stats %}
+    <div class="rating-info" style="margin-top: 0.8rem; padding: 0.5rem; background-color: #f5f5f5; border-radius: 4px;">
+        <div style="font-weight: bold; font-size: 0.95rem;">
+            <span id="stars-{{ spot.id }}">
+                {% for i in range(5) %}
+                    {% if i < (spot.rating_stats.average_score | int) %}★{% else %}☆{% endif %}
+                {% endfor %}
+            </span>
+            <span style="margin-left: 0.5rem; color: #333;">
+                {{ spot.rating_stats.average_score }}/5
+                <span style="color: #999; font-weight: normal;">
+                    ({{ spot.rating_stats.total_ratings }} rating{{ "s" if spot.rating_stats.total_ratings != 1 else "" }})
+                </span>
+            </span>
+        </div>
+    </div>
+    {% else %}
+    <div class="rating-info" style="margin-top: 0.8rem; padding: 0.5rem; background-color: #f5f5f5; border-radius: 4px; color: #999;">
+        No ratings yet
+    </div>
+    {% endif %}
 
     <div class="spot-actions">
         <a href="/skate-spots/{{ spot.id }}/edit" class="btn btn-edit">Edit</a>

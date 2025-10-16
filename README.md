@@ -10,6 +10,7 @@ A modern FastAPI application for sharing and discovering skateboarding spots aro
 
 - **Interactive Web Frontend** built with HTMX for dynamic user interactions
 - **REST API** for managing skate spots with full CRUD operations and rich filtering
+- **Community Ratings System** - 1-5 star ratings with reviews for skate spots
 - **Secure Authentication** with registration, login, and cookie-based JWT tokens
 - **Rich Data Model** with locations, difficulty levels, and spot types
 - **Comprehensive Validation** using Pydantic models
@@ -165,6 +166,7 @@ Database schema changes are managed with [Alembic](https://alembic.sqlalchemy.or
 |--------|----------|-------------|
 | `GET` | `/` | Home page |
 | `GET` | `/skate-spots` | View all skate spots (HTML) |
+| `GET` | `/skate-spots/{id}` | View spot details with ratings and reviews |
 | `GET` | `/skate-spots/new` | Create new spot form |
 | `GET` | `/skate-spots/{id}/edit` | Edit spot form |
 | `GET` | `/map` | Interactive map view |
@@ -191,6 +193,17 @@ Database schema changes are managed with [Alembic](https://alembic.sqlalchemy.or
 | `POST` | `/api/v1/auth/login` | Authenticate and receive a JWT access token cookie |
 | `POST` | `/api/v1/auth/logout` | Clear the authentication cookie |
 | `GET` | `/api/v1/auth/me` | Retrieve the currently authenticated user |
+
+### Ratings Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/skate-spots/{spot_id}/ratings/` | Create a rating for a spot (requires auth) |
+| `GET` | `/api/v1/skate-spots/{spot_id}/ratings/` | List all ratings for a spot |
+| `GET` | `/api/v1/skate-spots/{spot_id}/ratings/stats` | Get rating statistics for a spot |
+| `GET` | `/api/v1/skate-spots/{spot_id}/ratings/{rating_id}` | Get a specific rating |
+| `PUT` | `/api/v1/skate-spots/{spot_id}/ratings/{rating_id}` | Update a rating (owner or admin only) |
+| `DELETE` | `/api/v1/skate-spots/{spot_id}/ratings/{rating_id}` | Delete a rating (owner or admin only) |
 
 ### Example Usage
 
@@ -247,6 +260,27 @@ curl -X POST "http://localhost:8000/api/v1/auth/login" \
 curl "http://localhost:8000/api/v1/auth/me" -b cookies.txt
 ```
 
+**Rate a Skate Spot:**
+```bash
+curl -X POST "http://localhost:8000/api/v1/skate-spots/{spot_id}/ratings/" \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  -d '{
+    "score": 5,
+    "review": "Amazing spot! Great for practicing new tricks."
+  }'
+```
+
+**Get Rating Statistics:**
+```bash
+curl "http://localhost:8000/api/v1/skate-spots/{spot_id}/ratings/stats"
+```
+
+**List All Ratings for a Spot:**
+```bash
+curl "http://localhost:8000/api/v1/skate-spots/{spot_id}/ratings/"
+```
+
 ## 🏗️ Architecture
 
 This project follows **Clean Architecture** principles with clear separation of concerns:
@@ -267,16 +301,20 @@ skate-spots/
 │   │   ├── database.py          # Database configuration
 │   │   └── models.py            # SQLAlchemy models
 │   ├── models/           # Pydantic data models
+│   │   ├── rating.py
 │   │   ├── skate_spot.py
 │   │   └── user.py
 │   ├── repositories/     # Data access layer
+│   │   ├── rating_repository.py
 │   │   ├── skate_spot_repository.py
 │   │   └── user_repository.py
 │   ├── routers/          # FastAPI route handlers
 │   │   ├── auth.py              # Authentication API
 │   │   ├── frontend.py          # HTML/HTMX routes
+│   │   ├── ratings.py           # Ratings API
 │   │   └── skate_spots.py       # REST API routes
 │   └── services/         # Business logic layer
+│       ├── rating_service.py
 │       └── skate_spot_service.py
 ├── static/               # Static assets
 │   └── style.css         # Application styles
@@ -285,20 +323,27 @@ skate-spots/
 │   ├── index.html        # Spots list page
 │   ├── login.html        # Login form
 │   ├── map.html          # Interactive map view
+│   ├── rating_form.html  # Rating submission form
+│   ├── ratings_list.html # Ratings display component
 │   ├── register.html     # Registration form
 │   ├── spot_card.html    # Spot card component
+│   ├── spot_detail.html  # Spot detail page with ratings
 │   └── spot_form.html    # Create/edit form
 ├── tests/                # Test suite (organized by app structure)
 │   ├── test_api/         # API integration tests
 │   │   ├── test_auth.py         # Authentication endpoint tests
 │   │   ├── test_frontend.py     # Frontend route tests
+│   │   ├── test_ratings.py      # Ratings endpoint tests
 │   │   ├── test_root.py         # Root & docs endpoints
 │   │   └── test_skate_spots.py  # CRUD endpoint tests
 │   ├── test_models/      # Model validation tests
 │   │   ├── test_skate_spot.py   # Skate spot model tests
 │   │   └── test_user.py         # User model tests
+│   ├── test_repositories/# Repository layer tests
+│   │   └── test_rating_repository.py  # Rating CRUD tests
 │   ├── test_services/    # Service layer tests
-│   │   └── test_skate_spot_service.py  # Repository & service tests
+│   │   ├── test_rating_service.py     # Rating service tests
+│   │   └── test_skate_spot_service.py # Skate spot service tests
 │   └── conftest.py       # Test configuration
 ├── main.py               # Application entry point
 ├── Makefile              # Development commands
@@ -335,7 +380,8 @@ skate-spots/
 6. **API Layer** (`app/routers/`)
    - **Authentication** (`auth.py`): Registration, login, logout, and user info
    - **REST API** (`skate_spots.py`): JSON endpoints with form data support
-   - **Frontend** (`frontend.py`): HTML pages with Jinja2 templates
+   - **Ratings API** (`ratings.py`): Rating CRUD operations and statistics
+   - **Frontend** (`frontend.py`): HTML pages with Jinja2 templates and spot details
    - HTTP request/response handling
 
 7. **Presentation Layer** (`templates/` & `static/`)
@@ -362,11 +408,13 @@ Following **focused, single-responsibility testing** principles:
 ### Test Organization
 Tests are organized into packages that mirror the app structure:
 - **`tests/test_models/`**: Model validation and business rules
-- **`tests/test_services/`**: Repository and service layer logic
+- **`tests/test_repositories/`**: Data access layer CRUD operations
+- **`tests/test_services/`**: Service layer logic and business rules
 - **`tests/test_api/`**: HTTP endpoints and integration workflows
   - REST API tests (JSON and form data)
   - Frontend route tests (HTML rendering)
   - Authentication flows (registration, login, logout)
+  - Rating endpoints and authorization
 
 ### Test Philosophy
 - **Small & Focused**: Each test validates a single piece of functionality
@@ -383,8 +431,14 @@ Tests are organized into packages that mirror the app structure:
 - Geographic helpers (`test_geojson.py`)
 - Enum validation and default generation
 
-**Service Tests (`tests/test_services/test_skate_spot_service.py`)**
-- Repository CRUD operations
+**Repository Tests (`tests/test_repositories/`)**
+- Rating CRUD operations (`test_rating_repository.py`)
+- Ownership validation
+- Statistics calculation
+- Unique constraint enforcement
+
+**Service Tests (`tests/test_services/`)**
+- Repository CRUD operations (`test_skate_spot_service.py`, `test_rating_service.py`)
 - Business logic validation
 - Error handling and edge cases
 - Service layer isolation
@@ -393,9 +447,10 @@ Tests are organized into packages that mirror the app structure:
 - REST API: HTTP request/response cycles with JSON
 - REST API: Form data submission handling
 - Authentication: Cookie-based login, logout, and access control
-- Frontend: HTML page rendering
+- Ratings: CRUD operations and authorization (`test_ratings.py`)
+- Frontend: HTML page rendering including spot details with ratings
 - Frontend: Template integration
-- Error responses (404, 422)
+- Error responses (404, 409, 422, 403)
 - OpenAPI documentation generation
 
 ### Test Configuration
@@ -459,6 +514,21 @@ Tests are configured in `pyproject.toml` with:
   "country": str         # Required: Country name
 }
 ```
+
+### Rating Model
+```python
+{
+  "score": int,           # Required: 1-5 stars
+  "review": str | None    # Optional: Max 500 characters
+}
+```
+
+**Rating Constraints:**
+- Score must be between 1 and 5
+- One rating per user per spot (enforced at database level)
+- Reviews limited to 500 characters
+- Authenticated users only
+- Users can only edit/delete their own ratings (admins can override)
 
 ## 🚀 Deployment
 

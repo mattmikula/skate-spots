@@ -13,6 +13,10 @@ from app.services.skate_spot_service import (
     SkateSpotService,
     get_skate_spot_service,
 )
+from app.services.rating_service import (
+    RatingService,
+    get_rating_service,
+)
 
 router = APIRouter(tags=["frontend"])
 templates = Jinja2Templates(directory="templates")
@@ -82,6 +86,37 @@ async def edit_spot_page(
     return templates.TemplateResponse(
         "spot_form.html",
         {"request": request, "spot": spot, "current_user": current_user},
+    )
+
+
+@router.get("/skate-spots/{spot_id}", response_class=HTMLResponse)
+async def spot_detail_page(
+    request: Request,
+    spot_id: UUID,
+    service: Annotated[SkateSpotService, Depends(get_skate_spot_service)],
+    rating_service: Annotated[RatingService, Depends(get_rating_service)],
+    current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
+) -> HTMLResponse:
+    """Display details of a specific skate spot with ratings."""
+    spot = service.get_spot(spot_id)
+    if not spot:
+        return RedirectResponse(url="/", status_code=303)
+
+    # Get ratings and user's rating if authenticated
+    ratings = rating_service.get_spot_ratings(spot_id)
+    user_rating = None
+    if current_user:
+        user_rating = rating_service.get_user_rating_for_spot(spot_id, current_user.id)
+
+    return templates.TemplateResponse(
+        "spot_detail.html",
+        {
+            "request": request,
+            "spot": spot,
+            "ratings": ratings,
+            "user_rating": user_rating,
+            "current_user": current_user,
+        },
     )
 
 
