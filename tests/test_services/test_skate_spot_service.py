@@ -78,6 +78,8 @@ def test_create_spot(repository, sample_spot_data):
     assert spot.spot_type == SpotType.RAIL
     assert spot.id is not None
     assert spot.created_at is not None
+    assert spot.average_rating is None
+    assert spot.ratings_count == 0
 
 
 # Repository read tests
@@ -89,6 +91,8 @@ def test_get_by_id_existing(repository, created_spot):
     assert retrieved_spot is not None
     assert retrieved_spot.id == created_spot.id
     assert retrieved_spot.name == created_spot.name
+    assert retrieved_spot.average_rating is None
+    assert retrieved_spot.ratings_count == 0
 
 
 def test_get_by_id_nonexistent(repository):

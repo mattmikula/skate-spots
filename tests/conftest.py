@@ -11,8 +11,13 @@ from app.core.rate_limiter import rate_limiter
 from app.core.security import create_access_token, get_password_hash
 from app.db.database import Base, get_db
 from app.models.user import UserCreate
+from app.repositories.rating_repository import RatingRepository
 from app.repositories.skate_spot_repository import SkateSpotRepository
 from app.repositories.user_repository import UserRepository
+from app.services.rating_service import (
+    RatingService,
+    get_rating_service,
+)
 from app.services.skate_spot_service import (
     SkateSpotService,
     get_skate_spot_service,
@@ -67,6 +72,8 @@ def client(session_factory):
 
     repository = SkateSpotRepository(session_factory=session_factory)
     service = SkateSpotService(repository)
+    rating_repository = RatingRepository(session_factory=session_factory)
+    rating_service = RatingService(rating_repository, repository)
 
     # Override database session
     def override_get_db():
@@ -84,6 +91,7 @@ def client(session_factory):
             db.close()
 
     app.dependency_overrides[get_skate_spot_service] = lambda: service
+    app.dependency_overrides[get_rating_service] = lambda: rating_service
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_user_repository] = override_get_user_repository
 
@@ -92,6 +100,7 @@ def client(session_factory):
             yield test_client
     finally:
         app.dependency_overrides.pop(get_skate_spot_service, None)
+        app.dependency_overrides.pop(get_rating_service, None)
         app.dependency_overrides.pop(get_db, None)
         app.dependency_overrides.pop(get_user_repository, None)
 

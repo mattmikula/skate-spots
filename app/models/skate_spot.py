@@ -122,6 +122,17 @@ class SkateSpot(SkateSpotBase):
     updated_at: datetime = Field(
         default_factory=datetime.utcnow, description="Last update timestamp"
     )
+    average_rating: float | None = Field(
+        None,
+        ge=1,
+        le=5,
+        description="Average user rating between 1 and 5, if the spot has been rated.",
+    )
+    ratings_count: int = Field(
+        0,
+        ge=0,
+        description="Total number of ratings submitted for this skate spot.",
+    )
 
     model_config = {
         "json_schema_extra": {
@@ -142,6 +153,8 @@ class SkateSpot(SkateSpotBase):
                 "requires_permission": False,
                 "created_at": "2023-01-01T00:00:00Z",
                 "updated_at": "2023-01-01T00:00:00Z",
+                "average_rating": 4.5,
+                "ratings_count": 12,
             }
         }
     }

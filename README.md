@@ -10,6 +10,7 @@ A modern FastAPI application for sharing and discovering skateboarding spots aro
 
 - **Interactive Web Frontend** built with HTMX for dynamic user interactions
 - **REST API** for managing skate spots with full CRUD operations and rich filtering
+- **User Ratings** so skaters can rate spots, manage their own feedback, and see community sentiment
 - **Secure Authentication** with registration, login, and cookie-based JWT tokens
 - **Rich Data Model** with locations, difficulty levels, and spot types
 - **Comprehensive Validation** using Pydantic models
@@ -247,6 +248,22 @@ curl -X POST "http://localhost:8000/api/v1/auth/login" \
 curl "http://localhost:8000/api/v1/auth/me" -b cookies.txt
 ```
 
+**Rate a Spot:**
+```bash
+curl -X PUT "http://localhost:8000/api/v1/skate-spots/<spot-id>/ratings/me" \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  -d '{
+    "score": 4,
+    "comment": "Smooth transitions and clean coping."
+  }'
+```
+
+**Check Rating Summary:**
+```bash
+curl "http://localhost:8000/api/v1/skate-spots/<spot-id>/ratings/summary" -b cookies.txt
+```
+
 ## 🏗️ Architecture
 
 This project follows **Clean Architecture** principles with clear separation of concerns:
@@ -257,7 +274,9 @@ skate-spots/
 │   ├── env.py            # Alembic environment configuration
 │   ├── script.py.mako    # Migration file template
 │   └── versions/         # Individual migration revisions
-│       └── 0001_create_skate_spots_table.py
+│       ├── 0001_create_skate_spots_table.py
+│       ├── 0002_add_user_authentication.py
+│       └── 0003_add_spot_ratings.py
 ├── app/
 │   ├── core/             # Shared configuration & security helpers
 │   │   ├── config.py
@@ -267,16 +286,20 @@ skate-spots/
 │   │   ├── database.py          # Database configuration
 │   │   └── models.py            # SQLAlchemy models
 │   ├── models/           # Pydantic data models
+│   │   ├── rating.py
 │   │   ├── skate_spot.py
 │   │   └── user.py
 │   ├── repositories/     # Data access layer
+│   │   ├── rating_repository.py
 │   │   ├── skate_spot_repository.py
 │   │   └── user_repository.py
 │   ├── routers/          # FastAPI route handlers
 │   │   ├── auth.py              # Authentication API
 │   │   ├── frontend.py          # HTML/HTMX routes
+│   │   ├── ratings.py           # Rating API routes
 │   │   └── skate_spots.py       # REST API routes
 │   └── services/         # Business logic layer
+│       ├── rating_service.py
 │       └── skate_spot_service.py
 ├── static/               # Static assets
 │   └── style.css         # Application styles
@@ -292,12 +315,18 @@ skate-spots/
 │   ├── test_api/         # API integration tests
 │   │   ├── test_auth.py         # Authentication endpoint tests
 │   │   ├── test_frontend.py     # Frontend route tests
+│   │   ├── test_ratings.py      # Rating endpoint tests
 │   │   ├── test_root.py         # Root & docs endpoints
 │   │   └── test_skate_spots.py  # CRUD endpoint tests
 │   ├── test_models/      # Model validation tests
+│   │   ├── test_rating.py       # Rating model tests
 │   │   ├── test_skate_spot.py   # Skate spot model tests
 │   │   └── test_user.py         # User model tests
+│   ├── test_repositories/ # Repository layer tests
+│   │   ├── test_rating_repository.py
+│   │   └── test_user_repository.py
 │   ├── test_services/    # Service layer tests
+│   │   ├── test_rating_service.py
 │   │   └── test_skate_spot_service.py  # Repository & service tests
 │   └── conftest.py       # Test configuration
 ├── main.py               # Application entry point
@@ -349,6 +378,7 @@ skate-spots/
 - **SQLite Database**: Persistent storage with SQLAlchemy
 - **HTMX Frontend**: Progressive enhancement for dynamic UI without heavy JavaScript
 - **Hybrid API**: Endpoints accept both JSON and form data for flexibility
+- **User Ratings**: Dedicated repository/service pairing handles per-user ratings with live spot summaries
 - **Dependency Injection**: Services and repositories use FastAPI dependency injection
 - **Pydantic Models**: Strong typing and automatic validation
 - **Single Responsibility**: Each class has a focused purpose
@@ -379,19 +409,23 @@ Tests are organized into packages that mirror the app structure:
 
 **Model Tests (`tests/test_models/`)**
 - Skate spot validation rules (`test_skate_spot.py`)
+- Rating score boundaries and optional comments (`test_rating.py`)
 - User schema constraints (`test_user.py`)
 - Geographic helpers (`test_geojson.py`)
 - Enum validation and default generation
 
-**Service Tests (`tests/test_services/test_skate_spot_service.py`)**
-- Repository CRUD operations
-- Business logic validation
-- Error handling and edge cases
-- Service layer isolation
+**Service Tests (`tests/test_services/`)**
+- Skate spot repository and service flows (`test_skate_spot_service.py`)
+- Rating lifecycle, summaries, and error handling (`test_rating_service.py`)
+
+**Repository Tests (`tests/test_repositories/`)**
+- User persistence helpers (`test_user_repository.py`)
+- Rating persistence, upsert logic, and aggregation (`test_rating_repository.py`)
 
 **API Tests (`tests/test_api/`)**
 - REST API: HTTP request/response cycles with JSON
 - REST API: Form data submission handling
+- Rating endpoints: create/update/delete and summary queries (`test_ratings.py`)
 - Authentication: Cookie-based login, logout, and access control
 - Frontend: HTML page rendering
 - Frontend: Template integration

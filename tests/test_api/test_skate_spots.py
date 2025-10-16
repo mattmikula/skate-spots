@@ -85,6 +85,8 @@ def test_create_spot(client, sample_spot_payload, auth_token):
     assert data["difficulty"] == "intermediate"
     assert data["is_public"] is True
     assert data["requires_permission"] is False
+    assert data["average_rating"] is None
+    assert data["ratings_count"] == 0
 
     # Check generated fields
     assert "id" in data
@@ -137,6 +139,8 @@ def test_get_spot_by_id(client, created_spot_id):
     retrieved_spot = get_response.json()
     assert retrieved_spot["id"] == created_spot_id
     assert retrieved_spot["name"] == "API Test Spot"
+    assert retrieved_spot["average_rating"] is None
+    assert retrieved_spot["ratings_count"] == 0
 
 
 def test_get_nonexistent_spot(client):
@@ -164,6 +168,9 @@ def test_list_spots_with_existing_data(client, created_spot_id, second_spot_id):
     spot_ids = [spot["id"] for spot in spots]
     assert created_spot_id in spot_ids
     assert second_spot_id in spot_ids
+    for spot in spots:
+        assert "average_rating" in spot
+        assert "ratings_count" in spot
 
 
 def test_list_spots_with_filters(client, sample_spot_payload, auth_token):
