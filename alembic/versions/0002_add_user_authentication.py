@@ -8,6 +8,7 @@ from datetime import datetime
 
 import bcrypt
 import sqlalchemy as sa
+from sqlalchemy import inspect
 
 from alembic import op
 
@@ -28,46 +29,61 @@ def _hash_placeholder(password: str) -> str:
 
 
 def upgrade() -> None:
-    # Create users table
-    op.create_table(
-        "users",
-        sa.Column("id", sa.String(length=36), primary_key=True, nullable=False),
-        sa.Column("email", sa.String(length=255), nullable=False),
-        sa.Column("username", sa.String(length=50), nullable=False),
-        sa.Column("hashed_password", sa.String(length=255), nullable=False),
-        sa.Column(
-            "is_active",
-            sa.Boolean(),
-            nullable=False,
-            server_default=sa.text("1"),
-        ),
-        sa.Column(
-            "is_admin",
-            sa.Boolean(),
-            nullable=False,
-            server_default=sa.text("0"),
-        ),
-        sa.Column(
-            "created_at",
-            sa.DateTime(),
-            nullable=False,
-            server_default=sa.text("CURRENT_TIMESTAMP"),
-        ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(),
-            nullable=False,
-            server_default=sa.text("CURRENT_TIMESTAMP"),
-        ),
-    )
-    op.create_index(op.f("ix_users_email"), "users", ["email"], unique=True)
-    op.create_index(op.f("ix_users_username"), "users", ["username"], unique=True)
-
-    # Add user_id column to skate_spots (nullable while we backfill)
-    op.add_column("skate_spots", sa.Column("user_id", sa.String(length=36), nullable=True))
-    op.create_index(op.f("ix_skate_spots_user_id"), "skate_spots", ["user_id"])
-
     bind = op.get_bind()
+    inspector = inspect(bind)
+
+    existing_tables = set(inspector.get_table_names())
+
+    if "users" not in existing_tables:
+        op.create_table(
+            "users",
+            sa.Column("id", sa.String(length=36), primary_key=True, nullable=False),
+            sa.Column("email", sa.String(length=255), nullable=False),
+            sa.Column("username", sa.String(length=50), nullable=False),
+            sa.Column("hashed_password", sa.String(length=255), nullable=False),
+            sa.Column(
+                "is_active",
+                sa.Boolean(),
+                nullable=False,
+                server_default=sa.text("1"),
+            ),
+            sa.Column(
+                "is_admin",
+                sa.Boolean(),
+                nullable=False,
+                server_default=sa.text("0"),
+            ),
+            sa.Column(
+                "created_at",
+                sa.DateTime(),
+                nullable=False,
+                server_default=sa.text("CURRENT_TIMESTAMP"),
+            ),
+            sa.Column(
+                "updated_at",
+                sa.DateTime(),
+                nullable=False,
+                server_default=sa.text("CURRENT_TIMESTAMP"),
+            ),
+        )
+
+    users_indexes = {index["name"] for index in inspector.get_indexes("users")}
+    if "ix_users_email" not in users_indexes:
+        op.create_index(op.f("ix_users_email"), "users", ["email"], unique=True)
+    if "ix_users_username" not in users_indexes:
+        op.create_index(op.f("ix_users_username"), "users", ["username"], unique=True)
+
+    skate_spot_columns = {column["name"]: column for column in inspector.get_columns("skate_spots")}
+    if "user_id" not in skate_spot_columns:
+        op.add_column("skate_spots", sa.Column("user_id", sa.String(length=36), nullable=True))
+        user_id_nullable = True
+    else:
+        user_id_nullable = skate_spot_columns["user_id"]["nullable"]
+
+    skate_spot_indexes = {index["name"] for index in inspector.get_indexes("skate_spots")}
+    if "ix_skate_spots_user_id" not in skate_spot_indexes:
+        op.create_index(op.f("ix_skate_spots_user_id"), "skate_spots", ["user_id"])
+
     skate_spots_without_owner = bind.execute(
         sa.text("SELECT id FROM skate_spots WHERE user_id IS NULL")
     ).fetchall()
@@ -98,27 +114,66 @@ def upgrade() -> None:
             {"user_id": system_user_id},
         )
 
-    op.alter_column(
-        "skate_spots",
-        "user_id",
-        existing_type=sa.String(length=36),
-        nullable=False,
-    )
-    op.create_foreign_key(
-        "fk_skate_spots_user_id_users",
-        "skate_spots",
-        "users",
-        ["user_id"],
-        ["id"],
-        ondelete="CASCADE",
-    )
+    existing_fk_names = {fk["name"] for fk in inspector.get_foreign_keys("skate_spots")}
+    fk_missing = "fk_skate_spots_user_id_users" not in existing_fk_names
+
+    is_sqlite = bind.dialect.name == "sqlite"
+    if is_sqlite and (user_id_nullable or fk_missing):
+        with op.batch_alter_table("skate_spots") as batch_op:
+            if user_id_nullable:
+                batch_op.alter_column(
+                    "user_id",
+                    existing_type=sa.String(length=36),
+                    nullable=False,
+                )
+            if fk_missing:
+                batch_op.create_foreign_key(
+                    "fk_skate_spots_user_id_users",
+                    referent_table="users",
+                    local_cols=["user_id"],
+                    remote_cols=["id"],
+                    ondelete="CASCADE",
+                )
+    else:
+        if user_id_nullable:
+            op.alter_column(
+                "skate_spots",
+                "user_id",
+                existing_type=sa.String(length=36),
+                nullable=False,
+            )
+        if fk_missing:
+            op.create_foreign_key(
+                "fk_skate_spots_user_id_users",
+                "skate_spots",
+                "users",
+                ["user_id"],
+                ["id"],
+                ondelete="CASCADE",
+            )
 
 
 def downgrade() -> None:
-    op.drop_constraint("fk_skate_spots_user_id_users", "skate_spots", type_="foreignkey")
-    op.drop_index(op.f("ix_skate_spots_user_id"), table_name="skate_spots")
-    op.drop_column("skate_spots", "user_id")
+    bind = op.get_bind()
+    inspector = inspect(bind)
 
-    op.drop_index(op.f("ix_users_username"), table_name="users")
-    op.drop_index(op.f("ix_users_email"), table_name="users")
-    op.drop_table("users")
+    fk_names = {row["name"] for row in inspector.get_foreign_keys("skate_spots")}
+    if "fk_skate_spots_user_id_users" in fk_names:
+        op.drop_constraint("fk_skate_spots_user_id_users", "skate_spots", type_="foreignkey")
+
+    skate_spot_indexes = {index["name"] for index in inspector.get_indexes("skate_spots")}
+    if "ix_skate_spots_user_id" in skate_spot_indexes:
+        op.drop_index(op.f("ix_skate_spots_user_id"), table_name="skate_spots")
+
+    column_names = {column["name"] for column in inspector.get_columns("skate_spots")}
+    if "user_id" in column_names:
+        op.drop_column("skate_spots", "user_id")
+
+    user_indexes = {index["name"] for index in inspector.get_indexes("users")}
+    if "ix_users_username" in user_indexes:
+        op.drop_index(op.f("ix_users_username"), table_name="users")
+    if "ix_users_email" in user_indexes:
+        op.drop_index(op.f("ix_users_email"), table_name="users")
+
+    if "users" in inspector.get_table_names():
+        op.drop_table("users")
