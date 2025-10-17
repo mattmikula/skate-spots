@@ -4,7 +4,7 @@ Comprehensive test suite for the Skate Spots Django application using pytest-dja
 
 ## Test Coverage
 
-**81 tests** covering all functionality:
+**102 tests** covering all functionality:
 
 ### Test Files
 
@@ -14,6 +14,7 @@ Comprehensive test suite for the Skate Spots Django application using pytest-dja
   - `test_user` - Standard user fixture
   - `authenticated_api_client` - Authenticated API client
   - `admin_user` - Admin user fixture
+  - `admin_api_client` - Authenticated admin API client
   - `another_user` - Second user for permission tests
 
 - **`test_models.py`** - Model validation and behavior (12 tests)
@@ -30,11 +31,22 @@ Comprehensive test suite for the Skate Spots Django application using pytest-dja
   - GeoJSON endpoint
   - Permission checks (owner/admin)
 
-- **`test_frontend_pages.py`** - HTML pages and forms (21 tests)
+- **`test_ratings.py`** - Ratings API and models (14 tests)
+  - Rating model creation and validation
+  - String representation
+  - Unique constraint (one rating per user per spot)
+  - Cascade delete with spot
+  - List and filter ratings by spot
+  - Create rating (success, unauthenticated, duplicate, invalid score)
+  - Update rating by owner/non-owner
+  - Delete rating by owner/admin
+
+- **`test_frontend_pages.py`** - HTML pages and forms (28 tests)
   - Page rendering (home, list, map, auth pages)
   - Form submissions (login, register, create/edit spots)
   - Authentication requirements
   - Owner-only access verification
+  - Ratings UI tests: spot detail pages, rating display, form interactions
 
 - **`test_rate_limiting.py`** - Security and rate limits (15 tests)
   - Rate limiting decorator configuration
@@ -55,7 +67,7 @@ uv run pytest tests/test_models.py
 uv run pytest -v
 
 # Run with coverage
-uv run pytest --cov=accounts --cov=spots
+uv run pytest --cov=accounts --cov=spots --cov=ratings
 
 # Run linting and tests
 make check
@@ -116,6 +128,33 @@ def test_create_spot_api(authenticated_api_client):
     )
     assert response.status_code == 201
     assert response.data["name"] == "New Spot"
+```
+
+### Example Rating Test
+
+```python
+@pytest.mark.django_db
+def test_create_rating(authenticated_api_client, test_user):
+    """Test creating a rating."""
+    spot = SkateSpot.objects.create(
+        name="Test Spot",
+        description="Test",
+        spot_type=SpotType.PARK,
+        difficulty=Difficulty.BEGINNER,
+        latitude=40.7128,
+        longitude=-74.0060,
+        city="NYC",
+        country="USA",
+        owner=test_user,
+    )
+    response = authenticated_api_client.post(
+        "/api/v1/ratings/",
+        {"spot": str(spot.id), "score": 5, "comment": "Excellent!"},
+        format="json",
+    )
+    assert response.status_code == 201
+    assert response.data["score"] == 5
+    assert response.data["comment"] == "Excellent!"
 ```
 
 ## Test Configuration

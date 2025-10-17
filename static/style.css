@@ -461,3 +461,269 @@ nav form {
     background: none;
     margin: 0;
 }
+
+/* Spot Detail Styles */
+.spot-detail {
+    background: white;
+    border-radius: 8px;
+    padding: 2rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.back-link {
+    margin-bottom: 1.5rem;
+}
+
+.back-link a {
+    color: #3498db;
+    text-decoration: none;
+    font-size: 0.95rem;
+}
+
+.back-link a:hover {
+    text-decoration: underline;
+}
+
+.spot-detail-header {
+    margin-bottom: 1.5rem;
+}
+
+.spot-detail-header h1 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    font-size: 2rem;
+}
+
+.spot-description {
+    font-size: 1rem;
+    color: #555;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+
+.spot-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: #f9f9f9;
+    border-radius: 8px;
+}
+
+.info-section h3 {
+    color: #2c3e50;
+    margin-bottom: 0.75rem;
+    font-size: 1.1rem;
+}
+
+.info-section p {
+    color: #666;
+    margin-bottom: 0.5rem;
+}
+
+.spot-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.spot-card-header h3 {
+    flex: 1;
+}
+
+.spot-rating-badge {
+    background: #f1c40f;
+    color: #333;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    font-size: 0.9rem;
+}
+
+/* Ratings Section */
+.ratings-section {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #ddd;
+}
+
+.ratings-header {
+    margin-bottom: 1.5rem;
+}
+
+.ratings-header h2 {
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.ratings-summary {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    font-size: 1rem;
+}
+
+.rating-average {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #f1c40f;
+}
+
+.rating-count {
+    color: #999;
+    font-size: 0.95rem;
+}
+
+/* Rating Form */
+.rating-form-wrapper {
+    background: #f9f9f9;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.rating-form-wrapper h3 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+}
+
+.rating-form {
+    padding: 0;
+    box-shadow: none;
+    background: none;
+}
+
+.star-rating select {
+    font-size: 1rem;
+    padding: 0.5rem;
+}
+
+.user-rating-existing {
+    background: #efe;
+    border: 1px solid #cfc;
+    color: #3c3;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
+.rating-login-prompt {
+    background: #eee;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 2rem;
+}
+
+.rating-login-prompt a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+.rating-login-prompt a:hover {
+    text-decoration: underline;
+}
+
+/* Ratings List */
+.ratings-list {
+    margin-top: 2rem;
+}
+
+.ratings-list h3 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+}
+
+.rating-item {
+    background: #fafafa;
+    padding: 1rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    border-left: 4px solid #f1c40f;
+}
+
+.rating-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 0.75rem;
+}
+
+.rating-info {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.rating-info strong {
+    color: #2c3e50;
+    font-size: 0.95rem;
+}
+
+.rating-score {
+    background: #f1c40f;
+    color: #333;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.rating-date {
+    color: #999;
+    font-size: 0.85rem;
+}
+
+.rating-comment {
+    color: #555;
+    margin: 0.75rem 0;
+    line-height: 1.5;
+}
+
+.rating-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.btn-action {
+    padding: 0.25rem 0.75rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.3s;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-edit-small {
+    background: #f39c12;
+    color: white;
+}
+
+.btn-edit-small:hover {
+    background: #e67e22;
+}
+
+.btn-delete-small {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-delete-small:hover {
+    background: #c0392b;
+}
+
+.no-ratings {
+    background: #f0f0f0;
+    padding: 1.5rem;
+    border-radius: 4px;
+    text-align: center;
+    color: #666;
+}

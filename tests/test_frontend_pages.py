@@ -3,6 +3,7 @@
 import pytest
 from django.contrib.auth import get_user_model
 from spots.models import Difficulty, SkateSpot, SpotType
+from ratings.models import Rating
 
 User = get_user_model()
 
@@ -301,3 +302,157 @@ class TestFormSubmissions:
         assert response.status_code == 302
         # User should be logged out
         assert "_auth_user_id" not in client.session
+
+
+class TestRatingsUI:
+    """Tests for ratings UI functionality."""
+
+    @pytest.mark.django_db
+    def test_spot_detail_page_loads(self, client, test_user):
+        """Test spot detail page loads."""
+        spot = SkateSpot.objects.create(
+            name="Test Spot",
+            description="A test spot",
+            spot_type=SpotType.PARK,
+            difficulty=Difficulty.BEGINNER,
+            latitude=40.7128,
+            longitude=-74.0060,
+            city="New York",
+            country="USA",
+            owner=test_user
+        )
+        response = client.get(f"/skate-spots/{spot.id}/")
+        assert response.status_code == 200
+        assert b"Test Spot" in response.content
+        assert b"Ratings & Reviews" in response.content
+
+    @pytest.mark.django_db
+    def test_spot_detail_shows_average_rating(self, client, test_user, another_user):
+        """Test spot detail shows average rating."""
+        spot = SkateSpot.objects.create(
+            name="Rated Spot",
+            description="A rated spot",
+            spot_type=SpotType.PARK,
+            difficulty=Difficulty.BEGINNER,
+            latitude=40.7128,
+            longitude=-74.0060,
+            city="New York",
+            country="USA",
+            owner=test_user
+        )
+        # Create ratings
+        Rating.objects.create(spot=spot, user=test_user, score=4)
+        Rating.objects.create(spot=spot, user=another_user, score=5)
+
+        response = client.get(f"/skate-spots/{spot.id}/")
+        assert response.status_code == 200
+        # Average of 4 and 5 is 4.5
+        assert b"4.5" in response.content or b"4" in response.content
+
+    @pytest.mark.django_db
+    def test_spot_detail_shows_all_ratings(self, client, test_user, another_user):
+        """Test spot detail shows all ratings."""
+        spot = SkateSpot.objects.create(
+            name="Multi-Rated Spot",
+            description="Spot with multiple ratings",
+            spot_type=SpotType.PARK,
+            difficulty=Difficulty.BEGINNER,
+            latitude=40.7128,
+            longitude=-74.0060,
+            city="New York",
+            country="USA",
+            owner=test_user
+        )
+        rating1 = Rating.objects.create(
+            spot=spot,
+            user=test_user,
+            score=5,
+            comment="Excellent spot!"
+        )
+        rating2 = Rating.objects.create(
+            spot=spot,
+            user=another_user,
+            score=4,
+            comment="Really good"
+        )
+
+        response = client.get(f"/skate-spots/{spot.id}/")
+        assert response.status_code == 200
+        assert b"Excellent spot!" in response.content
+        assert b"Really good" in response.content
+
+    @pytest.mark.django_db
+    def test_spot_detail_rating_form_shown_for_authenticated(self, client, test_user):
+        """Test rating form is shown for authenticated users."""
+        spot = SkateSpot.objects.create(
+            name="Test Spot",
+            description="A test spot",
+            spot_type=SpotType.PARK,
+            difficulty=Difficulty.BEGINNER,
+            latitude=40.7128,
+            longitude=-74.0060,
+            city="New York",
+            country="USA",
+            owner=test_user
+        )
+        client.force_login(test_user)
+        response = client.get(f"/skate-spots/{spot.id}/")
+        assert response.status_code == 200
+        assert b"Rate This Spot" in response.content
+
+    @pytest.mark.django_db
+    def test_spot_detail_rating_prompt_for_unauthenticated(self, client, test_user):
+        """Test rating login prompt is shown for unauthenticated users."""
+        spot = SkateSpot.objects.create(
+            name="Test Spot",
+            description="A test spot",
+            spot_type=SpotType.PARK,
+            difficulty=Difficulty.BEGINNER,
+            latitude=40.7128,
+            longitude=-74.0060,
+            city="New York",
+            country="USA",
+            owner=test_user
+        )
+        response = client.get(f"/skate-spots/{spot.id}/")
+        assert response.status_code == 200
+        assert (b"Login" in response.content or b"login" in response.content)
+
+    @pytest.mark.django_db
+    def test_spot_card_shows_rating_badge(self, client, test_user):
+        """Test spot card on home page shows rating badge."""
+        spot = SkateSpot.objects.create(
+            name="Rated Spot",
+            description="A rated spot",
+            spot_type=SpotType.PARK,
+            difficulty=Difficulty.BEGINNER,
+            latitude=40.7128,
+            longitude=-74.0060,
+            city="New York",
+            country="USA",
+            owner=test_user
+        )
+        Rating.objects.create(spot=spot, user=test_user, score=5)
+
+        response = client.get("/")
+        assert response.status_code == 200
+        # Check for rating badge presence
+        assert b"spot-rating-badge" in response.content or b"5" in response.content
+
+    @pytest.mark.django_db
+    def test_spot_card_shows_view_details_button(self, client, test_user):
+        """Test spot card shows View Details button."""
+        spot = SkateSpot.objects.create(
+            name="Test Spot",
+            description="A test spot",
+            spot_type=SpotType.PARK,
+            difficulty=Difficulty.BEGINNER,
+            latitude=40.7128,
+            longitude=-74.0060,
+            city="New York",
+            country="USA",
+            owner=test_user
+        )
+        response = client.get("/")
+        assert response.status_code == 200
+        assert b"View Details" in response.content

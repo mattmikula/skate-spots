@@ -1,0 +1,177 @@
+{% extends "spots/base.html" %}
+
+{% block content %}
+<div class="spot-detail">
+    <div class="back-link">
+        <a href="{% url 'home' %}">← Back to Spots</a>
+    </div>
+
+    <div class="spot-detail-header">
+        <h1>{{ spot.name }}</h1>
+        <div class="spot-meta">
+            <span class="badge badge-type">{{ spot.spot_type }}</span>
+            <span class="badge badge-difficulty {{ spot.difficulty }}">{{ spot.difficulty }}</span>
+        </div>
+    </div>
+
+    <p class="spot-description">{{ spot.description }}</p>
+
+    <div class="spot-info">
+        <div class="info-section">
+            <h3>Location</h3>
+            <p>📍 {{ spot.city }}, {{ spot.country }}</p>
+            {% if spot.address %}<p>{{ spot.address }}</p>{% endif %}
+            <p>📌 Lat: {{ spot.latitude }}, Lon: {{ spot.longitude }}</p>
+        </div>
+
+        <div class="info-section">
+            <h3>Details</h3>
+            <p>{% if spot.is_public %}✅ Public{% else %}🔒 Private{% endif %}</p>
+            {% if spot.requires_permission %}<p>⚠️ Permission required to skate</p>{% endif %}
+        </div>
+
+        {% if user.is_authenticated and user == spot.owner or user.is_admin %}
+        <div class="info-section">
+            <h3>Actions</h3>
+            <div class="spot-actions">
+                <a href="{% url 'edit_spot' spot.id %}" class="btn btn-edit">Edit Spot</a>
+                <button
+                    hx-delete="/api/v1/skate-spots/{{ spot.id }}/"
+                    hx-confirm="Are you sure you want to delete this spot?"
+                    hx-on::after-request="if(event.detail.xhr.status === 204) window.location.href = '{% url 'home' %}';"
+                    class="btn btn-delete">
+                    Delete Spot
+                </button>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Ratings Section -->
+    <div class="ratings-section">
+        <div class="ratings-header">
+            <h2>Ratings & Reviews</h2>
+            <div class="ratings-summary">
+                {% if ratings %}
+                    <span class="rating-average">
+                        ⭐ {{ average_rating|floatformat:1 }} / 5.0
+                    </span>
+                    <span class="rating-count">({{ ratings|length }} rating{{ ratings|length|pluralize }})</span>
+                {% else %}
+                    <span class="rating-average">No ratings yet</span>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if user.is_authenticated %}
+            <!-- Rating Form -->
+            <div id="rating-form-container">
+                {% if user_rating %}
+                    <div class="user-rating-existing">
+                        <p>You've rated this spot:</p>
+                        <button
+                            hx-get="{% url 'rating_form' spot.id %}"
+                            hx-target="#rating-form-container"
+                            hx-swap="innerHTML"
+                            class="btn btn-secondary"
+                            style="margin-top: 0.5rem;">
+                            Edit Your Rating
+                        </button>
+                    </div>
+                {% else %}
+                    <div class="rating-form-wrapper">
+                        <h3>Rate This Spot</h3>
+                        <form
+                            hx-post="/api/v1/ratings/"
+                            hx-ext="json-enc"
+                            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                            hx-on::after-request="if(event.detail.xhr.status === 201) window.location.reload();"
+                            class="rating-form">
+                            <input type="hidden" name="spot" value="{{ spot.id }}">
+
+                            <div class="form-group">
+                                <label for="score">Rating</label>
+                                <div class="star-rating">
+                                    <select id="score" name="score" required>
+                                        <option value="">Select rating...</option>
+                                        <option value="1">⭐ 1 - Poor</option>
+                                        <option value="2">⭐⭐ 2 - Fair</option>
+                                        <option value="3">⭐⭐⭐ 3 - Good</option>
+                                        <option value="4">⭐⭐⭐⭐ 4 - Great</option>
+                                        <option value="5">⭐⭐⭐⭐⭐ 5 - Excellent</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="comment">Comment (optional)</label>
+                                <textarea
+                                    id="comment"
+                                    name="comment"
+                                    placeholder="Share your thoughts about this spot..."
+                                    rows="3"></textarea>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">
+                                <span class="htmx-indicator" style="margin-right: 0.5rem;">⏳</span>
+                                Submit Rating
+                            </button>
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="rating-login-prompt">
+                <p><a href="{% url 'login' %}">Login</a> or <a href="{% url 'register' %}">register</a> to rate this spot</p>
+            </div>
+        {% endif %}
+
+        <!-- Ratings List -->
+        {% if ratings %}
+            <div class="ratings-list">
+                <h3>All Reviews</h3>
+                {% for rating in ratings %}
+                    <div class="rating-item" id="rating-{{ rating.id }}">
+                        <div class="rating-header">
+                            <div class="rating-info">
+                                <strong>{{ rating.user_username }}</strong>
+                                <span class="rating-score">⭐ {{ rating.score }} / 5</span>
+                            </div>
+                            <span class="rating-date">{{ rating.created_at|date:"M d, Y" }}</span>
+                        </div>
+
+                        {% if rating.comment %}
+                            <p class="rating-comment">{{ rating.comment }}</p>
+                        {% endif %}
+
+                        {% if user.is_authenticated and user.id == rating.user.id or user.is_admin %}
+                            <div class="rating-actions">
+                                <button
+                                    hx-get="/ratings/{{ rating.id }}/edit/"
+                                    hx-target="#rating-{{ rating.id }}"
+                                    hx-swap="outerHTML"
+                                    class="btn-action btn-edit-small">
+                                    Edit
+                                </button>
+                                <button
+                                    hx-delete="/api/v1/ratings/{{ rating.id }}/"
+                                    hx-confirm="Delete this rating?"
+                                    hx-target="#rating-{{ rating.id }}"
+                                    hx-swap="outerHTML swap:0.3s"
+                                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                    class="btn-action btn-delete-small">
+                                    Delete
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="no-ratings">
+                <p>No ratings yet. Be the first to rate this spot!</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,48 @@
+<div class="rating-form-wrapper">
+    <h3>Edit Your Rating</h3>
+    <form
+        hx-patch="/api/v1/ratings/{{ rating.id }}/"
+        hx-ext="json-enc"
+        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+        hx-on::after-request="if(event.detail.xhr.status === 200) window.location.reload();"
+        class="rating-form">
+
+        <div class="form-group">
+            <label for="score">Rating</label>
+            <div class="star-rating">
+                <select id="score" name="score" required>
+                    <option value="">Select rating...</option>
+                    <option value="1" {% if rating.score == 1 %}selected{% endif %}>⭐ 1 - Poor</option>
+                    <option value="2" {% if rating.score == 2 %}selected{% endif %}>⭐⭐ 2 - Fair</option>
+                    <option value="3" {% if rating.score == 3 %}selected{% endif %}>⭐⭐⭐ 3 - Good</option>
+                    <option value="4" {% if rating.score == 4 %}selected{% endif %}>⭐⭐⭐⭐ 4 - Great</option>
+                    <option value="5" {% if rating.score == 5 %}selected{% endif %}>⭐⭐⭐⭐⭐ 5 - Excellent</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="comment">Comment (optional)</label>
+            <textarea
+                id="comment"
+                name="comment"
+                placeholder="Share your thoughts about this spot..."
+                rows="3">{{ rating.comment }}</textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                <span class="htmx-indicator" style="margin-right: 0.5rem;">⏳</span>
+                Update Rating
+            </button>
+            <button
+                type="button"
+                hx-get="{% url 'rating_form' spot.id %}"
+                hx-target="#rating-form-container"
+                hx-swap="innerHTML"
+                class="btn btn-secondary">
+                Cancel
+            </button>
+        </div>
+    </form>
+</div>
