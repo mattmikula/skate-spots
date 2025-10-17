@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import sqlalchemy as sa
+from sqlalchemy import inspect
 
 from alembic import op
-from sqlalchemy import inspect
 
 revision = "0003_add_spot_ratings"
 down_revision = "0002_add_user_authentication"
