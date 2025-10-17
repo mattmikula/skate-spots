@@ -45,30 +45,34 @@ def upgrade() -> None:
         unique=True,
     )
 
-    # Create foreign key constraints
-    op.create_foreign_key(
-        "fk_ratings_spot_id_skate_spots",
-        "ratings",
-        "skate_spots",
-        ["spot_id"],
-        ["id"],
-        ondelete="CASCADE",
-    )
-    op.create_foreign_key(
-        "fk_ratings_user_id_users",
-        "ratings",
-        "users",
-        ["user_id"],
-        ["id"],
-        ondelete="CASCADE",
-    )
+    # Create foreign key constraints (using batch mode for SQLite compatibility)
+    with op.batch_alter_table("ratings", schema=None) as batch_op:
+        batch_op.create_foreign_key(
+            "fk_ratings_spot_id_skate_spots",
+            "skate_spots",
+            ["spot_id"],
+            ["id"],
+            ondelete="CASCADE",
+        )
+        batch_op.create_foreign_key(
+            "fk_ratings_user_id_users",
+            "users",
+            ["user_id"],
+            ["id"],
+            ondelete="CASCADE",
+        )
 
 
 def downgrade() -> None:
     """Drop ratings table and constraints."""
-    op.drop_constraint("fk_ratings_user_id_users", "ratings", type_="foreignkey")
-    op.drop_constraint("fk_ratings_spot_id_skate_spots", "ratings", type_="foreignkey")
+    # Drop indexes first
     op.drop_index("ix_ratings_spot_user", table_name="ratings")
     op.drop_index(op.f("ix_ratings_user_id"), table_name="ratings")
     op.drop_index(op.f("ix_ratings_spot_id"), table_name="ratings")
+
+    # Drop constraints using batch mode for SQLite compatibility
+    with op.batch_alter_table("ratings", schema=None) as batch_op:
+        batch_op.drop_constraint("fk_ratings_user_id_users", type_="foreignkey")
+        batch_op.drop_constraint("fk_ratings_spot_id_skate_spots", type_="foreignkey")
+
     op.drop_table("ratings")
