@@ -84,6 +84,7 @@
                         <form
                             hx-post="/api/v1/ratings/"
                             hx-ext="json-enc"
+                            hx-swap="none"
                             hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
                             hx-on::after-request="if(event.detail.xhr.status === 201) window.location.reload();"
                             class="rating-form">
@@ -147,18 +148,17 @@
                         {% if user.is_authenticated and user.id == rating.user.id or user.is_admin %}
                             <div class="rating-actions">
                                 <button
-                                    hx-get="/ratings/{{ rating.id }}/edit/"
-                                    hx-target="#rating-{{ rating.id }}"
-                                    hx-swap="outerHTML"
+                                    hx-get="{% url 'rating_form' spot.id %}"
+                                    hx-target="#rating-form-container"
+                                    hx-swap="innerHTML"
                                     class="btn-action btn-edit-small">
                                     Edit
                                 </button>
                                 <button
                                     hx-delete="/api/v1/ratings/{{ rating.id }}/"
                                     hx-confirm="Delete this rating?"
-                                    hx-target="#rating-{{ rating.id }}"
-                                    hx-swap="outerHTML swap:0.3s"
                                     hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                    hx-on::after-request="if(event.detail.xhr.status === 204) window.location.reload();"
                                     class="btn-action btn-delete-small">
                                     Delete
                                 </button>

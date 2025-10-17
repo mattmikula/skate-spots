@@ -3,6 +3,7 @@
     <form
         hx-patch="/api/v1/ratings/{{ rating.id }}/"
         hx-ext="json-enc"
+        hx-swap="none"
         hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
         hx-on::after-request="if(event.detail.xhr.status === 200) window.location.reload();"
         class="rating-form">
