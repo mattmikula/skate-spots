@@ -8,7 +8,7 @@ class IsRatingOwnerOrAdmin(permissions.BasePermission):
     Permission to only allow rating creators or admins to edit/delete ratings.
     """
 
-    def has_object_permission(self, request, view, obj):
+    def has_object_permission(self, request, view, obj):  # noqa: ARG002
         # Read permissions are allowed to any request
         if request.method in permissions.SAFE_METHODS:
             return True

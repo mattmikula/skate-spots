@@ -50,7 +50,7 @@ class RatingViewSet(viewsets.ModelViewSet):
         return queryset
 
     @method_decorator(ratelimit(key="ip", rate="50/m", method="POST"))
-    def create(self, request, *args, **kwargs):
+    def create(self, request, *args, **kwargs):  # noqa: ARG002
         """Create a new rating."""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -78,7 +78,7 @@ class RatingViewSet(viewsets.ModelViewSet):
         return Response(RatingSerializer(rating).data, status=status.HTTP_201_CREATED)
 
     @method_decorator(ratelimit(key="ip", rate="50/m", method="PUT"))
-    def update(self, request, *args, **kwargs):
+    def update(self, request, *args, **kwargs):  # noqa: ARG002
         """Update a rating."""
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
@@ -92,7 +92,7 @@ class RatingViewSet(viewsets.ModelViewSet):
         return Response(RatingSerializer(rating).data)
 
     @method_decorator(ratelimit(key="ip", rate="50/m", method="DELETE"))
-    def destroy(self, request, *args, **kwargs):
+    def destroy(self, request, *args, **kwargs):  # noqa: ARG002
         """Delete a rating."""
         instance = self.get_object()
         rating_id = str(instance.id)

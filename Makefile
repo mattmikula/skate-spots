@@ -18,10 +18,10 @@ install:
 	uv sync
 
 lint:
-	uv run ruff check accounts spots skate_spots_project
+	uv run ruff check accounts spots ratings skate_spots_project
 
 format:
-	uv run ruff format accounts spots skate_spots_project
+	uv run ruff format accounts spots ratings skate_spots_project
 
 test:
 	uv run pytest
