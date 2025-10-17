@@ -1,5 +1,6 @@
 """Filters for skate spots."""
 
+from django.db.models import Q
 import django_filters
 
 from .models import Difficulty, SkateSpot, SpotType
@@ -38,8 +39,8 @@ class SkateSpotFilter(django_filters.FilterSet):
             return queryset
 
         return queryset.filter(
-            django_filters.Q(name__icontains=value)
-            | django_filters.Q(description__icontains=value)
-            | django_filters.Q(city__icontains=value)
-            | django_filters.Q(country__icontains=value)
+            Q(name__icontains=value)
+            | Q(description__icontains=value)
+            | Q(city__icontains=value)
+            | Q(country__icontains=value)
         )

@@ -86,13 +86,19 @@ class SkateSpotCreateSerializer(serializers.ModelSerializer):
             location_data = validated_data.pop("location")
         else:
             # Extract flat location fields
-            location_data = {
-                "latitude": validated_data.pop("latitude"),
-                "longitude": validated_data.pop("longitude"),
-                "city": validated_data.pop("city"),
-                "country": validated_data.pop("country"),
-                "address": validated_data.pop("address", ""),
-            }
+            required_fields = ["latitude", "longitude", "city", "country"]
+            missing_fields = [field for field in required_fields if field not in validated_data]
+
+            if missing_fields:
+                raise serializers.ValidationError(
+                    {
+                        field: "This field is required when 'location' is not provided."
+                        for field in missing_fields
+                    }
+                )
+
+            location_data = {field: validated_data.pop(field) for field in required_fields}
+            location_data["address"] = validated_data.pop("address", "")
 
         spot = SkateSpot.objects.create(
             **validated_data,
