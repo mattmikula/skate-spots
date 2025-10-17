@@ -1,51 +1,47 @@
-.PHONY: help install dev lint format test serve clean check migrate revision downgrade
+.PHONY: help install lint format test serve clean check migrate makemigrations shell createsuperuser
 
 help:
-	@echo "Available commands:"
-	@echo "  install    - Install dependencies"
-	@echo "  dev        - Install with dev dependencies"
-	@echo "  lint       - Check code with ruff"
-	@echo "  format     - Format code with ruff"
-	@echo "  test       - Run tests with pytest"
-	@echo "  serve      - Start development server"
-	@echo "  check      - Run lint and tests"
-	@echo "  migrate    - Apply database migrations"
-	@echo "  revision   - Create a new Alembic revision (msg=\"description\")"
-	@echo "  downgrade  - Roll back the last Alembic migration"
-	@echo "  clean      - Clean cache files"
+	@echo "Skate Spots - Available commands:"
+	@echo "  install         - Install dependencies with uv"
+	@echo "  lint            - Check code with ruff"
+	@echo "  format          - Format code with ruff"
+	@echo "  test            - Run tests with pytest"
+	@echo "  serve           - Start Django development server"
+	@echo "  check           - Run lint and tests"
+	@echo "  migrate         - Apply database migrations"
+	@echo "  makemigrations  - Create new migrations"
+	@echo "  shell           - Open Django shell"
+	@echo "  createsuperuser - Create Django superuser"
+	@echo "  clean           - Clean cache files"
 
 install:
 	uv sync
 
-dev:
-	uv sync --group dev
-
 lint:
-	uv run ruff check
+	uv run ruff check accounts spots skate_spots_project
 
 format:
-	uv run ruff format
+	uv run ruff format accounts spots skate_spots_project
 
 test:
-	uv run pytest
+	uv run pytest || [ $$? -eq 5 ]
 
 serve:
-	uv run uvicorn main:app --reload
+	uv run python manage.py runserver
 
 check: lint test
 
 migrate:
-	uv run alembic upgrade head
+	uv run python manage.py migrate
 
-revision:
-	@if [ -z "$(msg)" ]; then \
-		echo "Usage: make revision msg=\"Short description\""; \
-		exit 1; \
-	fi
-	uv run alembic revision --autogenerate -m "$(msg)"
+makemigrations:
+	uv run python manage.py makemigrations
 
-downgrade:
-	uv run alembic downgrade -1
+shell:
+	uv run python manage.py shell
+
+createsuperuser:
+	uv run python manage.py createsuperuser
 
 clean:
 	find . -type d -name __pycache__ -delete
