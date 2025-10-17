@@ -1,47 +1,45 @@
-<div class="rating-form" id="rating-form-{{ spot_id }}">
+<div class="rating-form" id="rating-form-{{ spot.id }}">
     <h4>Rate this spot</h4>
 
-    <form hx-post="/api/v1/skate-spots/{{ spot_id }}/ratings/"
-          hx-target="#ratings-container-{{ spot_id }}"
-          hx-swap="innerHTML swap:0.5s"
-          hx-on="htmx:afterSwap: htmx.ajax('GET', '/api/v1/skate-spots/{{ spot_id }}/ratings/', {target: '#ratings-list-{{ spot_id }}', swap: 'innerHTML'})"
+    <form method="post"
+          action="/api/v1/skate-spots/{{ spot.id }}/ratings/"
+          onsubmit="submitRating(event, '{{ spot.id }}')"
           class="form-inline"
           style="display: flex; flex-direction: column; gap: 1rem;">
 
         <div class="form-group">
-            <label for="score-{{ spot_id }}" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Rating:</label>
+            <label for="score-{{ spot.id }}" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Rating:</label>
             <div class="rating-selector" style="display: flex; gap: 0.5rem; align-items: center;">
                 <input type="range"
-                       id="score-{{ spot_id }}"
+                       id="score-{{ spot.id }}"
                        name="score"
                        min="1"
                        max="5"
                        value="5"
                        required
                        style="flex: 1;">
-                <span id="score-display-{{ spot_id }}" style="font-weight: bold; min-width: 2rem;">5★</span>
+                <span id="score-display-{{ spot.id }}" style="font-weight: bold; min-width: 2rem;">5★</span>
             </div>
             <script>
-                document.getElementById('score-{{ spot_id }}').addEventListener('input', function(e) {
-                    const stars = '★'.repeat(e.target.value) + '☆'.repeat(5 - e.target.value);
-                    document.getElementById('score-display-{{ spot_id }}').textContent = e.target.value + '★';
+                document.getElementById('score-{{ spot.id }}').addEventListener('input', function(e) {
+                    document.getElementById('score-display-{{ spot.id }}').textContent = e.target.value + '★';
                 });
             </script>
         </div>
 
         <div class="form-group">
-            <label for="review-{{ spot_id }}" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Review (optional):</label>
-            <textarea id="review-{{ spot_id }}"
+            <label for="review-{{ spot.id }}" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Review (optional):</label>
+            <textarea id="review-{{ spot.id }}"
                       name="review"
                       placeholder="Share your experience at this spot..."
                       maxlength="500"
                       style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; resize: vertical; min-height: 80px;"></textarea>
             <div style="font-size: 0.85rem; color: #999; margin-top: 0.25rem;">
-                <span id="char-count-{{ spot_id }}">0</span>/500
+                <span id="char-count-{{ spot.id }}">0</span>/500
             </div>
             <script>
-                const textarea = document.getElementById('review-{{ spot_id }}');
-                const charCount = document.getElementById('char-count-{{ spot_id }}');
+                const textarea = document.getElementById('review-{{ spot.id }}');
+                const charCount = document.getElementById('char-count-{{ spot.id }}');
                 textarea.addEventListener('input', function() {
                     charCount.textContent = this.value.length;
                 });
@@ -50,4 +48,40 @@
 
         <button type="submit" class="btn btn-primary" style="align-self: flex-start;">Submit Rating</button>
     </form>
+
+    <script>
+        async function submitRating(event, spotId) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        score: parseInt(formData.get('score')),
+                        review: formData.get('review') || null
+                    })
+                });
+
+                if (response.ok) {
+                    // Reload the page to show the rating
+                    window.location.reload();
+                } else if (response.status === 409) {
+                    alert('You have already rated this spot');
+                } else if (response.status === 401) {
+                    alert('Please log in to rate this spot');
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.detail || 'Failed to submit rating'));
+                }
+            } catch (error) {
+                alert('Error submitting rating: ' + error.message);
+            }
+        }
+    </script>
 </div>

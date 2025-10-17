@@ -53,12 +53,13 @@
         </div>
         {% endif %}
 
-        <!-- Edit button for owner/admin -->
-        {% if current_user and (current_user.is_admin or current_user.id == spot.owner.id) %}
+        <!-- Edit button -->
+        {% if current_user %}
         <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #eee;">
             <a href="/skate-spots/{{ spot.id }}/edit" class="btn btn-edit" style="display: inline-block; padding: 0.5rem 1.5rem; background-color: #4CAF50; color: white; border-radius: 4px; text-decoration: none;">
                 ✏️ Edit Spot
             </a>
+            <p style="font-size: 0.85rem; color: #999; margin-top: 0.5rem;">Only spot owners and admins can edit</p>
         </div>
         {% endif %}
     </div>
