@@ -1,12 +1,11 @@
 """Tests for the ratings API endpoints."""
 
-import pytest
 from uuid import uuid4
 
-from app.models.rating import RatingCreate
-from app.models.skate_spot import Difficulty, Location, SpotType, SkateSpotCreate
-from app.services.rating_service import RatingService, get_rating_service
+import pytest
+
 from app.repositories.rating_repository import RatingRepository
+from app.services.rating_service import RatingService, get_rating_service
 
 
 @pytest.fixture
@@ -25,9 +24,9 @@ def app_with_ratings(client, session_factory):
 
 
 @pytest.fixture
-def test_spot_with_owner(client, app_with_ratings, auth_token):
+def test_spot_with_owner(app_with_ratings, auth_token):
     """Create a test spot for rating tests."""
-    response = client.post(
+    response = app_with_ratings.post(
         "/api/v1/skate-spots/",
         json={
             "name": "Rating Test Spot",
@@ -110,7 +109,7 @@ def test_create_duplicate_rating(app_with_ratings, test_spot_with_owner, auth_to
     assert response2.status_code == 409
 
 
-def test_list_ratings(app_with_ratings, test_spot_with_owner, auth_token, client):
+def test_list_ratings(app_with_ratings, test_spot_with_owner, auth_token):
     """Test listing all ratings for a spot."""
     spot_id = test_spot_with_owner["id"]
 
@@ -123,9 +122,7 @@ def test_list_ratings(app_with_ratings, test_spot_with_owner, auth_token, client
     assert create_response.status_code == 201
 
     # List ratings
-    list_response = app_with_ratings.get(
-        f"/api/v1/skate-spots/{spot_id}/ratings/"
-    )
+    list_response = app_with_ratings.get(f"/api/v1/skate-spots/{spot_id}/ratings/")
     assert list_response.status_code == 200
     data = list_response.json()
     assert isinstance(data, list)
@@ -136,13 +133,11 @@ def test_list_ratings_nonexistent_spot(app_with_ratings):
     """Test listing ratings for a non-existent spot."""
     spot_id = str(uuid4())
 
-    response = app_with_ratings.get(
-        f"/api/v1/skate-spots/{spot_id}/ratings/"
-    )
+    response = app_with_ratings.get(f"/api/v1/skate-spots/{spot_id}/ratings/")
     assert response.status_code == 404
 
 
-def test_get_rating_stats(app_with_ratings, test_spot_with_owner, auth_token, client):
+def test_get_rating_stats(app_with_ratings, test_spot_with_owner, auth_token):
     """Test getting rating statistics."""
     spot_id = test_spot_with_owner["id"]
 
@@ -154,9 +149,7 @@ def test_get_rating_stats(app_with_ratings, test_spot_with_owner, auth_token, cl
     )
 
     # Get stats
-    response = app_with_ratings.get(
-        f"/api/v1/skate-spots/{spot_id}/ratings/stats"
-    )
+    response = app_with_ratings.get(f"/api/v1/skate-spots/{spot_id}/ratings/stats")
     assert response.status_code == 200
     data = response.json()
     assert "average_score" in data
@@ -168,9 +161,7 @@ def test_get_rating_stats_empty_spot(app_with_ratings, test_spot_with_owner):
     """Test getting stats for a spot with no ratings."""
     spot_id = test_spot_with_owner["id"]
 
-    response = app_with_ratings.get(
-        f"/api/v1/skate-spots/{spot_id}/ratings/stats"
-    )
+    response = app_with_ratings.get(f"/api/v1/skate-spots/{spot_id}/ratings/stats")
     assert response.status_code == 200
     data = response.json()
     assert data["average_score"] == 0
@@ -190,16 +181,14 @@ def test_get_single_rating(app_with_ratings, test_spot_with_owner, auth_token):
     rating_id = create_response.json()["id"]
 
     # Get the rating
-    response = app_with_ratings.get(
-        f"/api/v1/skate-spots/{spot_id}/ratings/{rating_id}"
-    )
+    response = app_with_ratings.get(f"/api/v1/skate-spots/{spot_id}/ratings/{rating_id}")
     assert response.status_code == 200
     data = response.json()
     assert data["id"] == rating_id
     assert data["score"] == 5
 
 
-def test_get_rating_from_wrong_spot(app_with_ratings, test_spot_with_owner, auth_token, client):
+def test_get_rating_from_wrong_spot(app_with_ratings, test_spot_with_owner, auth_token):
     """Test getting a rating from a wrong spot ID."""
     spot_id = test_spot_with_owner["id"]
 
@@ -213,9 +202,7 @@ def test_get_rating_from_wrong_spot(app_with_ratings, test_spot_with_owner, auth
 
     # Try to get rating from different spot
     wrong_spot_id = str(uuid4())
-    response = app_with_ratings.get(
-        f"/api/v1/skate-spots/{wrong_spot_id}/ratings/{rating_id}"
-    )
+    response = app_with_ratings.get(f"/api/v1/skate-spots/{wrong_spot_id}/ratings/{rating_id}")
     assert response.status_code == 404
 
 
@@ -243,7 +230,9 @@ def test_update_rating(app_with_ratings, test_spot_with_owner, auth_token):
     assert data["review"] == "Actually amazing!"
 
 
-def test_update_rating_unauthorized(app_with_ratings, test_spot_with_owner, auth_token, session_factory):
+def test_update_rating_unauthorized(
+    app_with_ratings, test_spot_with_owner, auth_token, session_factory
+):
     """Test that only the owner can update a rating."""
     spot_id = test_spot_with_owner["id"]
 
@@ -256,9 +245,9 @@ def test_update_rating_unauthorized(app_with_ratings, test_spot_with_owner, auth
     rating_id = create_response.json()["id"]
 
     # Create another user and try to update
-    from app.repositories.user_repository import UserRepository
+    from app.core.security import create_access_token, get_password_hash
     from app.models.user import UserCreate
-    from app.core.security import get_password_hash, create_access_token
+    from app.repositories.user_repository import UserRepository
 
     db = session_factory()
     try:
@@ -271,7 +260,9 @@ def test_update_rating_unauthorized(app_with_ratings, test_spot_with_owner, auth
         hashed_password = get_password_hash("password123")
         other_user = repo.create(user_data, hashed_password)
         db.expunge(other_user)
-        other_token = create_access_token(data={"sub": str(other_user.id), "username": other_user.username})
+        other_token = create_access_token(
+            data={"sub": str(other_user.id), "username": other_user.username}
+        )
     finally:
         db.close()
 
@@ -304,13 +295,13 @@ def test_delete_rating(app_with_ratings, test_spot_with_owner, auth_token):
     assert delete_response.status_code == 204
 
     # Verify it's deleted
-    get_response = app_with_ratings.get(
-        f"/api/v1/skate-spots/{spot_id}/ratings/{rating_id}"
-    )
+    get_response = app_with_ratings.get(f"/api/v1/skate-spots/{spot_id}/ratings/{rating_id}")
     assert get_response.status_code == 404
 
 
-def test_delete_rating_unauthorized(app_with_ratings, test_spot_with_owner, auth_token, session_factory):
+def test_delete_rating_unauthorized(
+    app_with_ratings, test_spot_with_owner, auth_token, session_factory
+):
     """Test that only the owner can delete a rating."""
     spot_id = test_spot_with_owner["id"]
 
@@ -323,9 +314,9 @@ def test_delete_rating_unauthorized(app_with_ratings, test_spot_with_owner, auth
     rating_id = create_response.json()["id"]
 
     # Create another user and try to delete
-    from app.repositories.user_repository import UserRepository
+    from app.core.security import create_access_token, get_password_hash
     from app.models.user import UserCreate
-    from app.core.security import get_password_hash, create_access_token
+    from app.repositories.user_repository import UserRepository
 
     db = session_factory()
     try:
@@ -338,7 +329,9 @@ def test_delete_rating_unauthorized(app_with_ratings, test_spot_with_owner, auth
         hashed_password = get_password_hash("password123")
         other_user = repo.create(user_data, hashed_password)
         db.expunge(other_user)
-        other_token = create_access_token(data={"sub": str(other_user.id), "username": other_user.username})
+        other_token = create_access_token(
+            data={"sub": str(other_user.id), "username": other_user.username}
+        )
     finally:
         db.close()
 

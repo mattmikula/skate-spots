@@ -1,14 +1,15 @@
 """Tests for the rating repository."""
 
-import pytest
 from uuid import uuid4
 
+import pytest
+
 from app.models.rating import RatingCreate, RatingUpdate
-from app.models.skate_spot import Difficulty, Location, SpotType, SkateSpotCreate
+from app.models.skate_spot import Difficulty, Location, SkateSpotCreate, SpotType
+from app.models.user import UserCreate
 from app.repositories.rating_repository import RatingRepository
 from app.repositories.skate_spot_repository import SkateSpotRepository
 from app.repositories.user_repository import UserRepository
-from app.models.user import UserCreate
 
 
 @pytest.fixture
@@ -42,6 +43,7 @@ def test_spot(skate_spot_repository, user_repository):
         password="password123",
     )
     from app.core.security import get_password_hash
+
     hashed_password = get_password_hash("password123")
     user = user_repository.create(user_data, hashed_password)
 
@@ -69,6 +71,7 @@ def test_user(user_repository):
         password="password123",
     )
     from app.core.security import get_password_hash
+
     hashed_password = get_password_hash("password123")
     return user_repository.create(user_data, hashed_password)
 
@@ -114,18 +117,14 @@ def test_get_rating_by_spot_and_user(rating_repository, test_spot, test_user):
 def test_get_ratings_by_spot(rating_repository, test_spot, user_repository):
     """Test retrieving all ratings for a spot."""
     # Create multiple ratings
+    from app.core.security import get_password_hash
+
     ratings_data = [
         RatingCreate(score=5, review="Excellent!"),
         RatingCreate(score=4, review="Good"),
         RatingCreate(score=3, review="Average"),
     ]
 
-    user_data = UserCreate(
-        email="rater{id}@example.com",
-        username="rater{id}",
-        password="password123",
-    )
-    from app.core.security import get_password_hash
     hashed_password = get_password_hash("password123")
 
     created_ratings = []
@@ -147,6 +146,7 @@ def test_get_ratings_by_spot(rating_repository, test_spot, user_repository):
 def test_get_stats_for_spot(rating_repository, test_spot, user_repository):
     """Test getting rating statistics for a spot."""
     from app.core.security import get_password_hash
+
     hashed_password = get_password_hash("password123")
 
     # Create ratings with different scores
@@ -222,6 +222,7 @@ def test_is_owner(rating_repository, test_spot, test_user, user_repository):
     created_rating = rating_repository.create(rating_data, test_spot.id, str(test_user.id))
 
     from app.core.security import get_password_hash
+
     hashed_password = get_password_hash("password123")
     other_user_data = UserCreate(
         email="other@example.com",

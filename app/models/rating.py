@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 
 class RatingBase(BaseModel):
@@ -57,6 +57,4 @@ class RatingStats(BaseModel):
 
     average_score: float = Field(..., ge=0, le=5, description="Average rating score")
     total_ratings: int = Field(..., ge=0, description="Total number of ratings")
-    distribution: dict[int, int] = Field(
-        ..., description="Distribution of ratings by score (1-5)"
-    )
+    distribution: dict[int, int] = Field(..., description="Distribution of ratings by score (1-5)")

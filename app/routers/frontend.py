@@ -9,13 +9,13 @@ from fastapi.templating import Jinja2Templates
 
 from app.core.dependencies import get_optional_user
 from app.db.models import UserORM
-from app.services.skate_spot_service import (
-    SkateSpotService,
-    get_skate_spot_service,
-)
 from app.services.rating_service import (
     RatingService,
     get_rating_service,
+)
+from app.services.skate_spot_service import (
+    SkateSpotService,
+    get_skate_spot_service,
 )
 
 router = APIRouter(tags=["frontend"])

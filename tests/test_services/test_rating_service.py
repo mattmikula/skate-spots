@@ -1,16 +1,15 @@
 """Tests for the rating service."""
 
 import pytest
-from uuid import uuid4
 
+from app.core.security import get_password_hash
 from app.models.rating import RatingCreate, RatingUpdate
-from app.services.rating_service import RatingService
+from app.models.skate_spot import Difficulty, Location, SkateSpotCreate, SpotType
+from app.models.user import UserCreate
 from app.repositories.rating_repository import RatingRepository
 from app.repositories.skate_spot_repository import SkateSpotRepository
 from app.repositories.user_repository import UserRepository
-from app.models.skate_spot import Difficulty, Location, SpotType, SkateSpotCreate
-from app.models.user import UserCreate
-from app.core.security import get_password_hash
+from app.services.rating_service import RatingService
 
 
 @pytest.fixture

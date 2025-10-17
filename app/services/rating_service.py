@@ -1,9 +1,6 @@
 """Service layer for ratings business logic."""
 
-from typing import Annotated
 from uuid import UUID
-
-from fastapi import Depends
 
 from app.models.rating import Rating, RatingCreate, RatingStats, RatingUpdate
 from app.repositories.rating_repository import RatingRepository

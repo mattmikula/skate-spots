@@ -6,7 +6,7 @@ from collections.abc import Callable
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.database import SessionLocal
@@ -89,7 +89,9 @@ class RatingRepository:
             orm_ratings = session.scalars(stmt).all()
 
             if not orm_ratings:
-                return RatingStats(average_score=0, total_ratings=0, distribution={1: 0, 2: 0, 3: 0, 4: 0, 5: 0})
+                return RatingStats(
+                    average_score=0, total_ratings=0, distribution={1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+                )
 
             scores = [rating.score for rating in orm_ratings]
             average = sum(scores) / len(scores)
