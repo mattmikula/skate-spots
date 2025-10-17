@@ -19,13 +19,6 @@ dependencies = [
     "email-validator>=2.3.0",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "ruff>=0.12.10",
-    "pytest>=8.4.1",
-    "pytest-asyncio>=1.1.0",
-    "pytest-django>=4.7.0",
-]
 
 [tool.ruff]
 target-version = "py312"
@@ -97,5 +90,8 @@ django_settings_module = "skate_spots_project.settings"
 
 [dependency-groups]
 dev = [
-    "pytest-django>=4.11.1",
+    "ruff>=0.12.10",
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.1.0",
+    "pytest-django>=4.7.0",
 ]

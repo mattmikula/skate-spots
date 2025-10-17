@@ -523,17 +523,12 @@ dependencies = [
     { name = "structlog" },
 ]
 
-[package.optional-dependencies]
+[package.dev-dependencies]
 dev = [
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-django" },
     { name = "ruff" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pytest-django" },
 ]
 
 [package.metadata]
@@ -547,18 +542,18 @@ requires-dist = [
     { name = "djangorestframework-simplejwt", specifier = ">=5.3.0" },
     { name = "drf-spectacular", specifier = ">=0.27.0" },
     { name = "email-validator", specifier = ">=2.3.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.4.1" },
-    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=1.1.0" },
-    { name = "pytest-django", marker = "extra == 'dev'", specifier = ">=4.7.0" },
     { name = "python-json-logger", specifier = ">=2.0.0" },
     { name = "python-multipart", specifier = ">=0.0.20" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.12.10" },
     { name = "structlog", specifier = ">=24.3.0" },
 ]
-provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "pytest-django", specifier = ">=4.11.1" }]
+dev = [
+    { name = "pytest", specifier = ">=8.4.1" },
+    { name = "pytest-asyncio", specifier = ">=1.1.0" },
+    { name = "pytest-django", specifier = ">=4.7.0" },
+    { name = "ruff", specifier = ">=0.12.10" },
+]
 
 [[package]]
 name = "sqlparse"
