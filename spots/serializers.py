@@ -91,10 +91,10 @@ class SkateSpotCreateSerializer(serializers.ModelSerializer):
 
             if missing_fields:
                 raise serializers.ValidationError(
-                    {
-                        field: "This field is required when 'location' is not provided."
-                        for field in missing_fields
-                    }
+                    dict.fromkeys(
+                        missing_fields,
+                        "This field is required when 'location' is not provided.",
+                    )
                 )
 
             location_data = {field: validated_data.pop(field) for field in required_fields}
