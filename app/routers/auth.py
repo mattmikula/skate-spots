@@ -32,6 +32,102 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 logger = get_logger(__name__)
 
 
+def _log_message(action: str, source: str | None) -> str:
+    """Create consistent log prefixes for shared auth helpers."""
+
+    return f"{source} {action}" if source else action
+
+
+def _register_user_account(
+    user_repo: UserRepository,
+    user_data: UserCreate,
+    *,
+    source: str | None = None,
+) -> db_models.UserORM:
+    """Create a user account after enforcing uniqueness constraints."""
+
+    logger.info(
+        _log_message("registration attempt", source),
+        username=user_data.username,
+        email=user_data.email,
+    )
+
+    if user_repo.get_by_email(user_data.email):
+        logger.warning(
+            _log_message("registration email already exists", source), email=user_data.email
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered",
+        )
+
+    if user_repo.get_by_username(user_data.username):
+        logger.warning(
+            _log_message("registration username already exists", source),
+            username=user_data.username,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already taken",
+        )
+
+    hashed_password = get_password_hash(user_data.password)
+    db_user = user_repo.create(user_data, hashed_password)
+    logger.info(
+        _log_message("registration successful", source),
+        user_id=str(db_user.id),
+        username=db_user.username,
+    )
+    return db_user
+
+
+def _authenticate_user(
+    user_repo: UserRepository,
+    username: str,
+    password: str,
+    *,
+    source: str | None = None,
+    include_auth_header: bool = False,
+) -> db_models.UserORM:
+    """Validate credentials and return the associated user."""
+
+    logger.info(_log_message("login attempt", source), username=username)
+    user = user_repo.get_by_username(username)
+
+    if not user or not verify_password(password, user.hashed_password):
+        logger.warning(
+            _log_message("login failed", source),
+            username=username,
+            reason="invalid_credentials",
+        )
+        if include_auth_header:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+        )
+
+    if not user.is_active:
+        logger.warning(
+            _log_message("login failed", source),
+            username=user.username,
+            reason="inactive_user",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Inactive user",
+        )
+
+    logger.info(
+        _log_message("login successful", source), user_id=str(user.id), username=user.username
+    )
+    return user
+
+
 @router.post(
     "/register",
     response_model=User,
@@ -43,27 +139,7 @@ async def register(
     user_repo: Annotated[UserRepository, Depends(get_user_repository)],
 ) -> User:
     """Register a new user."""
-    # Check if user already exists
-    logger.info("registration attempt", username=user_data.username, email=user_data.email)
-    if user_repo.get_by_email(user_data.email):
-        logger.warning("registration email already exists", email=user_data.email)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered",
-        )
-
-    if user_repo.get_by_username(user_data.username):
-        logger.warning("registration username already exists", username=user_data.username)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already taken",
-        )
-
-    # Create user
-    hashed_password = get_password_hash(user_data.password)
-    db_user = user_repo.create(user_data, hashed_password)
-    logger.info("user registered", user_id=str(db_user.id), username=db_user.username)
-
+    db_user = _register_user_account(user_repo, user_data)
     return User.model_validate(db_user)
 
 
@@ -80,23 +156,12 @@ async def login(
     """Login and receive an access token."""
     settings = get_settings()
 
-    # Get user by username
-    logger.info("login attempt", username=user_data.username)
-    user = user_repo.get_by_username(user_data.username)
-    if not user or not verify_password(user_data.password, user.hashed_password):
-        logger.warning("login failed", username=user_data.username, reason="invalid_credentials")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    if not user.is_active:
-        logger.warning("login failed", username=user.username, reason="inactive_user")
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Inactive user",
-        )
+    user = _authenticate_user(
+        user_repo,
+        user_data.username,
+        user_data.password,
+        include_auth_header=True,
+    )
 
     # Create access token
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
@@ -114,7 +179,6 @@ async def login(
         samesite="lax",
     )
 
-    logger.info("login successful", user_id=str(user.id), username=user.username)
     return Token(access_token=access_token)
 
 
@@ -146,23 +210,12 @@ async def login_form(
     """Login via form submission and redirect."""
     settings = get_settings()
 
-    # Get user by username
-    logger.info("form login attempt", username=username)
-    user = user_repo.get_by_username(username)
-    if not user or not verify_password(password, user.hashed_password):
-        # In production, redirect to login page with error message
-        logger.warning("form login failed", username=username, reason="invalid_credentials")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-        )
-
-    if not user.is_active:
-        logger.warning("form login failed", username=username, reason="inactive_user")
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Inactive user",
-        )
+    user = _authenticate_user(
+        user_repo,
+        username,
+        password,
+        source="form",
+    )
 
     # Create access token
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
@@ -183,7 +236,6 @@ async def login_form(
         samesite="lax",
     )
 
-    logger.info("form login successful", user_id=str(user.id), username=user.username)
     return redirect_response
 
 
@@ -200,26 +252,8 @@ async def register_form(
     """Register via form submission and redirect."""
     settings = get_settings()
 
-    # Check if user already exists
-    logger.info("form registration attempt", username=username, email=email)
-    if user_repo.get_by_email(email):
-        logger.warning("form registration email exists", email=email)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered",
-        )
-
-    if user_repo.get_by_username(username):
-        logger.warning("form registration username exists", username=username)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already taken",
-        )
-
-    # Create user
     user_data = UserCreate(email=email, username=username, password=password)
-    hashed_password = get_password_hash(user_data.password)
-    db_user = user_repo.create(user_data, hashed_password)
+    db_user = _register_user_account(user_repo, user_data, source="form")
 
     # Create access token
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
@@ -240,5 +274,4 @@ async def register_form(
         samesite="lax",
     )
 
-    logger.info("form registration successful", user_id=str(db_user.id), username=db_user.username)
     return redirect_response

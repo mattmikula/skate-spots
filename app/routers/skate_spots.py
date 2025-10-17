@@ -5,7 +5,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from app.core.dependencies import get_current_user
 from app.core.rate_limiter import SKATE_SPOT_WRITE_LIMIT, rate_limited
@@ -29,6 +29,7 @@ from app.services.skate_spot_service import (
 )
 
 router = APIRouter(prefix="/skate-spots", tags=["skate-spots"])
+_TRUE_VALUES = {"true", "on", "1"}
 
 
 async def _parse_location_from_form(form) -> Location:
@@ -42,32 +43,70 @@ async def _parse_location_from_form(form) -> Location:
     )
 
 
-async def _parse_create_from_form(form) -> SkateSpotCreate:
-    """Parse SkateSpotCreate object from form data."""
-    location = await _parse_location_from_form(form)
-    return SkateSpotCreate(
-        name=str(form.get("name")),
-        description=str(form.get("description")),
-        spot_type=SpotType(form.get("spot_type")),
-        difficulty=Difficulty(form.get("difficulty")),
-        location=location,
-        is_public=form.get("is_public", "true").lower() in ("true", "on", "1"),
-        requires_permission=form.get("requires_permission", "false").lower() in ("true", "on", "1"),
-    )
+def _coerce_form_bool(value: str | None, default: bool) -> bool:
+    """Coerce form checkbox values to booleans with sensible defaults."""
+
+    if value is None:
+        return default
+    normalised = str(value).strip().lower()
+    if not normalised:
+        return default
+    return normalised in _TRUE_VALUES
 
 
-async def _parse_update_from_form(form) -> SkateSpotUpdate:
-    """Parse SkateSpotUpdate object from form data."""
+async def _parse_request_payload[SchemaT: BaseModel](
+    request: Request,
+    schema: type[SchemaT],
+    *,
+    bool_defaults: dict[str, bool],
+) -> SchemaT:
+    """Normalise request payloads to the desired schema for JSON or form submissions."""
+
+    content_type = request.headers.get("content-type", "")
+    if "application/json" in content_type:
+        payload = await request.json()
+        return schema(**payload)
+
+    form = await request.form()
     location = await _parse_location_from_form(form)
-    return SkateSpotUpdate(
-        name=str(form.get("name")),
-        description=str(form.get("description")),
-        spot_type=SpotType(form.get("spot_type")),
-        difficulty=Difficulty(form.get("difficulty")),
-        location=location,
-        is_public=form.get("is_public", "").lower() in ("true", "on", "1"),
-        requires_permission=form.get("requires_permission", "").lower() in ("true", "on", "1"),
+    payload = {
+        "name": form.get("name"),
+        "description": form.get("description"),
+        "spot_type": SpotType(form.get("spot_type")),
+        "difficulty": Difficulty(form.get("difficulty")),
+        "location": location,
+    }
+    payload.update(
+        {
+            field: _coerce_form_bool(form.get(field), default)
+            for field, default in bool_defaults.items()
+        }
     )
+    return schema(**payload)
+
+
+def _ensure_spot_can_be_modified(
+    spot_id: UUID,
+    service: SkateSpotService,
+    current_user: UserORM,
+    *,
+    action: str = "modify",
+) -> SkateSpot:
+    """Return the target spot or raise when it cannot be edited by the user."""
+
+    spot = service.get_spot(spot_id)
+    if not spot:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Skate spot with id {spot_id} not found",
+        )
+
+    if not current_user.is_admin and not service.is_owner(spot_id, current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Not authorized to {action} this spot",
+        )
+    return spot
 
 
 @router.post(
@@ -83,11 +122,10 @@ async def create_skate_spot(
 ) -> SkateSpot:
     """Create a new skate spot."""
     try:
-        content_type = request.headers.get("content-type", "")
-        spot_data = (
-            SkateSpotCreate(**(await request.json()))
-            if "application/json" in content_type
-            else await _parse_create_from_form(await request.form())
+        spot_data = await _parse_request_payload(
+            request,
+            SkateSpotCreate,
+            bool_defaults={"is_public": True, "requires_permission": False},
         )
     except ValidationError as e:
         raise HTTPException(
@@ -218,27 +256,13 @@ async def update_skate_spot(
     current_user: Annotated[UserORM, Depends(get_current_user)],
 ) -> SkateSpot:
     """Update an existing skate spot."""
-    # Check if spot exists
-    spot = service.get_spot(spot_id)
-    if not spot:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Skate spot with id {spot_id} not found",
-        )
-
-    # Check ownership (admins can update any spot)
-    if not current_user.is_admin and not service.is_owner(spot_id, current_user.id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to update this spot",
-        )
+    _ensure_spot_can_be_modified(spot_id, service, current_user, action="update")
 
     try:
-        content_type = request.headers.get("content-type", "")
-        update_data = (
-            SkateSpotUpdate(**(await request.json()))
-            if "application/json" in content_type
-            else await _parse_update_from_form(await request.form())
+        update_data = await _parse_request_payload(
+            request,
+            SkateSpotUpdate,
+            bool_defaults={"is_public": False, "requires_permission": False},
         )
     except ValidationError as e:
         raise HTTPException(
@@ -265,21 +289,7 @@ async def delete_skate_spot(
     current_user: Annotated[UserORM, Depends(get_current_user)],
 ) -> HTMLResponse:
     """Delete a skate spot."""
-    # Check if spot exists
-    spot = service.get_spot(spot_id)
-    if not spot:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Skate spot with id {spot_id} not found",
-        )
-
-    # Check ownership (admins can delete any spot)
-    if not current_user.is_admin and not service.is_owner(spot_id, current_user.id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to delete this spot",
-        )
-
+    _ensure_spot_can_be_modified(spot_id, service, current_user, action="delete")
     success = service.delete_spot(spot_id)
     if not success:
         raise HTTPException(
