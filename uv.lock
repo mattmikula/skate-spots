@@ -531,6 +531,11 @@ dev = [
     { name = "ruff" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pytest-django" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "bcrypt", specifier = ">=4.1.2,<5.0" },
@@ -551,6 +556,9 @@ requires-dist = [
     { name = "structlog", specifier = ">=24.3.0" },
 ]
 provides-extras = ["dev"]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest-django", specifier = ">=4.11.1" }]
 
 [[package]]
 name = "sqlparse"

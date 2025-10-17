@@ -1,0 +1,372 @@
+"""Tests for API endpoints."""
+
+import pytest
+from django.contrib.auth import get_user_model
+from spots.models import Difficulty, SkateSpot, SpotType
+
+User = get_user_model()
+
+
+class TestAuthEndpoints:
+    """Tests for authentication endpoints."""
+
+    @pytest.mark.django_db
+    def test_register_success(self, api_client):
+        """Test successful user registration."""
+        response = api_client.post(
+            "/api/v1/auth/register/",
+            {
+                "email": "newuser@example.com",
+                "username": "newuser",
+                "password": "newpass123",
+            },
+            format="json"
+        )
+        assert response.status_code == 201
+        assert response.data["username"] == "newuser"
+        assert response.data["email"] == "newuser@example.com"
+
+    @pytest.mark.django_db
+    def test_register_duplicate_email(self, api_client, test_user):
+        """Test registration with duplicate email fails."""
+        response = api_client.post(
+            "/api/v1/auth/register/",
+            {
+                "email": test_user.email,
+                "username": "newuser",
+                "password": "newpass123",
+            },
+            format="json"
+        )
+        assert response.status_code == 400
+        assert "Email already registered" in str(response.data)
+
+    @pytest.mark.django_db
+    def test_register_duplicate_username(self, api_client, test_user):
+        """Test registration with duplicate username fails."""
+        response = api_client.post(
+            "/api/v1/auth/register/",
+            {
+                "email": "different@example.com",
+                "username": test_user.username,
+                "password": "newpass123",
+            },
+            format="json"
+        )
+        assert response.status_code == 400
+        assert "Username already taken" in str(response.data)
+
+    @pytest.mark.django_db
+    def test_login_success(self, api_client, test_user):
+        """Test successful login."""
+        response = api_client.post(
+            "/api/v1/auth/login/",
+            {
+                "username": test_user.username,
+                "password": "testpass123",
+            },
+            format="json"
+        )
+        assert response.status_code == 200
+        assert "access_token" in response.data
+
+    @pytest.mark.django_db
+    def test_login_invalid_credentials(self, api_client, test_user):
+        """Test login with invalid credentials fails."""
+        response = api_client.post(
+            "/api/v1/auth/login/",
+            {
+                "username": test_user.username,
+                "password": "wrongpassword",
+            },
+            format="json"
+        )
+        assert response.status_code == 401
+        assert "Incorrect username or password" in str(response.data)
+
+    @pytest.mark.django_db
+    def test_get_current_user(self, authenticated_api_client, test_user):
+        """Test getting current user info."""
+        response = authenticated_api_client.get("/api/v1/auth/me/")
+        assert response.status_code == 200
+        assert response.data["username"] == test_user.username
+        assert response.data["email"] == test_user.email
+
+    @pytest.mark.django_db
+    def test_get_current_user_unauthenticated(self, api_client):
+        """Test getting current user without auth fails."""
+        response = api_client.get("/api/v1/auth/me/")
+        assert response.status_code == 401
+
+    @pytest.mark.django_db
+    def test_logout(self, authenticated_api_client):
+        """Test logout endpoint."""
+        response = authenticated_api_client.post("/api/v1/auth/logout/")
+        assert response.status_code == 200
+
+
+class TestSkateSpotListEndpoint:
+    """Tests for skate spot list endpoint."""
+
+    @pytest.mark.django_db
+    def test_list_spots_empty(self, api_client):
+        """Test listing spots when none exist."""
+        response = api_client.get("/api/v1/skate-spots/")
+        assert response.status_code == 200
+        assert response.data == []
+
+    @pytest.mark.django_db
+    def test_list_spots_with_data(self, api_client, test_user):
+        """Test listing spots with data."""
+        SkateSpot.objects.create(
+            name="Spot 1",
+            description="First spot",
+            spot_type=SpotType.PARK,
+            difficulty=Difficulty.BEGINNER,
+            latitude=40.7128,
+            longitude=-74.0060,
+            city="New York",
+            country="USA",
+            owner=test_user
+        )
+        SkateSpot.objects.create(
+            name="Spot 2",
+            description="Second spot",
+            spot_type=SpotType.STREET,
+            difficulty=Difficulty.ADVANCED,
+            latitude=34.0522,
+            longitude=-118.2437,
+            city="Los Angeles",
+            country="USA",
+            owner=test_user
+        )
+        response = api_client.get("/api/v1/skate-spots/")
+        assert response.status_code == 200
+        assert len(response.data) == 2
+
+    @pytest.mark.django_db
+    def test_list_spots_filter_by_city(self, api_client, test_user):
+        """Test filtering spots by city."""
+        SkateSpot.objects.create(
+            name="NYC Spot",
+            description="In New York",
+            spot_type=SpotType.PARK,
+            difficulty=Difficulty.BEGINNER,
+            latitude=40.7128,
+            longitude=-74.0060,
+            city="New York",
+            country="USA",
+            owner=test_user
+        )
+        SkateSpot.objects.create(
+            name="LA Spot",
+            description="In Los Angeles",
+            spot_type=SpotType.STREET,
+            difficulty=Difficulty.BEGINNER,
+            latitude=34.0522,
+            longitude=-118.2437,
+            city="Los Angeles",
+            country="USA",
+            owner=test_user
+        )
+        response = api_client.get("/api/v1/skate-spots/?city=New%20York")
+        assert response.status_code == 200
+        assert len(response.data) == 1
+        assert response.data[0]["name"] == "NYC Spot"
+
+    @pytest.mark.django_db
+    def test_list_spots_filter_by_difficulty(self, api_client, test_user):
+        """Test filtering spots by difficulty."""
+        SkateSpot.objects.create(
+            name="Easy Spot",
+            description="Easy",
+            spot_type=SpotType.PARK,
+            difficulty=Difficulty.BEGINNER,
+            latitude=40.7128,
+            longitude=-74.0060,
+            city="New York",
+            country="USA",
+            owner=test_user
+        )
+        SkateSpot.objects.create(
+            name="Hard Spot",
+            description="Hard",
+            spot_type=SpotType.PARK,
+            difficulty=Difficulty.EXPERT,
+            latitude=34.0522,
+            longitude=-118.2437,
+            city="Los Angeles",
+            country="USA",
+            owner=test_user
+        )
+        response = api_client.get("/api/v1/skate-spots/?difficulty=expert")
+        assert response.status_code == 200
+        assert len(response.data) == 1
+        assert response.data[0]["difficulty"] == "expert"
+
+    @pytest.mark.django_db
+    def test_list_spots_filter_by_type(self, api_client, test_user):
+        """Test filtering spots by type."""
+        SkateSpot.objects.create(
+            name="Park Spot",
+            description="Park",
+            spot_type=SpotType.PARK,
+            difficulty=Difficulty.BEGINNER,
+            latitude=40.7128,
+            longitude=-74.0060,
+            city="New York",
+            country="USA",
+            owner=test_user
+        )
+        SkateSpot.objects.create(
+            name="Street Spot",
+            description="Street",
+            spot_type=SpotType.STREET,
+            difficulty=Difficulty.BEGINNER,
+            latitude=34.0522,
+            longitude=-118.2437,
+            city="Los Angeles",
+            country="USA",
+            owner=test_user
+        )
+        response = api_client.get("/api/v1/skate-spots/?spot_type=park")
+        assert response.status_code == 200
+        assert len(response.data) == 1
+        assert response.data[0]["spot_type"] == "park"
+
+
+class TestSkateSpotCreateEndpoint:
+    """Tests for creating skate spots."""
+
+    @pytest.mark.django_db
+    def test_create_spot_success(self, authenticated_api_client):
+        """Test creating a spot with authentication."""
+        response = authenticated_api_client.post(
+            "/api/v1/skate-spots/",
+            {
+                "name": "New Spot",
+                "description": "A brand new spot",
+                "spot_type": "park",
+                "difficulty": "intermediate",
+                "location": {
+                    "latitude": 40.7128,
+                    "longitude": -74.0060,
+                    "city": "New York",
+                    "country": "USA",
+                },
+                "is_public": True,
+                "requires_permission": False,
+            },
+            format="json"
+        )
+        assert response.status_code == 201
+        assert response.data["name"] == "New Spot"
+        assert SkateSpot.objects.count() == 1
+
+    @pytest.mark.django_db
+    def test_create_spot_unauthenticated(self, api_client):
+        """Test creating a spot without authentication fails."""
+        response = api_client.post(
+            "/api/v1/skate-spots/",
+            {
+                "name": "New Spot",
+                "description": "A spot",
+                "spot_type": "park",
+                "difficulty": "intermediate",
+                "location": {
+                    "latitude": 40.7128,
+                    "longitude": -74.0060,
+                    "city": "New York",
+                    "country": "USA",
+                },
+                "is_public": True,
+                "requires_permission": False,
+            },
+            format="json"
+        )
+        assert response.status_code == 401
+        assert SkateSpot.objects.count() == 0
+
+    @pytest.mark.django_db
+    def test_create_spot_invalid_latitude(self, authenticated_api_client):
+        """Test creating a spot with invalid latitude fails."""
+        response = authenticated_api_client.post(
+            "/api/v1/skate-spots/",
+            {
+                "name": "New Spot",
+                "description": "A spot",
+                "spot_type": "park",
+                "difficulty": "intermediate",
+                "location": {
+                    "latitude": 91,  # Invalid
+                    "longitude": -74.0060,
+                    "city": "New York",
+                    "country": "USA",
+                },
+                "is_public": True,
+                "requires_permission": False,
+            },
+            format="json"
+        )
+        assert response.status_code == 400
+
+
+class TestSkateSpotDetailEndpoint:
+    """Tests for retrieving single skate spot."""
+
+    @pytest.mark.django_db
+    def test_get_spot_success(self, api_client, test_user):
+        """Test getting a single spot."""
+        spot = SkateSpot.objects.create(
+            name="Test Spot",
+            description="A test spot",
+            spot_type=SpotType.PARK,
+            difficulty=Difficulty.BEGINNER,
+            latitude=40.7128,
+            longitude=-74.0060,
+            city="New York",
+            country="USA",
+            owner=test_user
+        )
+        response = api_client.get(f"/api/v1/skate-spots/{spot.id}/")
+        assert response.status_code == 200
+        assert response.data["name"] == "Test Spot"
+
+    @pytest.mark.django_db
+    def test_get_spot_not_found(self, api_client):
+        """Test getting non-existent spot fails."""
+        response = api_client.get("/api/v1/skate-spots/00000000-0000-0000-0000-000000000000/")
+        assert response.status_code == 404
+
+
+class TestGeoJSONEndpoint:
+    """Tests for GeoJSON endpoint."""
+
+    @pytest.mark.django_db
+    def test_geojson_empty(self, api_client):
+        """Test GeoJSON with no spots."""
+        response = api_client.get("/api/v1/skate-spots/geojson/")
+        assert response.status_code == 200
+        assert response.data["type"] == "FeatureCollection"
+        assert response.data["features"] == []
+
+    @pytest.mark.django_db
+    def test_geojson_with_spots(self, api_client, test_user):
+        """Test GeoJSON with spots."""
+        SkateSpot.objects.create(
+            name="Test Spot",
+            description="A test spot",
+            spot_type=SpotType.PARK,
+            difficulty=Difficulty.BEGINNER,
+            latitude=40.7128,
+            longitude=-74.0060,
+            city="New York",
+            country="USA",
+            owner=test_user
+        )
+        response = api_client.get("/api/v1/skate-spots/geojson/")
+        assert response.status_code == 200
+        assert response.data["type"] == "FeatureCollection"
+        assert len(response.data["features"]) == 1
+        assert response.data["features"][0]["type"] == "Feature"
+        assert response.data["features"][0]["geometry"]["type"] == "Point"

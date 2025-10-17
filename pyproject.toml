@@ -94,3 +94,8 @@ markers = [
 
 [tool.django-stubs]
 django_settings_module = "skate_spots_project.settings"
+
+[dependency-groups]
+dev = [
+    "pytest-django>=4.11.1",
+]
