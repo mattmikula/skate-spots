@@ -312,6 +312,53 @@ class TestSkateSpotCreateEndpoint:
         )
         assert response.status_code == 400
 
+    @pytest.mark.django_db
+    def test_create_spot_missing_flat_location_fields(self, authenticated_api_client):
+        """Flat payloads without full location data should return validation errors."""
+        response = authenticated_api_client.post(
+            "/api/v1/skate-spots/",
+            {
+                "name": "Partial Location Spot",
+                "description": "Missing some location fields",
+                "spot_type": "park",
+                "difficulty": "intermediate",
+                "latitude": 40.7128,
+                "is_public": True,
+                "requires_permission": False,
+            },
+            format="json"
+        )
+
+        assert response.status_code == 400
+        assert "longitude" in response.data
+        assert "city" in response.data
+        assert "country" in response.data
+
+    @pytest.mark.django_db
+    def test_create_spot_with_flat_location_fields(self, authenticated_api_client):
+        """Flat payloads with full location data should be accepted."""
+        response = authenticated_api_client.post(
+            "/api/v1/skate-spots/",
+            {
+                "name": "Flat Location Spot",
+                "description": "Using flat location fields",
+                "spot_type": "street",
+                "difficulty": "beginner",
+                "latitude": 34.0522,
+                "longitude": -118.2437,
+                "city": "Los Angeles",
+                "country": "USA",
+                "address": "123 Skate Park",
+                "is_public": False,
+                "requires_permission": True,
+            },
+            format="json"
+        )
+
+        assert response.status_code == 201
+        assert response.data["name"] == "Flat Location Spot"
+        assert response.data["location"]["city"] == "Los Angeles"
+
 
 class TestSkateSpotDetailEndpoint:
     """Tests for retrieving single skate spot."""
