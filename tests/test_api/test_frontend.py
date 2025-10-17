@@ -1,5 +1,7 @@
 """Tests for frontend HTML endpoints."""
 
+import copy
+
 import pytest
 
 from app.models.skate_spot import Difficulty, SpotType
@@ -64,6 +66,78 @@ def test_list_spots_page_with_data(client, created_spot_id):  # noqa: ARG001
     response = client.get("/skate-spots")
     assert response.status_code == 200
     assert b"Frontend Test Spot" in response.content
+
+
+def test_list_spots_page_preserves_filters(
+    client,
+    created_spot_id,  # noqa: ARG001
+    sample_spot_payload,
+    auth_token,
+):
+    """Full page loads should honour filters and keep the form selection."""
+
+    second_payload = copy.deepcopy(sample_spot_payload)
+    second_payload.update(
+        {
+            "name": "Advanced Park",
+            "spot_type": SpotType.PARK.value,
+            "difficulty": Difficulty.ADVANCED.value,
+            "city": "Madrid",
+            "country": "Spain",
+        }
+    )
+    client.post(
+        "/api/v1/skate-spots/",
+        json=second_payload,
+        cookies={"access_token": auth_token},
+    )
+
+    response = client.get("/skate-spots?spot_type=park&difficulty=advanced")
+    body = response.text
+
+    assert response.status_code == 200
+    assert "Advanced Park" in body
+    assert "Frontend Test Spot" not in body
+    assert "Clear filters" in body
+    assert 'value="park"' in body
+    assert "selected" in body
+
+
+def test_htmx_spot_list_partial_filters_results(
+    client,
+    created_spot_id,  # noqa: ARG001
+    sample_spot_payload,
+    auth_token,
+):
+    """HTMX requests return the partial template with filtered results."""
+
+    third_payload = copy.deepcopy(sample_spot_payload)
+    third_payload.update(
+        {
+            "name": "Beginner Park",
+            "spot_type": SpotType.PARK.value,
+            "difficulty": Difficulty.BEGINNER.value,
+            "city": "Lisbon",
+            "country": "Portugal",
+        }
+    )
+    client.post(
+        "/api/v1/skate-spots/",
+        json=third_payload,
+        cookies={"access_token": auth_token},
+    )
+
+    response = client.get(
+        "/skate-spots?spot_type=park",
+        headers={"HX-Request": "true"},
+    )
+    body = response.text
+
+    assert response.status_code == 200
+    assert "Beginner Park" in body
+    assert "Frontend Test Spot" not in body
+    assert '<div class="spot-list">' in body
+    assert "All Skate Spots" not in body
 
 
 def test_new_spot_page(client, auth_token):

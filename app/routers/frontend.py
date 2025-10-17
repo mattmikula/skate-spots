@@ -10,6 +10,7 @@ from fastapi.templating import Jinja2Templates
 from app.core.dependencies import get_optional_user
 from app.db.models import UserORM
 from app.models.rating import RatingCreate
+from app.models.skate_spot import Difficulty, SpotType
 from app.services.rating_service import (
     RatingNotFoundError,
     RatingService,
@@ -19,9 +20,102 @@ from app.services.skate_spot_service import (
     SkateSpotService,
     get_skate_spot_service,
 )
+from spots.filters import build_skate_spot_filters
 
 router = APIRouter(tags=["frontend"])
 templates = Jinja2Templates(directory="templates")
+
+
+_FILTER_FIELDS = (
+    "search",
+    "spot_type",
+    "difficulty",
+    "city",
+    "country",
+    "is_public",
+    "requires_permission",
+)
+_TRUE_VALUES = {"true", "1", "yes"}
+_FALSE_VALUES = {"false", "0", "no"}
+
+
+def _extract_filter_values(request: Request) -> dict[str, str]:
+    """Return raw query string values for the supported filter fields."""
+
+    params = request.query_params
+    return {field: params.get(field, "").strip() for field in _FILTER_FIELDS}
+
+
+def _coerce_enum(value: str, enum_cls):
+    """Best-effort conversion from a query string value to an Enum member."""
+
+    if not value:
+        return None
+    try:
+        return enum_cls(value)
+    except ValueError:
+        return None
+
+
+def _coerce_optional_bool(value: str) -> bool | None:
+    """Convert optional boolean query parameters into Python booleans."""
+
+    if not value:
+        return None
+    lowered = value.lower()
+    if lowered in _TRUE_VALUES:
+        return True
+    if lowered in _FALSE_VALUES:
+        return False
+    return None
+
+
+def _build_service_filters(filter_values: dict[str, str]):
+    """Translate raw query parameters into ``SkateSpotFilters``."""
+
+    spot_type = _coerce_enum(filter_values["spot_type"], SpotType)
+    difficulty = _coerce_enum(filter_values["difficulty"], Difficulty)
+
+    return build_skate_spot_filters(
+        search=filter_values["search"] or None,
+        spot_types=[spot_type] if spot_type else None,
+        difficulties=[difficulty] if difficulty else None,
+        city=filter_values["city"] or None,
+        country=filter_values["country"] or None,
+        is_public=_coerce_optional_bool(filter_values["is_public"]),
+        requires_permission=_coerce_optional_bool(filter_values["requires_permission"]),
+    )
+
+
+def _has_active_filters(values: dict[str, str]) -> bool:
+    """Return ``True`` when any filter has a non-blank value."""
+
+    return any(value for value in values.values())
+
+
+def _spot_list_context(
+    request: Request,
+    spots,
+    current_user: UserORM | None,
+    filter_values: dict[str, str],
+) -> dict[str, object]:
+    """Template context shared by the full index and HTMX partial."""
+
+    return {
+        "request": request,
+        "spots": spots,
+        "current_user": current_user,
+        "spot_types": list(SpotType),
+        "difficulties": list(Difficulty),
+        "filter_values": filter_values,
+        "has_active_filters": _has_active_filters(filter_values),
+    }
+
+
+def _is_htmx(request: Request) -> bool:
+    """Detect HTMX requests using the standard header."""
+
+    return request.headers.get("HX-Request", "").lower() == "true"
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -31,11 +125,13 @@ async def home(
     current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
 ) -> HTMLResponse:
     """Display home page with all skate spots."""
-    spots = service.list_spots()
-    return templates.TemplateResponse(
-        "index.html",
-        {"request": request, "spots": spots, "current_user": current_user},
-    )
+
+    filter_values = _extract_filter_values(request)
+    filters = _build_service_filters(filter_values)
+    spots = service.list_spots(filters)
+
+    context = _spot_list_context(request, spots, current_user, filter_values)
+    return templates.TemplateResponse("index.html", context)
 
 
 @router.get("/skate-spots", response_class=HTMLResponse)
@@ -44,12 +140,15 @@ async def list_spots_page(
     service: Annotated[SkateSpotService, Depends(get_skate_spot_service)],
     current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
 ) -> HTMLResponse:
-    """Display all skate spots."""
-    spots = service.list_spots()
-    return templates.TemplateResponse(
-        "index.html",
-        {"request": request, "spots": spots, "current_user": current_user},
-    )
+    """Display all skate spots, optionally filtered via HTMX or page loads."""
+
+    filter_values = _extract_filter_values(request)
+    filters = _build_service_filters(filter_values)
+    spots = service.list_spots(filters)
+
+    template_name = "partials/spot_list.html" if _is_htmx(request) else "index.html"
+    context = _spot_list_context(request, spots, current_user, filter_values)
+    return templates.TemplateResponse(template_name, context)
 
 
 @router.get("/skate-spots/new", response_class=HTMLResponse)
