@@ -41,7 +41,9 @@ class RatingService:
             raise SpotNotFoundError(f"Skate spot with id {spot_id} not found.")
         return spot
 
-    def set_rating(self, spot_id: uuid.UUID, user_id: str, rating_data: RatingCreate) -> RatingSummaryResponse:
+    def set_rating(
+        self, spot_id: uuid.UUID, user_id: str, rating_data: RatingCreate
+    ) -> RatingSummaryResponse:
         """Create or update a user's rating for a given spot."""
 
         self._ensure_spot_exists(spot_id)
