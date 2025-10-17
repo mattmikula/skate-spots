@@ -9,7 +9,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -42,9 +41,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "comment",
-                    models.TextField(
-                        blank=True, help_text="Optional comment about the spot"
-                    ),
+                    models.TextField(blank=True, help_text="Optional comment about the spot"),
                 ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),

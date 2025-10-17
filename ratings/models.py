@@ -11,9 +11,7 @@ class Rating(models.Model):
     """User rating for a skate spot."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    spot = models.ForeignKey(
-        "spots.SkateSpot", on_delete=models.CASCADE, related_name="ratings"
-    )
+    spot = models.ForeignKey("spots.SkateSpot", on_delete=models.CASCADE, related_name="ratings")
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="ratings"
     )
