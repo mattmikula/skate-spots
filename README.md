@@ -11,6 +11,7 @@ A modern FastAPI application for sharing and discovering skateboarding spots aro
 - **Interactive Web Frontend** built with HTMX for dynamic user interactions
 - **REST API** for managing skate spots with full CRUD operations and rich filtering
 - **User Ratings** so skaters can rate spots, manage their own feedback, and see community sentiment
+- **Inline Ratings UI** with HTMX-driven snippets that let logged-in users rate spots directly from the listings
 - **Secure Authentication** with registration, login, and cookie-based JWT tokens
 - **Rich Data Model** with locations, difficulty levels, and spot types
 - **Comprehensive Validation** using Pydantic models
@@ -248,7 +249,7 @@ curl -X POST "http://localhost:8000/api/v1/auth/login" \
 curl "http://localhost:8000/api/v1/auth/me" -b cookies.txt
 ```
 
-**Rate a Spot:**
+**Rate a Spot (API):**
 ```bash
 curl -X PUT "http://localhost:8000/api/v1/skate-spots/<spot-id>/ratings/me" \
   -H "Content-Type: application/json" \
@@ -259,7 +260,7 @@ curl -X PUT "http://localhost:8000/api/v1/skate-spots/<spot-id>/ratings/me" \
   }'
 ```
 
-**Check Rating Summary:**
+**Check Rating Summary (API):**
 ```bash
 curl "http://localhost:8000/api/v1/skate-spots/<spot-id>/ratings/summary" -b cookies.txt
 ```
@@ -310,6 +311,8 @@ skate-spots/
 │   ├── map.html          # Interactive map view
 │   ├── register.html     # Registration form
 │   ├── spot_card.html    # Spot card component
+│   └── partials/
+│       └── rating_section.html  # HTMX snippet for rating summary & form
 │   └── spot_form.html    # Create/edit form
 ├── tests/                # Test suite (organized by app structure)
 │   ├── test_api/         # API integration tests
@@ -606,3 +609,9 @@ For support, please open an issue in the GitHub repository or contact the develo
 ---
 
 **Happy skating!** 🛹
+### 🎨 Frontend Ratings
+
+- Every spot card now lazy-loads a rating widget (`templates/partials/rating_section.html`) via HTMX. When the snippet loads it shows the aggregate score and rating count pulled from the new summary endpoint.
+- Authenticated users can select a score, add an optional comment, and submit directly from the list view. The form posts to `/skate-spots/{spot_id}/ratings` (frontend route) and swaps the snippet with the latest summary without a full page refresh.
+- Removing a rating is equally quick: the “Remove rating” action issues an HTMX `DELETE` that clears the user’s feedback and re-renders the summary.
+- Anonymous visitors still see the community average along with a prompt to log in, so the UI stays informative even when users can’t rate.

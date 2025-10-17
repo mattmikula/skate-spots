@@ -1,0 +1,57 @@
+<div id="rating-section-{{ spot_id }}" class="spot-rating" hx-target="this">
+    <div class="rating-summary">
+        {% if message %}
+        <div class="rating-message">{{ message }}</div>
+        {% endif %}
+
+        {% if summary.ratings_count %}
+        <strong>{{ '{:.1f}'.format(summary.average_score or 0) }}</strong>/5
+        <span>({{ summary.ratings_count }} rating{% if summary.ratings_count != 1 %}s{% endif %})</span>
+        {% else %}
+        <span>No ratings yet.</span>
+        {% endif %}
+    </div>
+
+    {% if current_user %}
+    <form
+        class="rating-form"
+        hx-post="/skate-spots/{{ spot_id }}/ratings"
+        hx-target="#rating-section-{{ spot_id }}"
+        hx-swap="outerHTML"
+    >
+        <label for="rating-score-{{ spot_id }}">Your rating</label>
+        <select id="rating-score-{{ spot_id }}" name="score" required>
+            {% set current_score = summary.user_rating.score if summary.user_rating else None %}
+            {% for value in range(1, 6) %}
+            <option value="{{ value }}" {% if current_score == value %}selected{% endif %}>{{ value }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="rating-comment-{{ spot_id }}">Comment (optional)</label>
+        <textarea
+            id="rating-comment-{{ spot_id }}"
+            name="comment"
+            rows="2"
+            placeholder="Share why you picked this rating"
+        >{{ summary.user_rating.comment if summary.user_rating and summary.user_rating.comment else '' }}</textarea>
+
+        <div class="rating-form-actions">
+            <button type="submit" class="btn btn-primary">Save rating</button>
+            {% if summary.user_rating %}
+            <button
+                type="button"
+                class="btn btn-secondary"
+                hx-delete="/skate-spots/{{ spot_id }}/ratings"
+                hx-target="#rating-section-{{ spot_id }}"
+                hx-swap="outerHTML"
+                hx-confirm="Remove your rating for this spot?"
+            >Remove rating</button>
+            {% endif %}
+        </div>
+    </form>
+    {% else %}
+    <p class="rating-login-prompt">
+        <a href="/login">Log in</a> to rate this spot.
+    </p>
+    {% endif %}
+</div>

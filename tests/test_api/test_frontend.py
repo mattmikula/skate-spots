@@ -112,3 +112,52 @@ def test_map_view_includes_leaflet(client):
     assert b'id="map"' in response.content
     # Check for GeoJSON endpoint fetch
     assert b"/api/v1/skate-spots/geojson" in response.content
+
+
+def test_rating_section_anonymous(client, created_spot_id):  # noqa: ARG001
+    """Rating section shows summary and login prompt for anonymous users."""
+
+    response = client.get(f"/skate-spots/{created_spot_id}/rating-section")
+    assert response.status_code == 200
+    body = response.content.decode()
+    assert "No ratings yet." in body
+    assert "Log in" in body
+
+
+def test_rating_section_authenticated(client, created_spot_id, auth_token):
+    """Logged-in users can see the rating form with their saved rating."""
+
+    response = client.get(
+        f"/skate-spots/{created_spot_id}/rating-section",
+        cookies={"access_token": auth_token},
+    )
+    assert response.status_code == 200
+    body = response.content.decode()
+    assert "Save rating" in body
+    assert "Remove rating" not in body  # no rating yet
+
+
+def test_submit_and_delete_rating_via_frontend(client, created_spot_id, auth_token):
+    """Submitting and deleting ratings through the frontend routes returns updated snippets."""
+
+    post_response = client.post(
+        f"/skate-spots/{created_spot_id}/ratings",
+        data={"score": "4", "comment": "Smooth lines"},
+        cookies={"access_token": auth_token},
+        headers={"HX-Request": "true"},
+    )
+    assert post_response.status_code == 200
+    post_body = post_response.content.decode()
+    assert "Rating saved!" in post_body
+    assert "Remove rating" in post_body
+    assert "4" in post_body
+
+    delete_response = client.delete(
+        f"/skate-spots/{created_spot_id}/ratings",
+        cookies={"access_token": auth_token},
+        headers={"HX-Request": "true"},
+    )
+    assert delete_response.status_code == 200
+    delete_body = delete_response.content.decode()
+    assert "Rating removed." in delete_body
+    assert "Remove rating" not in delete_body
