@@ -69,6 +69,50 @@ def _orm_to_pydantic(
     )
 
 
+def _filters_to_conditions(filters: SkateSpotFilters | None) -> list[Any]:
+    """Translate ``SkateSpotFilters`` into SQLAlchemy filter conditions."""
+
+    if not filters or not filters.has_filters():
+        return []
+
+    conditions: list[Any] = []
+
+    if filters.search:
+        pattern = f"%{filters.search.lower()}%"
+        conditions.append(
+            or_(
+                func.lower(SkateSpotORM.name).like(pattern),
+                func.lower(SkateSpotORM.description).like(pattern),
+                func.lower(SkateSpotORM.city).like(pattern),
+                func.lower(SkateSpotORM.country).like(pattern),
+            )
+        )
+
+    if filters.spot_types:
+        conditions.append(
+            SkateSpotORM.spot_type.in_([spot_type.value for spot_type in filters.spot_types])
+        )
+
+    if filters.difficulties:
+        conditions.append(
+            SkateSpotORM.difficulty.in_([difficulty.value for difficulty in filters.difficulties])
+        )
+
+    if filters.city:
+        conditions.append(func.lower(SkateSpotORM.city) == filters.city.lower())
+
+    if filters.country:
+        conditions.append(func.lower(SkateSpotORM.country) == filters.country.lower())
+
+    if filters.is_public is not None:
+        conditions.append(SkateSpotORM.is_public == filters.is_public)
+
+    if filters.requires_permission is not None:
+        conditions.append(SkateSpotORM.requires_permission == filters.requires_permission)
+
+    return conditions
+
+
 class SkateSpotRepository:
     """Repository handling database persistence for skate spots."""
 
@@ -117,63 +161,12 @@ class SkateSpotRepository:
         with self._session_factory() as session:
             stmt = select(SkateSpotORM)
 
-            if filters and filters.has_filters():
-                conditions: list[Any] = []
-
-                if filters.search:
-                    pattern = f"%{filters.search.lower()}%"
-                    conditions.append(
-                        or_(
-                            func.lower(SkateSpotORM.name).like(pattern),
-                            func.lower(SkateSpotORM.description).like(pattern),
-                            func.lower(SkateSpotORM.city).like(pattern),
-                            func.lower(SkateSpotORM.country).like(pattern),
-                        )
-                    )
-
-                if filters.spot_types:
-                    conditions.append(
-                        SkateSpotORM.spot_type.in_(
-                            [spot_type.value for spot_type in filters.spot_types]
-                        )
-                    )
-
-                if filters.difficulties:
-                    conditions.append(
-                        SkateSpotORM.difficulty.in_(
-                            [difficulty.value for difficulty in filters.difficulties]
-                        )
-                    )
-
-                if filters.city:
-                    conditions.append(func.lower(SkateSpotORM.city) == filters.city.lower())
-
-                if filters.country:
-                    conditions.append(func.lower(SkateSpotORM.country) == filters.country.lower())
-
-                if filters.is_public is not None:
-                    conditions.append(SkateSpotORM.is_public == filters.is_public)
-
-                if filters.requires_permission is not None:
-                    conditions.append(
-                        SkateSpotORM.requires_permission == filters.requires_permission
-                    )
-
-                if conditions:
-                    stmt = stmt.where(*conditions)
+            conditions = _filters_to_conditions(filters)
+            if conditions:
+                stmt = stmt.where(*conditions)
 
             spots = session.scalars(stmt).all()
-            spot_ids = [spot.id for spot in spots]
-            summaries = self._rating_summary_for_spots(session, spot_ids)
-            return [
-                _orm_to_pydantic(
-                    spot,
-                    summary=summaries.get(
-                        spot.id, RatingSummary(average_score=None, ratings_count=0)
-                    ),
-                )
-                for spot in spots
-            ]
+            return self._with_rating_summaries(session, spots)
 
     def is_owner(self, spot_id: UUID, user_id: str) -> bool:
         """Check if a user owns a skate spot."""
@@ -224,6 +217,26 @@ class SkateSpotRepository:
             session.delete(orm_spot)
             session.commit()
             return True
+
+    def _with_rating_summaries(
+        self,
+        session: Session,
+        spots: list[SkateSpotORM],
+    ) -> list[SkateSpot]:
+        """Return hydrated ``SkateSpot`` models for the provided ORM instances."""
+
+        if not spots:
+            return []
+
+        spot_ids = [spot.id for spot in spots]
+        summaries = self._rating_summary_for_spots(session, spot_ids)
+        return [
+            _orm_to_pydantic(
+                spot,
+                summary=summaries.get(spot.id, RatingSummary(average_score=None, ratings_count=0)),
+            )
+            for spot in spots
+        ]
 
     def _rating_summary_for_spots(
         self,
