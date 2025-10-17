@@ -19,7 +19,6 @@ from app.models.skate_spot import (
     Location,
     SkateSpot,
     SkateSpotCreate,
-    SkateSpotFilters,
     SkateSpotUpdate,
     SpotType,
 )
@@ -27,6 +26,7 @@ from app.services.skate_spot_service import (
     SkateSpotService,
     get_skate_spot_service,
 )
+from spots.filters import build_skate_spot_filters
 
 router = APIRouter(prefix="/skate-spots", tags=["skate-spots"])
 _TRUE_VALUES = {"true", "on", "1"}
@@ -135,27 +135,6 @@ async def create_skate_spot(
     return service.create_spot(spot_data, current_user.id)
 
 
-def _build_filters(
-    search: str | None,
-    spot_types: list[SpotType] | None,
-    difficulties: list[Difficulty] | None,
-    city: str | None,
-    country: str | None,
-    is_public: bool | None,
-    requires_permission: bool | None,
-) -> SkateSpotFilters | None:
-    filters = SkateSpotFilters(
-        search=search,
-        spot_types=spot_types or None,
-        difficulties=difficulties or None,
-        city=city,
-        country=country,
-        is_public=is_public,
-        requires_permission=requires_permission,
-    )
-    return filters if filters.has_filters() else None
-
-
 @router.get("/", response_model=list[SkateSpot])
 async def list_skate_spots(
     service: Annotated[SkateSpotService, Depends(get_skate_spot_service)],
@@ -169,7 +148,7 @@ async def list_skate_spots(
 ) -> list[SkateSpot]:
     """Get skate spots, optionally filtered by query parameters."""
 
-    filters = _build_filters(
+    filters = build_skate_spot_filters(
         search=search,
         spot_types=spot_type,
         difficulties=difficulty,
@@ -195,7 +174,7 @@ async def get_spots_geojson(
 ) -> GeoJSONFeatureCollection:
     """Get skate spots in GeoJSON format, honoring optional filters."""
     spots = service.list_spots(
-        _build_filters(
+        build_skate_spot_filters(
             search=search,
             spot_types=spot_type,
             difficulties=difficulty,

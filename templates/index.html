@@ -6,31 +6,106 @@
     <a href="/skate-spots/new" class="btn btn-primary">+ Add New Spot</a>
 </div>
 
-<div id="spot-list" class="spot-list">
-    {% for spot in spots %}
-        {% include "spot_card.html" %}
-    {% endfor %}
+<form
+    id="spot-filter-form"
+    class="filter-form"
+    hx-get="/skate-spots"
+    hx-target="#spot-results"
+    hx-push-url="true"
+    hx-trigger="submit, change delay:300ms from:select, keyup changed delay:500ms from:input"
+    hx-indicator="#spot-filter-indicator"
+>
+    <div class="filter-grid">
+        <div class="filter-field">
+            <label for="filter-search">Search</label>
+            <input
+                type="search"
+                id="filter-search"
+                name="search"
+                value="{{ filter_values.get('search', '') }}"
+                placeholder="Search by name, description, or location"
+            >
+        </div>
+
+        <div class="filter-field">
+            <label for="filter-spot-type">Spot type</label>
+            <select id="filter-spot-type" name="spot_type">
+                <option value="">Any type</option>
+                {% for option in spot_types %}
+                <option
+                    value="{{ option.value }}"
+                    {% if filter_values.get('spot_type') == option.value %}selected{% endif %}
+                >{{ option.value | replace('_', ' ') | title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-field">
+            <label for="filter-difficulty">Difficulty</label>
+            <select id="filter-difficulty" name="difficulty">
+                <option value="">Any level</option>
+                {% for option in difficulties %}
+                <option
+                    value="{{ option.value }}"
+                    {% if filter_values.get('difficulty') == option.value %}selected{% endif %}
+                >{{ option.value | title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-field">
+            <label for="filter-city">City</label>
+            <input
+                type="text"
+                id="filter-city"
+                name="city"
+                value="{{ filter_values.get('city', '') }}"
+                placeholder="e.g. Barcelona"
+            >
+        </div>
+
+        <div class="filter-field">
+            <label for="filter-country">Country</label>
+            <input
+                type="text"
+                id="filter-country"
+                name="country"
+                value="{{ filter_values.get('country', '') }}"
+                placeholder="e.g. Spain"
+            >
+        </div>
+
+        <div class="filter-field">
+            <label for="filter-public">Access</label>
+            <select id="filter-public" name="is_public">
+                <option value="">Any access</option>
+                <option value="true" {% if filter_values.get('is_public') == 'true' %}selected{% endif %}>Public only</option>
+                <option value="false" {% if filter_values.get('is_public') == 'false' %}selected{% endif %}>Private only</option>
+            </select>
+        </div>
+
+        <div class="filter-field">
+            <label for="filter-permission">Permission required</label>
+            <select id="filter-permission" name="requires_permission">
+                <option value="">Either</option>
+                <option value="true" {% if filter_values.get('requires_permission') == 'true' %}selected{% endif %}>Yes</option>
+                <option value="false" {% if filter_values.get('requires_permission') == 'false' %}selected{% endif %}>No</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="filter-actions">
+        <button type="submit" class="btn btn-primary">Apply filters</button>
+        {% if has_active_filters %}
+        <a href="/skate-spots" class="btn btn-secondary">Clear filters</a>
+        {% endif %}
+        <span id="spot-filter-indicator" class="htmx-indicator" role="status" aria-live="polite">
+            Updating spots…
+        </span>
+    </div>
+</form>
+
+<div id="spot-results">
+    {% include "partials/spot_list.html" %}
 </div>
-
-<div id="empty-state" style="text-align: center; padding: 3rem; {% if spots %}display: none;{% endif %}">
-    <p>No skate spots found. Be the first to add one!</p>
-    <a href="/skate-spots/new" class="btn btn-primary" style="margin-top: 1rem;">+ Add New Spot</a>
-</div>
-
-<script>
-// Use MutationObserver to watch for changes in the spot list
-const spotList = document.getElementById('spot-list');
-const emptyState = document.getElementById('empty-state');
-
-const observer = new MutationObserver(function(mutations) {
-    if (spotList.children.length === 0) {
-        emptyState.style.display = 'block';
-    } else {
-        emptyState.style.display = 'none';
-    }
-});
-
-// Start observing the spot list for child changes
-observer.observe(spotList, { childList: true });
-</script>
 {% endblock %}
