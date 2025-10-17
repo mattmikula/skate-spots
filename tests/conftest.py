@@ -1,160 +1,81 @@
-"""Shared test fixtures and configuration."""
+"""Shared test fixtures and configuration for pytest-django."""
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
+from django.contrib.auth import get_user_model
+from django.test import Client
+from rest_framework.test import APIClient
 
-from app.core.dependencies import get_user_repository
-from app.core.rate_limiter import rate_limiter
-from app.core.security import create_access_token, get_password_hash
-from app.db.database import Base, get_db
-from app.models.user import UserCreate
-from app.repositories.rating_repository import RatingRepository
-from app.repositories.skate_spot_repository import SkateSpotRepository
-from app.repositories.user_repository import UserRepository
-from app.services.rating_service import (
-    RatingService,
-    get_rating_service,
-)
-from app.services.skate_spot_service import (
-    SkateSpotService,
-    get_skate_spot_service,
-)
-from main import app
+User = get_user_model()
 
 
 @pytest.fixture
-def session_factory():
-    """Create an in-memory SQLite session factory for tests."""
+def client():
+    """Django test client."""
+    return Client()
 
-    engine = create_engine(
-        "sqlite+pysqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-        future=True,
+
+@pytest.fixture
+def api_client():
+    """DRF API test client."""
+    return APIClient()
+
+
+@pytest.fixture
+def test_user(db):
+    """Create a test user."""
+    return User.objects.create_user(
+        email="test@example.com",
+        username="testuser",
+        password="testpass123"
     )
-    Base.metadata.create_all(engine)
-    TestSessionLocal = sessionmaker(
-        bind=engine,
-        autoflush=False,
-        autocommit=False,
-        expire_on_commit=False,
+
+
+@pytest.fixture
+def authenticated_user(test_user):
+    """Return authenticated test user."""
+    return test_user
+
+
+@pytest.fixture
+def authenticated_api_client(api_client, test_user):
+    """API client authenticated as test user."""
+    from rest_framework_simplejwt.tokens import RefreshToken
+
+    refresh = RefreshToken.for_user(test_user)
+    api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {str(refresh.access_token)}')
+    return api_client
+
+
+@pytest.fixture
+def another_user(db):
+    """Create another test user for permission tests."""
+    return User.objects.create_user(
+        email="other@example.com",
+        username="otheruser",
+        password="otherpass123"
     )
-    try:
-        yield TestSessionLocal
-    finally:
-        Base.metadata.drop_all(engine)
-        engine.dispose()
-
-
-@pytest.fixture(autouse=True)
-def reset_rate_limits():
-    """Ensure rate limiter state is cleared between tests."""
-
-    rate_limiter.reset()
-    yield
-    rate_limiter.reset()
 
 
 @pytest.fixture
-def fresh_service(session_factory):
-    """Return a service wired to the test session factory."""
-
-    repository = SkateSpotRepository(session_factory=session_factory)
-    return SkateSpotService(repository)
-
-
-@pytest.fixture
-def client(session_factory):
-    """Create a FastAPI test client with a test database."""
-
-    repository = SkateSpotRepository(session_factory=session_factory)
-    service = SkateSpotService(repository)
-    rating_repository = RatingRepository(session_factory=session_factory)
-    rating_service = RatingService(rating_repository, repository)
-
-    # Override database session
-    def override_get_db():
-        db = session_factory()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    def override_get_user_repository():
-        db = session_factory()
-        try:
-            yield UserRepository(db)
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_skate_spot_service] = lambda: service
-    app.dependency_overrides[get_rating_service] = lambda: rating_service
-    app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_user_repository] = override_get_user_repository
-
-    try:
-        with TestClient(app) as test_client:
-            yield test_client
-    finally:
-        app.dependency_overrides.pop(get_skate_spot_service, None)
-        app.dependency_overrides.pop(get_rating_service, None)
-        app.dependency_overrides.pop(get_db, None)
-        app.dependency_overrides.pop(get_user_repository, None)
+def admin_user(db):
+    """Create an admin user."""
+    user = User.objects.create_user(
+        email="admin@example.com",
+        username="admin",
+        password="adminpass123"
+    )
+    user.is_admin = True
+    user.is_staff = True
+    user.is_superuser = True
+    user.save()
+    return user
 
 
 @pytest.fixture
-def test_user(session_factory):
-    """Create a test user in the database."""
-    db = session_factory()
-    try:
-        repo = UserRepository(db)
-        user_data = UserCreate(
-            email="testuser@example.com",
-            username="testuser",
-            password="password123",
-        )
-        hashed_password = get_password_hash("password123")
-        user = repo.create(user_data, hashed_password)
-        db.expunge(user)
-        return user
-    finally:
-        db.close()
+def admin_api_client(api_client, admin_user):
+    """API client authenticated as admin."""
+    from rest_framework_simplejwt.tokens import RefreshToken
 
-
-@pytest.fixture
-def test_admin(session_factory):
-    """Create a test admin user in the database."""
-    db = session_factory()
-    try:
-        repo = UserRepository(db)
-        user_data = UserCreate(
-            email="admin@example.com",
-            username="admin",
-            password="adminpass123",
-        )
-        hashed_password = get_password_hash("adminpass123")
-        user = repo.create(user_data, hashed_password)
-
-        # Manually set admin flag (normally would be done through separate endpoint)
-        user.is_admin = True
-        db.commit()
-        db.refresh(user)
-        db.expunge(user)
-        return user
-    finally:
-        db.close()
-
-
-@pytest.fixture
-def auth_token(test_user):
-    """Create an authentication token for the test user."""
-    return create_access_token(data={"sub": str(test_user.id), "username": test_user.username})
-
-
-@pytest.fixture
-def admin_token(test_admin):
-    """Create an authentication token for the admin user."""
-    return create_access_token(data={"sub": str(test_admin.id), "username": test_admin.username})
+    refresh = RefreshToken.for_user(admin_user)
+    api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {str(refresh.access_token)}')
+    return api_client

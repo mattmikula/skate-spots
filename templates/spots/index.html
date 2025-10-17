@@ -1,0 +1,42 @@
+{% extends "spots/base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h2>All Skate Spots</h2>
+    {% if user.is_authenticated %}
+    <a href="{% url 'new_spot' %}" class="btn btn-primary">+ Add New Spot</a>
+    {% endif %}
+</div>
+
+<div id="spot-list" class="spot-list">
+    {% for spot in spots %}
+        {% include "spots/spot_card.html" %}
+    {% endfor %}
+</div>
+
+<div id="empty-state" style="text-align: center; padding: 3rem; {% if spots %}display: none;{% endif %}">
+    <p>No skate spots found. Be the first to add one!</p>
+    {% if user.is_authenticated %}
+    <a href="{% url 'new_spot' %}" class="btn btn-primary" style="margin-top: 1rem;">+ Add New Spot</a>
+    {% endif %}
+</div>
+
+<script>
+// Use MutationObserver to watch for changes in the spot list
+const spotList = document.getElementById('spot-list');
+const emptyState = document.getElementById('empty-state');
+
+if (spotList && emptyState) {
+    const observer = new MutationObserver(function(mutations) {
+        if (spotList.children.length === 0) {
+            emptyState.style.display = 'block';
+        } else {
+            emptyState.style.display = 'none';
+        }
+    });
+
+    // Start observing the spot list for child changes
+    observer.observe(spotList, { childList: true });
+}
+</script>
+{% endblock %}

@@ -1,23 +1,24 @@
 [project]
 name = "skate-spots"
 version = "0.1.0"
-description = "Add your description here"
+description = "A Django application for sharing and discovering skateboarding spots"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi>=0.116.1",
-    "pydantic>=2.11.7",
-    "pydantic-settings>=2.6.1",
-    "ruff>=0.12.10",
-    "uvicorn>=0.35.0",
-    "sqlalchemy>=2.0.36",
-    "jinja2>=3.1.6",
+    "Django>=5.0,<5.1",
+    "djangorestframework>=3.14.0",
+    "djangorestframework-simplejwt>=5.3.0",
+    "django-environ>=0.11.0",
+    "django-ratelimit>=4.1.0",
+    "django-filter>=23.0",
+    "drf-spectacular>=0.27.0",
+    "structlog>=24.3.0",
+    "python-json-logger>=2.0.0",
     "python-multipart>=0.0.20",
-    "python-jose[cryptography]>=3.5.0",
     "bcrypt>=4.1.2,<5.0",
     "email-validator>=2.3.0",
-    "structlog>=24.3.0",
 ]
+
 
 [tool.ruff]
 target-version = "py312"
@@ -45,8 +46,20 @@ ignore = [
     "ARG002",  # Unused method argument (fixtures are intentional)
     "B017",    # Blind exception assertion (acceptable in tests)
 ]
-"app/models/*.py" = [
-    "TCH003",  # Standard library imports needed at runtime for Pydantic
+"*/migrations/*.py" = [
+    "E501",    # Line too long (Django migrations can be long)
+]
+"accounts/views.py" = [
+    "ARG002",  # Unused method arguments (intentional in Django ViewSets)
+]
+"spots/views.py" = [
+    "ARG",     # Unused method arguments (intentional in Django ViewSets and actions)
+]
+"spots/filters.py" = [
+    "ARG002",  # Unused name argument (intentional in django-filter)
+]
+"spots/permissions.py" = [
+    "ARG002",  # Unused view argument (intentional in DRF permissions)
 ]
 
 [tool.ruff.format]
@@ -57,7 +70,7 @@ line-ending = "auto"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-python_files = ["test_*.py", "*_test.py"]
+python_files = ["test_*.py", "*_tests.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = [
@@ -72,11 +85,13 @@ markers = [
     "slow: Slow running tests",
 ]
 
+[tool.django-stubs]
+django_settings_module = "skate_spots_project.settings"
 
 [dependency-groups]
 dev = [
-    "httpx>=0.28.1",
+    "ruff>=0.12.10",
     "pytest>=8.4.1",
     "pytest-asyncio>=1.1.0",
-    "alembic>=1.14.1",
+    "pytest-django>=4.7.0",
 ]

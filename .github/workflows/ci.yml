@@ -27,13 +27,13 @@ jobs:
       run: uv python install ${{ matrix.python-version }}
 
     - name: Install dependencies
-      run: uv sync
+      run: uv sync --all-groups
 
     - name: Run linting
-      run: uv run ruff check
+      run: uv run ruff check accounts spots ratings skate_spots_project
 
     - name: Check code formatting
-      run: uv run ruff format --check
+      run: uv run ruff format --check accounts spots ratings skate_spots_project
 
     - name: Run tests
       run: uv run pytest --verbose
