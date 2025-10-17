@@ -42,12 +42,8 @@ class SkateSpot(models.Model):
     difficulty = models.CharField(max_length=50, choices=Difficulty.choices)
 
     # Location fields
-    latitude = models.FloatField(
-        validators=[MinValueValidator(-90), MaxValueValidator(90)]
-    )
-    longitude = models.FloatField(
-        validators=[MinValueValidator(-180), MaxValueValidator(180)]
-    )
+    latitude = models.FloatField(validators=[MinValueValidator(-90), MaxValueValidator(90)])
+    longitude = models.FloatField(validators=[MinValueValidator(-180), MaxValueValidator(180)])
     address = models.CharField(max_length=255, blank=True, null=True)
     city = models.CharField(max_length=100)
     country = models.CharField(max_length=100)

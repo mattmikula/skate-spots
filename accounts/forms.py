@@ -11,14 +11,10 @@ class LoginForm(forms.Form):
 
     username = forms.CharField(
         max_length=150,
-        widget=forms.TextInput(
-            attrs={"class": "form-input", "placeholder": "Username"}
-        ),
+        widget=forms.TextInput(attrs={"class": "form-input", "placeholder": "Username"}),
     )
     password = forms.CharField(
-        widget=forms.PasswordInput(
-            attrs={"class": "form-input", "placeholder": "Password"}
-        )
+        widget=forms.PasswordInput(attrs={"class": "form-input", "placeholder": "Password"})
     )
 
 
@@ -34,9 +30,7 @@ class RegisterForm(UserCreationForm):
         model = User
         fields = ("email", "username", "password1", "password2")
         widgets = {
-            "username": forms.TextInput(
-                attrs={"class": "form-input", "placeholder": "Username"}
-            ),
+            "username": forms.TextInput(attrs={"class": "form-input", "placeholder": "Username"}),
         }
 
     def __init__(self, *args, **kwargs):

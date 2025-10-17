@@ -3,6 +3,7 @@
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import redirect, render
 from django_ratelimit.decorators import ratelimit
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from .forms import LoginForm, RegisterForm
 
@@ -22,7 +23,18 @@ def login_page(request):
 
             if user is not None:
                 login(request, user)
-                return redirect("home")
+                # Also set JWT token cookie for API access
+                refresh = RefreshToken.for_user(user)
+                access_token = str(refresh.access_token)
+                response = redirect("home")
+                response.set_cookie(
+                    key="access_token",
+                    value=access_token,
+                    httponly=True,
+                    samesite="Lax",
+                    max_age=1800,  # 30 minutes
+                )
+                return response
             else:
                 form.add_error(None, "Incorrect username or password")
     else:
@@ -42,7 +54,18 @@ def register_page(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
-            return redirect("home")
+            # Also set JWT token cookie for API access
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
+            response = redirect("home")
+            response.set_cookie(
+                key="access_token",
+                value=access_token,
+                httponly=True,
+                samesite="Lax",
+                max_age=1800,  # 30 minutes
+            )
+            return response
     else:
         form = RegisterForm()
 
@@ -52,4 +75,7 @@ def register_page(request):
 def logout_view(request):
     """Logout user and redirect to home."""
     logout(request)
-    return redirect("home")
+    response = redirect("home")
+    # Clear JWT token cookie
+    response.delete_cookie("access_token")
+    return response

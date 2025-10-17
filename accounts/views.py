@@ -32,9 +32,7 @@ class AuthViewSet(viewsets.GenericViewSet):
     @action(detail=False, methods=["post"], url_path="register")
     def register(self, request):
         """Register a new user."""
-        logger.info(
-            "registration attempt", extra={"username": request.data.get("username")}
-        )
+        logger.info("registration attempt", extra={"username": request.data.get("username")})
 
         serializer = UserCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -93,12 +91,8 @@ class AuthViewSet(viewsets.GenericViewSet):
             )
 
         if not user.is_active:
-            logger.warning(
-                "login failed", extra={"username": username, "reason": "inactive_user"}
-            )
-            return Response(
-                {"detail": "Inactive user"}, status=status.HTTP_403_FORBIDDEN
-            )
+            logger.warning("login failed", extra={"username": username, "reason": "inactive_user"})
+            return Response({"detail": "Inactive user"}, status=status.HTTP_403_FORBIDDEN)
 
         # Create JWT token
         refresh = RefreshToken.for_user(user)

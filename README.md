@@ -1,40 +1,53 @@
-# Skate Spots API - Django Version
+# Skate Spots 🛹
 
 [![Python](https://img.shields.io/badge/Python-3.12-blue)](https://www.python.org/downloads/)
 [![Django](https://img.shields.io/badge/Django-5.0-green)](https://www.djangoproject.com/)
 [![DRF](https://img.shields.io/badge/DRF-3.16-orange)](https://www.django-rest-framework.org/)
+[![HTMX](https://img.shields.io/badge/HTMX-2.0-blueviolet)](https://htmx.org/)
 
-A Django REST Framework implementation of the Skate Spots API for sharing and discovering skateboarding spots around the world.
+A full-stack Django application for sharing and discovering skateboarding spots around the world. Features a REST API with Django REST Framework and an interactive HTMX-powered frontend.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 - Python 3.12+
-- pip or uv package manager
+- [uv](https://github.com/astral-sh/uv) package manager (recommended) or pip
 
 ### Installation
 
 ```bash
+# Install uv if you don't have it
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
 # Install dependencies
-pip install -r requirements.txt
+make install
 
 # Run migrations
-make -f Makefile.django migrate
+make migrate
 
-# Create superuser
-make -f Makefile.django createsuperuser
+# Create superuser (optional, for admin access)
+make createsuperuser
 
 # Start server
-make -f Makefile.django serve
+make serve
 ```
 
-The API will be available at:
+The application will be available at:
+- **Website**: http://localhost:8000/
 - **API**: http://localhost:8000/api/v1/
 - **Admin**: http://localhost:8000/admin/
 - **Docs**: http://localhost:8000/api/docs/
 
 ## 🛹 Features
 
+### Frontend
+- **Interactive Web UI** with HTMX for smooth interactions
+- **Spot Management** - Create, edit, delete spots with forms
+- **Real-time Updates** - HTMX-powered delete without page reload
+- **Map View** with Leaflet.js for visualizing spots
+- **Responsive Design** with modern CSS
+
+### Backend
 - **REST API** with full CRUD operations for skate spots
 - **JWT Authentication** with httponly cookies
 - **Advanced Filtering** by location, difficulty, type, and more
@@ -42,7 +55,9 @@ The API will be available at:
 - **Admin Interface** for easy data management
 - **API Documentation** with interactive Swagger UI
 - **Ownership & Permissions** - Users own their spots
+- **Rate Limiting** - 5 requests/min for auth, 50/min for writes
 - **Clean Architecture** with Django best practices
+- **Comprehensive Test Suite** - 81 tests covering all functionality
 
 ## 📋 API Endpoints
 
@@ -144,15 +159,17 @@ curl http://localhost:8000/api/v1/auth/me/ -b cookies.txt
 ### Available Commands
 
 ```bash
-make -f Makefile.django serve           # Start dev server
-make -f Makefile.django makemigrations  # Create migrations
-make -f Makefile.django migrate         # Apply migrations
-make -f Makefile.django shell           # Django shell
-make -f Makefile.django createsuperuser # Create admin user
-make -f Makefile.django lint            # Check code
-make -f Makefile.django format          # Format code
-make -f Makefile.django test            # Run tests
-make -f Makefile.django clean           # Clean cache
+make install            # Install dependencies with uv
+make serve              # Start development server
+make migrate            # Run database migrations
+make makemigrations     # Create new migrations
+make shell              # Open Django shell
+make createsuperuser    # Create admin user
+make test               # Run test suite (81 tests)
+make check              # Run linting and tests
+make lint               # Check code with ruff
+make format             # Format code with ruff
+make clean              # Remove cache files
 ```
 
 ### Project Structure
@@ -160,17 +177,36 @@ make -f Makefile.django clean           # Clean cache
 ```
 skate-spots/
 ├── accounts/              # User authentication
-│   ├── models.py         # User model
+│   ├── models.py         # Custom User model with UUID
 │   ├── serializers.py    # API serializers
-│   ├── views.py          # Auth endpoints
+│   ├── views.py          # API auth endpoints
+│   ├── frontend_views.py # HTML login/register views
+│   ├── forms.py          # Django forms
 │   └── authentication.py # JWT cookie auth
-├── spots/                # Skate spots
+├── spots/                # Skate spots app
 │   ├── models.py         # SkateSpot model
-│   ├── serializers.py    # Spot serializers
-│   ├── views.py          # CRUD endpoints
-│   ├── filters.py        # Filtering logic
-│   └── permissions.py    # Access control
-└── skate_spots_project/  # Django config
+│   ├── serializers.py    # API serializers (nested & flat)
+│   ├── views.py          # API CRUD endpoints
+│   ├── frontend_views.py # HTML views
+│   ├── filters.py        # Advanced filtering
+│   ├── permissions.py    # Owner/admin permissions
+│   └── forms.py          # Spot creation forms
+├── templates/            # Django templates
+│   ├── spots/           # Spot templates with HTMX
+│   │   ├── base.html
+│   │   ├── index.html
+│   │   ├── spot_card.html
+│   │   ├── spot_form.html
+│   │   └── map.html
+│   └── accounts/        # Auth templates
+├── static/              # CSS, JS, images
+├── tests/               # Comprehensive test suite
+│   ├── conftest.py      # pytest fixtures
+│   ├── test_models.py
+│   ├── test_api_endpoints.py
+│   ├── test_frontend_pages.py
+│   └── test_rate_limiting.py
+└── skate_spots_project/ # Django config
     ├── settings.py
     └── urls.py
 ```
@@ -188,45 +224,68 @@ DEBUG=True
 
 ## 🧪 Testing
 
-Core API tested and verified:
-- ✅ User registration & login
-- ✅ JWT cookie authentication
-- ✅ CRUD operations on spots
-- ✅ Filtering & search
-- ✅ GeoJSON endpoint
-- ✅ Permission controls
+Comprehensive test suite with **81 tests** covering:
+- ✅ **Model tests** - User and SkateSpot validation, constraints, cascade delete
+- ✅ **API endpoint tests** - Auth flow, CRUD operations, filtering, GeoJSON
+- ✅ **Frontend tests** - Page rendering, form submissions, authentication flow
+- ✅ **Permission tests** - Owner/admin access, update/delete authorization
+- ✅ **Rate limiting** - Decorator configuration and enforcement
+
+Run tests with:
+```bash
+make test        # Run all tests
+make check       # Run linting + tests
+```
 
 ## 📚 Documentation
 
-- **API Docs**: http://localhost:8000/api/docs/ (Swagger UI)
-- **Migration Guide**: [DJANGO_MIGRATION.md](DJANGO_MIGRATION.md)
-- **Admin Interface**: http://localhost:8000/admin/
+- **Website**: http://localhost:8000/ - Interactive frontend
+- **API Docs**: http://localhost:8000/api/docs/ - Swagger UI
+- **Admin Interface**: http://localhost:8000/admin/ - Django admin
 
-## 🔄 Migration from FastAPI
+## 🔄 Migration History
 
-This is a Django implementation of the original FastAPI application. See [DJANGO_MIGRATION.md](DJANGO_MIGRATION.md) for details on the migration.
+This project was migrated from FastAPI to Django with full feature parity.
 
-**Key differences:**
-- Django REST Framework instead of FastAPI
-- Django ORM instead of SQLAlchemy
-- Built-in admin interface
-- Django migrations instead of Alembic
+**Technology Stack Changes:**
+- ~~FastAPI~~ → **Django REST Framework**
+- ~~SQLAlchemy~~ → **Django ORM**
+- ~~Alembic~~ → **Django Migrations**
+- ~~Jinja2~~ → **Django Templates**
+- Added: **HTMX** for interactive frontend
+- Added: **Django Admin** interface
 
-**Preserved functionality:**
-- All API endpoints
-- Authentication & permissions
-- Data validation
-- Filtering capabilities
-- GeoJSON support
+**All functionality preserved:**
+- ✅ REST API endpoints
+- ✅ JWT authentication
+- ✅ Permission system
+- ✅ Data validation
+- ✅ Advanced filtering
+- ✅ GeoJSON support
+- ✅ Rate limiting
+- **+** Interactive web UI
+- **+** 81-test comprehensive suite
 
 ## 📦 Dependencies
 
-- Django 5.0
-- Django REST Framework 3.16
-- djangorestframework-simplejwt (JWT auth)
-- django-filter (filtering)
-- django-environ (settings)
-- drf-spectacular (API docs)
+### Backend
+- **Django 5.0** - Web framework
+- **Django REST Framework 3.16** - API toolkit
+- **djangorestframework-simplejwt** - JWT authentication
+- **django-filter** - Advanced filtering
+- **django-ratelimit** - Rate limiting
+- **django-environ** - Environment configuration
+- **drf-spectacular** - OpenAPI documentation
+
+### Frontend
+- **HTMX 2.0** - Dynamic interactions
+- **Leaflet.js** - Interactive maps
+- **Modern CSS** - Responsive design
+
+### Development
+- **pytest-django** - Testing framework
+- **ruff** - Fast Python linter & formatter
+- **uv** - Fast Python package installer
 
 ## 🚀 Production
 

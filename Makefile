@@ -24,7 +24,7 @@ format:
 	uv run ruff format accounts spots skate_spots_project
 
 test:
-	uv run pytest || [ $$? -eq 5 ]
+	uv run pytest
 
 serve:
 	uv run python manage.py runserver

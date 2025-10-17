@@ -102,19 +102,11 @@ class Migration(migrations.Migration):
                 "db_table": "skate_spots",
                 "ordering": ["-created_at"],
                 "indexes": [
-                    models.Index(
-                        fields=["owner"], name="skate_spots_user_id_6b147c_idx"
-                    ),
+                    models.Index(fields=["owner"], name="skate_spots_user_id_6b147c_idx"),
                     models.Index(fields=["city"], name="skate_spots_city_9e18b0_idx"),
-                    models.Index(
-                        fields=["country"], name="skate_spots_country_240519_idx"
-                    ),
-                    models.Index(
-                        fields=["spot_type"], name="skate_spots_spot_ty_272b04_idx"
-                    ),
-                    models.Index(
-                        fields=["difficulty"], name="skate_spots_difficu_2c3f51_idx"
-                    ),
+                    models.Index(fields=["country"], name="skate_spots_country_240519_idx"),
+                    models.Index(fields=["spot_type"], name="skate_spots_spot_ty_272b04_idx"),
+                    models.Index(fields=["difficulty"], name="skate_spots_difficu_2c3f51_idx"),
                 ],
             },
         ),

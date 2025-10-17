@@ -28,17 +28,11 @@ class SkateSpotForm(forms.ModelForm):
             "description": forms.Textarea(attrs={"class": "form-input", "rows": 4}),
             "spot_type": forms.Select(attrs={"class": "form-input"}),
             "difficulty": forms.Select(attrs={"class": "form-input"}),
-            "latitude": forms.NumberInput(
-                attrs={"class": "form-input", "step": "0.000001"}
-            ),
-            "longitude": forms.NumberInput(
-                attrs={"class": "form-input", "step": "0.000001"}
-            ),
+            "latitude": forms.NumberInput(attrs={"class": "form-input", "step": "0.000001"}),
+            "longitude": forms.NumberInput(attrs={"class": "form-input", "step": "0.000001"}),
             "address": forms.TextInput(attrs={"class": "form-input"}),
             "city": forms.TextInput(attrs={"class": "form-input"}),
             "country": forms.TextInput(attrs={"class": "form-input"}),
             "is_public": forms.CheckboxInput(attrs={"class": "form-checkbox"}),
-            "requires_permission": forms.CheckboxInput(
-                attrs={"class": "form-checkbox"}
-            ),
+            "requires_permission": forms.CheckboxInput(attrs={"class": "form-checkbox"}),
         }

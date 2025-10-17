@@ -435,7 +435,7 @@ input:focus, textarea:focus, select:focus {
 .alert-success {
     background: #efe;
     border: 1px solid #cfc;
-    color: #3c3;
+    color: #3c3;;
 }
 
 .btn-link {

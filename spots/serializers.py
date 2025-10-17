@@ -50,9 +50,17 @@ class SkateSpotSerializer(serializers.ModelSerializer):
 
 
 class SkateSpotCreateSerializer(serializers.ModelSerializer):
-    """Serializer for creating skate spots."""
+    """Serializer for creating skate spots - accepts both nested and flat data."""
 
-    location = LocationSerializer()
+    location = LocationSerializer(required=False)
+    # Also accept flat location fields for form submissions
+    latitude = serializers.FloatField(min_value=-90, max_value=90, required=False, write_only=True)
+    longitude = serializers.FloatField(
+        min_value=-180, max_value=180, required=False, write_only=True
+    )
+    city = serializers.CharField(required=False, write_only=True)
+    country = serializers.CharField(required=False, write_only=True)
+    address = serializers.CharField(required=False, allow_blank=True, write_only=True)
 
     class Meta:
         model = SkateSpot
@@ -62,28 +70,53 @@ class SkateSpotCreateSerializer(serializers.ModelSerializer):
             "spot_type",
             "difficulty",
             "location",
+            "latitude",
+            "longitude",
+            "city",
+            "country",
+            "address",
             "is_public",
             "requires_permission",
         )
 
     def create(self, validated_data):
-        """Create a skate spot with nested location data."""
-        location_data = validated_data.pop("location")
+        """Create a skate spot with nested or flat location data."""
+        # Check if location is nested (JSON) or flat (form data)
+        if "location" in validated_data:
+            location_data = validated_data.pop("location")
+        else:
+            # Extract flat location fields
+            location_data = {
+                "latitude": validated_data.pop("latitude"),
+                "longitude": validated_data.pop("longitude"),
+                "city": validated_data.pop("city"),
+                "country": validated_data.pop("country"),
+                "address": validated_data.pop("address", ""),
+            }
+
         spot = SkateSpot.objects.create(
             **validated_data,
             latitude=location_data["latitude"],
             longitude=location_data["longitude"],
             city=location_data["city"],
             country=location_data["country"],
-            address=location_data.get("address"),
+            address=location_data.get("address", ""),
         )
         return spot
 
 
 class SkateSpotUpdateSerializer(serializers.ModelSerializer):
-    """Serializer for updating skate spots."""
+    """Serializer for updating skate spots - accepts both nested and flat data."""
 
     location = LocationSerializer(required=False)
+    # Also accept flat location fields for form submissions
+    latitude = serializers.FloatField(min_value=-90, max_value=90, required=False, write_only=True)
+    longitude = serializers.FloatField(
+        min_value=-180, max_value=180, required=False, write_only=True
+    )
+    city = serializers.CharField(required=False, write_only=True)
+    country = serializers.CharField(required=False, write_only=True)
+    address = serializers.CharField(required=False, allow_blank=True, write_only=True)
 
     class Meta:
         model = SkateSpot
@@ -93,13 +126,28 @@ class SkateSpotUpdateSerializer(serializers.ModelSerializer):
             "spot_type",
             "difficulty",
             "location",
+            "latitude",
+            "longitude",
+            "city",
+            "country",
+            "address",
             "is_public",
             "requires_permission",
         )
 
     def update(self, instance, validated_data):
-        """Update a skate spot with optional nested location data."""
-        location_data = validated_data.pop("location", None)
+        """Update a skate spot with optional nested or flat location data."""
+        # Check if location is nested (JSON) or flat (form data)
+        if "location" in validated_data:
+            location_data = validated_data.pop("location")
+        elif any(key in validated_data for key in ["latitude", "longitude", "city", "country"]):
+            # Extract flat location fields if any are present
+            location_data = {}
+            for field in ["latitude", "longitude", "city", "country", "address"]:
+                if field in validated_data:
+                    location_data[field] = validated_data.pop(field)
+        else:
+            location_data = None
 
         # Update basic fields
         for attr, value in validated_data.items():
@@ -121,9 +169,7 @@ class GeoJSONPointSerializer(serializers.Serializer):
     """Serializer for GeoJSON Point geometry."""
 
     type = serializers.CharField(default="Point")
-    coordinates = serializers.ListField(
-        child=serializers.FloatField(), min_length=2, max_length=2
-    )
+    coordinates = serializers.ListField(child=serializers.FloatField(), min_length=2, max_length=2)
 
 
 class GeoJSONFeaturePropertiesSerializer(serializers.Serializer):
