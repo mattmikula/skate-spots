@@ -10,6 +10,13 @@ from app.core.dependencies import get_user_repository
 from app.core.rate_limiter import rate_limiter
 from app.core.security import create_access_token, get_password_hash
 from app.db.database import Base, get_db
+from app.db.models import (  # noqa: F401 - Import to register models with Base
+    FavoriteSpotORM,
+    RatingORM,
+    SkateSpotORM,
+    SpotPhotoORM,
+    UserORM,
+)
 from app.models.user import UserCreate
 from app.repositories.favorite_repository import FavoriteRepository
 from app.repositories.rating_repository import RatingRepository
