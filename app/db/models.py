@@ -127,9 +127,7 @@ class FavoriteSpotORM(Base):
     """Association table linking users to their favourite skate spots."""
 
     __tablename__ = "favorite_spots"
-    __table_args__ = (
-        UniqueConstraint("user_id", "spot_id", name="uq_favorite_user_spot"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "spot_id", name="uq_favorite_user_spot"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
     user_id: Mapped[str] = mapped_column(
