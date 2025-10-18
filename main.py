@@ -1,5 +1,7 @@
 """Main FastAPI application entry point."""
 
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
@@ -26,6 +28,9 @@ app.state.rate_limiter = rate_limiter
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Mount media files (user-uploaded content)
+# Ensure media directory exists for CI/testing environments
+MEDIA_DIR = Path("media")
+MEDIA_DIR.mkdir(exist_ok=True)
 app.mount("/media", StaticFiles(directory="media"), name="media")
 
 # Include routers
