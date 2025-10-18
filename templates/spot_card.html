@@ -19,6 +19,11 @@
         {% if spot.requires_permission %} • ⚠️ Permission required{% endif %}
     </div>
 
+    {% set is_favorite = spot.id in favorite_spot_ids %}
+    {% with spot_id=spot.id, is_favorite=is_favorite, current_user=current_user %}
+        {% include "partials/favorite_button.html" %}
+    {% endwith %}
+
     <div
         class="spot-rating-container"
         hx-get="/skate-spots/{{ spot.id }}/rating-section"

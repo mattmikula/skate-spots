@@ -13,6 +13,7 @@ A modern FastAPI application for sharing and discovering skateboarding spots aro
 - **User Ratings** so skaters can rate spots, manage their own feedback, and see community sentiment
 - **Inline Ratings UI** with HTMX-driven snippets that let logged-in users rate spots directly from the listings
 - **Dynamic Spot Filters** with HTMX-powered search and dropdowns so the catalogue updates instantly without full page reloads
+- **Personal Collections** so logged-in skaters can favourite spots and revisit them from their profile
 - **Secure Authentication** with registration, login, and cookie-based JWT tokens
 - **Rich Data Model** with locations, difficulty levels, and spot types
 - **Comprehensive Validation** using Pydantic models
@@ -74,7 +75,7 @@ the full catalogue. Combine any of the following parameters on `GET /api/v1/skat
 | `is_public` | `bool` | Restrict to publicly accessible spots. |
 | `requires_permission` | `bool` | Restrict to spots that require special permission. |
 
-The `/skate-spots` HTMX front end uses the same parameters under the hood, so the filter form in the UI stays in sync with the API surface.
+The `/skate-spots` HTMX front end uses the same parameters under the hood, so the filter form in the UI stays in sync with the API surface. When you favourite a spot from the listings, the UI issues the same requests you can script against `/api/v1/users/me/favorites/`.
 
 Example: fetch all intermediate or advanced street spots in Barcelona that are publicly accessible:
 

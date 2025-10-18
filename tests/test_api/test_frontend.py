@@ -235,3 +235,34 @@ def test_submit_and_delete_rating_via_frontend(client, created_spot_id, auth_tok
     delete_body = delete_response.content.decode()
     assert "Rating removed." in delete_body
     assert "Remove rating" not in delete_body
+
+
+def test_toggle_favorite_button(client, created_spot_id, auth_token):
+    response = client.post(
+        f"/skate-spots/{created_spot_id}/favorite",
+        headers={"HX-Request": "true"},
+        cookies={"access_token": auth_token},
+    )
+    assert response.status_code == 200
+    body = response.text
+    assert "★ Saved" in body
+
+    second = client.post(
+        f"/skate-spots/{created_spot_id}/favorite",
+        headers={"HX-Request": "true"},
+        cookies={"access_token": auth_token},
+    )
+    assert second.status_code == 200
+    assert "☆ Save spot" in second.text
+
+
+def test_profile_page_shows_favourites(client, created_spot_id, auth_token):
+    client.post(
+        f"/skate-spots/{created_spot_id}/favorite",
+        headers={"HX-Request": "true"},
+        cookies={"access_token": auth_token},
+    )
+
+    response = client.get("/profile", cookies={"access_token": auth_token})
+    assert response.status_code == 200
+    assert "Frontend Test Spot" in response.text

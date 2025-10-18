@@ -1,0 +1,24 @@
+<div class="spot-favorite" id="favorite-toggle-{{ spot_id }}">
+    {% if current_user %}
+    <button
+        class="btn btn-favorite {% if is_favorite %}btn-favorite--active{% endif %}"
+        hx-post="/skate-spots/{{ spot_id }}/favorite"
+        hx-target="#favorite-toggle-{{ spot_id }}"
+        hx-swap="outerHTML"
+    >
+        {% if is_favorite %}
+        ★ Saved
+        {% else %}
+        ☆ Save spot
+        {% endif %}
+    </button>
+    {% if message %}
+    <p class="favorite-message">{{ message }}</p>
+    {% endif %}
+    {% else %}
+    <span class="guest-favorite-message">
+        <a href="/login">Log in</a> to save this spot.
+        {% if message %}<span class="favorite-message">{{ message }}</span>{% endif %}
+    </span>
+    {% endif %}
+</div>

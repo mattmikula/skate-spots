@@ -46,6 +46,11 @@ class UserORM(Base):
     ratings: Mapped[list[RatingORM]] = relationship(
         "RatingORM", back_populates="user", cascade="all, delete-orphan"
     )
+    favorite_spots: Mapped[list[FavoriteSpotORM]] = relationship(
+        "FavoriteSpotORM",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
 
 
 class SkateSpotORM(Base):
@@ -81,6 +86,11 @@ class SkateSpotORM(Base):
     ratings: Mapped[list[RatingORM]] = relationship(
         "RatingORM", back_populates="spot", cascade="all, delete-orphan"
     )
+    favorited_by: Mapped[list[FavoriteSpotORM]] = relationship(
+        "FavoriteSpotORM",
+        back_populates="spot",
+        cascade="all, delete-orphan",
+    )
 
 
 class RatingORM(Base):
@@ -111,3 +121,24 @@ class RatingORM(Base):
 
     spot: Mapped[SkateSpotORM] = relationship("SkateSpotORM", back_populates="ratings")
     user: Mapped[UserORM] = relationship("UserORM", back_populates="ratings")
+
+
+class FavoriteSpotORM(Base):
+    """Association table linking users to their favourite skate spots."""
+
+    __tablename__ = "favorite_spots"
+    __table_args__ = (
+        UniqueConstraint("user_id", "spot_id", name="uq_favorite_user_spot"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    spot_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("skate_spots.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+
+    user: Mapped[UserORM] = relationship("UserORM", back_populates="favorite_spots")
+    spot: Mapped[SkateSpotORM] = relationship("SkateSpotORM", back_populates="favorited_by")
