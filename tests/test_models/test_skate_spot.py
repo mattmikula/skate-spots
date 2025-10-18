@@ -9,6 +9,8 @@ from app.models.skate_spot import (
     SkateSpot,
     SkateSpotCreate,
     SkateSpotUpdate,
+    SpotPhoto,
+    SpotPhotoCreate,
     SpotType,
 )
 
@@ -39,6 +41,29 @@ def test_location_without_address():
     }
     location = Location(**location_data)
     assert location.address is None
+
+
+def test_spot_photo_create_valid():
+    """Photo payloads store relative media paths."""
+
+    photo = SpotPhotoCreate(path="2024/05/spot.jpg")
+    assert photo.path == "2024/05/spot.jpg"
+
+
+def test_spot_photo_create_requires_path():
+    """Missing file paths should raise a validation error."""
+
+    with pytest.raises(ValidationError):
+        SpotPhotoCreate(path="")
+
+
+def test_spot_photo_defaults_and_url():
+    """Complete photo models expose generated identifiers and computed URLs."""
+
+    photo = SpotPhoto(path="2024/05/spot.jpg", original_filename="spot.jpg")
+    assert photo.id is not None
+    assert photo.created_at is not None
+    assert photo.url.endswith("/media/2024/05/spot.jpg")
 
 
 def test_invalid_latitude_too_high():
@@ -105,11 +130,16 @@ def test_valid_skate_spot_create():
         },
         "is_public": True,
         "requires_permission": False,
+        "photos": [
+            {"path": "2024/05/rails-1.jpg"},
+            {"path": "2024/05/rails-2.jpg"},
+        ],
     }
     spot = SkateSpotCreate(**spot_data)
     assert spot.name == "Downtown Rails"
     assert spot.spot_type == SpotType.RAIL
     assert spot.difficulty == Difficulty.INTERMEDIATE
+    assert len(spot.photos) == 2
 
 
 def test_name_empty_validation():
@@ -276,6 +306,14 @@ def test_partial_update():
     assert update.description is None
 
 
+def test_update_with_photos():
+    """Photos can be supplied as part of an update payload."""
+
+    update = SkateSpotUpdate(photos=[SpotPhotoCreate(path="2024/05/new-photo.jpg")])
+    assert update.photos is not None
+    assert len(update.photos) == 1
+
+
 def test_update_name_empty_validation():
     """Test that empty name still fails validation in update."""
     with pytest.raises(ValidationError):
@@ -311,6 +349,7 @@ def test_auto_generated_fields():
     # Timestamps should be close but may have microsecond differences
     time_diff = abs((spot.updated_at - spot.created_at).total_seconds())
     assert time_diff < 0.1  # Within 100ms
+    assert spot.photos == []
 
 
 def test_default_values():

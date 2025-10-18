@@ -11,7 +11,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.db.database import SessionLocal
-from app.db.models import RatingORM, SkateSpotORM
+from app.db.models import RatingORM, SkateSpotORM, SpotPhotoORM
 from app.models.rating import RatingSummary
 from app.models.skate_spot import (
     Difficulty,
@@ -20,6 +20,7 @@ from app.models.skate_spot import (
     SkateSpotCreate,
     SkateSpotFilters,
     SkateSpotUpdate,
+    SpotPhoto,
     SpotType,
 )
 
@@ -47,6 +48,15 @@ def _orm_to_pydantic(
     """Convert an ORM instance into a Pydantic model, including rating metadata."""
 
     rating_summary = summary or RatingSummary(average_score=None, ratings_count=0)
+    photos = [
+        SpotPhoto(
+            id=UUID(photo.id),
+            path=photo.file_path,
+            original_filename=photo.original_filename,
+            created_at=photo.created_at,
+        )
+        for photo in sorted(orm_spot.photos, key=lambda record: record.created_at)
+    ]
     return SkateSpot(
         id=UUID(orm_spot.id),
         name=orm_spot.name,
@@ -66,6 +76,7 @@ def _orm_to_pydantic(
         updated_at=orm_spot.updated_at,
         average_rating=rating_summary.average_score,
         ratings_count=rating_summary.ratings_count,
+        photos=photos,
     )
 
 
@@ -123,6 +134,7 @@ class SkateSpotRepository:
         """Create a new skate spot."""
 
         payload = spot_data.model_dump()
+        photo_payloads = payload.pop("photos", [])
         location_data = _location_dict(payload.pop("location"))
         orm_spot = SkateSpotORM(
             **{key: _enum_to_value(value) for key, value in payload.items()},
@@ -136,8 +148,19 @@ class SkateSpotRepository:
 
         with self._session_factory() as session:
             session.add(orm_spot)
+            session.flush()
+            for photo in photo_payloads:
+                session.add(
+                    SpotPhotoORM(
+                        spot_id=orm_spot.id,
+                        uploader_id=user_id,
+                        file_path=str(photo["path"]),
+                        original_filename=photo.get("original_filename"),
+                    )
+                )
             session.commit()
             session.refresh(orm_spot)
+            _ = list(orm_spot.photos)
             return _orm_to_pydantic(
                 orm_spot,
                 summary=RatingSummary(average_score=None, ratings_count=0),
@@ -209,6 +232,19 @@ class SkateSpotRepository:
                     orm_spot.address = location_data.get("address")
                     orm_spot.city = location_data["city"]
                     orm_spot.country = location_data["country"]
+                elif field == "photos" and value is not None:
+                    session.query(SpotPhotoORM).filter(SpotPhotoORM.spot_id == orm_spot.id).delete(
+                        synchronize_session=False
+                    )
+                    for photo in value:
+                        session.add(
+                            SpotPhotoORM(
+                                spot_id=orm_spot.id,
+                                uploader_id=orm_spot.user_id,
+                                file_path=str(photo["path"]),
+                                original_filename=photo.get("original_filename"),
+                            )
+                        )
                 else:
                     setattr(orm_spot, field, _enum_to_value(value))
 
@@ -216,6 +252,7 @@ class SkateSpotRepository:
             session.add(orm_spot)
             session.commit()
             session.refresh(orm_spot)
+            _ = list(orm_spot.photos)
             summary = self._rating_summary_for_spots(session, [str(spot_id)]).get(
                 str(spot_id), RatingSummary(average_score=None, ratings_count=0)
             )

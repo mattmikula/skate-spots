@@ -31,6 +31,11 @@ class Settings(BaseSettings):
         alias="LOG_LEVEL",
     )
     log_json: bool = Field(default=False, alias="LOG_JSON")
+    media_directory: Path = Field(
+        default_factory=lambda: Path(__file__).resolve().parents[2] / "media",
+        alias="MEDIA_DIRECTORY",
+    )
+    media_url_path: str = Field(default="/media", alias="MEDIA_URL_PATH")
 
     model_config = {
         "env_prefix": "SKATE_SPOTS_",

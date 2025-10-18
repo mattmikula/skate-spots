@@ -10,6 +10,7 @@ from app.models.skate_spot import (
     SkateSpotCreate,
     SkateSpotFilters,
     SkateSpotUpdate,
+    SpotPhotoCreate,
     SpotType,
 )
 from app.repositories.skate_spot_repository import SkateSpotRepository
@@ -80,6 +81,26 @@ def test_create_spot(repository, sample_spot_data):
     assert spot.created_at is not None
     assert spot.average_rating is None
     assert spot.ratings_count == 0
+    assert spot.photos == []
+
+
+def test_create_spot_with_photos(repository, sample_spot_data):
+    """Spot photos provided at creation are persisted."""
+
+    data_with_photos = sample_spot_data.model_copy(
+        update={
+            "photos": [
+                SpotPhotoCreate(path="2024/05/photo-1.jpg"),
+                SpotPhotoCreate(path="2024/05/photo-2.jpg"),
+            ]
+        }
+    )
+
+    spot = repository.create(data_with_photos, user_id="test-user-id")
+
+    assert len(spot.photos) == 2
+    assert spot.photos[0].path == "2024/05/photo-1.jpg"
+    assert spot.photos[0].url.endswith("/media/2024/05/photo-1.jpg")
 
 
 # Repository read tests
@@ -179,6 +200,22 @@ def test_update_existing_spot(repository, created_spot):
     assert updated_spot.difficulty == Difficulty.ADVANCED
     assert updated_spot.description == created_spot.description
     assert updated_spot.updated_at >= created_spot.updated_at
+
+
+def test_update_spot_photos(repository, created_spot):
+    """Updating a spot can replace its photo list."""
+
+    update_data = SkateSpotUpdate(
+        photos=[
+            SpotPhotoCreate(path="2024/05/updated-photo.jpg"),
+        ]
+    )
+
+    updated_spot = repository.update(created_spot.id, update_data)
+
+    assert updated_spot is not None
+    assert len(updated_spot.photos) == 1
+    assert updated_spot.photos[0].path == "2024/05/updated-photo.jpg"
 
 
 def test_update_nonexistent_spot(repository):

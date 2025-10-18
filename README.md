@@ -13,6 +13,7 @@ A modern FastAPI application for sharing and discovering skateboarding spots aro
 - **User Ratings** so skaters can rate spots, manage their own feedback, and see community sentiment
 - **Inline Ratings UI** with HTMX-driven snippets that let logged-in users rate spots directly from the listings
 - **Dynamic Spot Filters** with HTMX-powered search and dropdowns so the catalogue updates instantly without full page reloads
+- **Spot Photo Uploads** with local media storage, editing, and responsive galleries on each spot card
 - **Personal Collections** so logged-in skaters can favourite spots and revisit them from their profile
 - **Secure Authentication** with registration, login, and cookie-based JWT tokens
 - **Rich Data Model** with locations, difficulty levels, and spot types
@@ -59,6 +60,9 @@ The application will be available at:
 - **API Base**: http://localhost:8000/api/v1
 - **Interactive API Docs**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
+- **Uploaded Media**: http://localhost:8000/media/
+
+Uploaded skate spot photos are stored under the `media/` directory in the project root. The FastAPI app automatically creates the folder on startup and serves its contents at `/media`. Add or remove photos using the HTMX forms on the spot create/edit pages – each submission supports multiple image uploads and lets you mark existing photos for deletion. The repository includes a `.gitignore` entry so that media files stay out of version control.
 
 ### Filtering Skate Spots via the API
 
