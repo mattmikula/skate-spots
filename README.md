@@ -14,8 +14,9 @@ A modern FastAPI application for sharing and discovering skateboarding spots aro
 - **Inline Ratings UI** with HTMX-driven snippets that let logged-in users rate spots directly from the listings
 - **Dynamic Spot Filters** with HTMX-powered search and dropdowns so the catalogue updates instantly without full page reloads
 - **Personal Collections** so logged-in skaters can favourite spots and revisit them from their profile
+- **Photo Upload** allowing users to share images of spots with image optimization and primary photo selection
 - **Secure Authentication** with registration, login, and cookie-based JWT tokens
-- **Rich Data Model** with locations, difficulty levels, and spot types
+- **Rich Data Model** with locations, difficulty levels, spot types, and photos
 - **Comprehensive Validation** using Pydantic models
 - **Clean Architecture** with separation of concerns
 - **Extensive Testing** with focused, single-responsibility tests
@@ -189,6 +190,15 @@ Database schema changes are managed with [Alembic](https://alembic.sqlalchemy.or
 
 **Note**: The API endpoints accept both JSON payloads and HTML form data, making them compatible with both traditional API clients and HTMX-powered forms.
 
+### Photo Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/skate-spots/{spot_id}/photos` | Upload a photo for a spot (multipart/form-data) |
+| `GET` | `/api/v1/skate-spots/{spot_id}/photos` | List all photos for a spot |
+| `DELETE` | `/api/v1/skate-spots/{spot_id}/photos/{photo_id}` | Delete a photo (owner or admin only) |
+| `PUT` | `/api/v1/skate-spots/{spot_id}/photos/{photo_id}/primary` | Set a photo as primary (owner or admin only) |
+
 ### Authentication Endpoints
 
 | Method | Endpoint | Description |
@@ -291,21 +301,27 @@ skate-spots/
 │   │   ├── database.py          # Database configuration
 │   │   └── models.py            # SQLAlchemy models
 │   ├── models/           # Pydantic data models
+│   │   ├── photo.py
 │   │   ├── rating.py
 │   │   ├── skate_spot.py
 │   │   └── user.py
 │   ├── repositories/     # Data access layer
+│   │   ├── photo_repository.py
 │   │   ├── rating_repository.py
 │   │   ├── skate_spot_repository.py
 │   │   └── user_repository.py
 │   ├── routers/          # FastAPI route handlers
 │   │   ├── auth.py              # Authentication API
 │   │   ├── frontend.py          # HTML/HTMX routes
+│   │   ├── photos.py            # Photo upload API routes
 │   │   ├── ratings.py           # Rating API routes
 │   │   └── skate_spots.py       # REST API routes
 │   └── services/         # Business logic layer
+│       ├── photo_service.py
 │       ├── rating_service.py
 │       └── skate_spot_service.py
+├── media/                # User-uploaded content
+│   └── photos/           # Spot photos (organized by date/UUID)
 ├── static/               # Static assets
 │   └── style.css         # Application styles
 ├── templates/            # Jinja2 HTML templates
@@ -315,13 +331,16 @@ skate-spots/
 │   ├── map.html          # Interactive map view
 │   ├── register.html     # Registration form
 │   ├── spot_card.html    # Spot card component
+│   ├── spot_form.html    # Create/edit form
 │   └── partials/
-│       └── rating_section.html  # HTMX snippet for rating summary & form
-│   └── spot_form.html    # Create/edit form
+│       ├── photo_gallery.html      # Photo gallery display
+│       ├── photo_upload_form.html  # Photo upload form
+│       └── rating_section.html     # HTMX snippet for rating summary & form
 ├── tests/                # Test suite (organized by app structure)
 │   ├── test_api/         # API integration tests
 │   │   ├── test_auth.py         # Authentication endpoint tests
 │   │   ├── test_frontend.py     # Frontend route tests
+│   │   ├── test_photos.py        # Photo endpoint tests
 │   │   ├── test_ratings.py      # Rating endpoint tests
 │   │   ├── test_root.py         # Root & docs endpoints
 │   │   └── test_skate_spots.py  # CRUD endpoint tests
@@ -330,11 +349,13 @@ skate-spots/
 │   │   ├── test_skate_spot.py   # Skate spot model tests
 │   │   └── test_user.py         # User model tests
 │   ├── test_repositories/ # Repository layer tests
+│   │   ├── test_photo_repository.py
 │   │   ├── test_rating_repository.py
 │   │   └── test_user_repository.py
 │   ├── test_services/    # Service layer tests
+│   │   ├── test_photo_service.py
 │   │   ├── test_rating_service.py
-│   │   └── test_skate_spot_service.py  # Repository & service tests
+│   │   └── test_skate_spot_service.py
 │   └── conftest.py       # Test configuration
 ├── main.py               # Application entry point
 ├── Makefile              # Development commands

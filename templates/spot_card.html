@@ -1,4 +1,16 @@
 <div class="spot-card" id="spot-{{ spot.id }}">
+    {% if spot.photos %}
+        {% set primary_photo = spot.photos[0] if spot.photos[0].get('is_primary') else (spot.photos|selectattr('is_primary')|first or spot.photos[0]) %}
+        {% if primary_photo %}
+        <div class="spot-primary-photo">
+            <img src="/{{ primary_photo.get('file_path') }}" alt="{{ primary_photo.get('caption') or 'Spot photo' }}" class="spot-thumbnail" />
+            {% if spot.photos|length > 1 %}
+            <span class="photo-count-badge">+{{ spot.photos|length - 1 }} photos</span>
+            {% endif %}
+        </div>
+        {% endif %}
+    {% endif %}
+
     <h3>{{ spot.name }}</h3>
     <p>{{ spot.description }}</p>
 

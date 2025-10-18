@@ -91,6 +91,9 @@ class SkateSpotORM(Base):
         back_populates="spot",
         cascade="all, delete-orphan",
     )
+    photos: Mapped[list[SpotPhotoORM]] = relationship(
+        "SpotPhotoORM", back_populates="spot", cascade="all, delete-orphan"
+    )
 
 
 class RatingORM(Base):
@@ -140,3 +143,25 @@ class FavoriteSpotORM(Base):
 
     user: Mapped[UserORM] = relationship("UserORM", back_populates="favorite_spots")
     spot: Mapped[SkateSpotORM] = relationship("SkateSpotORM", back_populates="favorited_by")
+
+
+class SpotPhotoORM(Base):
+    """Database model representing a photo of a skate spot."""
+
+    __tablename__ = "spot_photos"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    spot_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("skate_spots.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    file_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    caption: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    is_primary: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+
+    spot: Mapped[SkateSpotORM] = relationship("SkateSpotORM", back_populates="photos")
+    user: Mapped[UserORM] = relationship("UserORM")

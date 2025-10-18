@@ -47,6 +47,24 @@ def _orm_to_pydantic(
     """Convert an ORM instance into a Pydantic model, including rating metadata."""
 
     rating_summary = summary or RatingSummary(average_score=None, ratings_count=0)
+
+    # Convert photos to dicts for JSON serialization
+    photos_list = []
+    if orm_spot.photos:
+        for photo_orm in orm_spot.photos:
+            photos_list.append(
+                {
+                    "id": photo_orm.id,
+                    "spot_id": photo_orm.spot_id,
+                    "user_id": photo_orm.user_id,
+                    "filename": photo_orm.filename,
+                    "file_path": photo_orm.file_path,
+                    "caption": photo_orm.caption,
+                    "is_primary": photo_orm.is_primary,
+                    "created_at": photo_orm.created_at,
+                }
+            )
+
     return SkateSpot(
         id=UUID(orm_spot.id),
         name=orm_spot.name,
@@ -66,6 +84,7 @@ def _orm_to_pydantic(
         updated_at=orm_spot.updated_at,
         average_rating=rating_summary.average_score,
         ratings_count=rating_summary.ratings_count,
+        photos=photos_list,
     )
 
 

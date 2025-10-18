@@ -31,6 +31,21 @@ class Settings(BaseSettings):
         alias="LOG_LEVEL",
     )
     log_json: bool = Field(default=False, alias="LOG_JSON")
+    photo_max_size_bytes: int = Field(
+        default=5 * 1024 * 1024,  # 5MB default
+        alias="PHOTO_MAX_SIZE_BYTES",
+        description="Maximum photo file size in bytes",
+    )
+    photo_allowed_types: set[str] = Field(
+        default={"image/jpeg", "image/png", "image/webp"},
+        alias="PHOTO_ALLOWED_TYPES",
+        description="Allowed MIME types for uploaded photos",
+    )
+    photo_upload_path: str = Field(
+        default="media/photos",
+        alias="PHOTO_UPLOAD_PATH",
+        description="Path relative to project root where photos are stored",
+    )
 
     model_config = {
         "env_prefix": "SKATE_SPOTS_",

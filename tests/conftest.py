@@ -164,3 +164,48 @@ def auth_token(test_user):
 def admin_token(test_admin):
     """Create an authentication token for the admin user."""
     return create_access_token(data={"sub": str(test_admin.id), "username": test_admin.username})
+
+
+@pytest.fixture
+def db_session(session_factory):
+    """Provide a database session for tests."""
+    db = session_factory()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+@pytest.fixture
+def user(db_session):
+    """Create a test user in the database."""
+    repo = UserRepository(db_session)
+    user_data = UserCreate(
+        email="testuser@example.com",
+        username="testuser",
+        password="password123",
+    )
+    hashed_password = get_password_hash("password123")
+    user = repo.create(user_data, hashed_password)
+    return user
+
+
+@pytest.fixture
+def spot(db_session, user):
+    """Create a test skate spot in the database."""
+    from app.models.skate_spot import Location, SkateSpotCreate
+
+    repository = SkateSpotRepository(session_factory=lambda: db_session)
+    spot_data = SkateSpotCreate(
+        name="Test Spot",
+        description="A test skate spot",
+        spot_type="park",
+        difficulty="intermediate",
+        location=Location(
+            latitude=40.7128,
+            longitude=-74.0060,
+            city="New York",
+            country="USA",
+        ),
+    )
+    return repository.create(spot_data, user.id)

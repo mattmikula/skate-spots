@@ -1,5 +1,7 @@
 """Pydantic models for skate spots."""
 
+from __future__ import annotations
+
 from datetime import datetime
 from enum import Enum
 from uuid import UUID, uuid4
@@ -132,6 +134,10 @@ class SkateSpot(SkateSpotBase):
         0,
         ge=0,
         description="Total number of ratings submitted for this skate spot.",
+    )
+    photos: list[dict] = Field(
+        default_factory=list,
+        description="List of photos uploaded for this spot.",
     )
 
     model_config = {

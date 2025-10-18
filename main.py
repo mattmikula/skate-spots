@@ -7,7 +7,7 @@ from app.core.config import get_settings
 from app.core.logging import get_logger, setup_logging
 from app.core.logging_middleware import RequestContextLogMiddleware
 from app.core.rate_limiter import rate_limiter
-from app.routers import auth, favorites, frontend, ratings, skate_spots
+from app.routers import auth, favorites, frontend, photos, ratings, skate_spots
 
 settings = get_settings()
 setup_logging(settings)
@@ -25,12 +25,16 @@ app.state.rate_limiter = rate_limiter
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# Mount media files (user-uploaded content)
+app.mount("/media", StaticFiles(directory="media"), name="media")
+
 # Include routers
 app.include_router(frontend.router)
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(favorites.router, prefix="/api/v1")
 app.include_router(skate_spots.router, prefix="/api/v1")
 app.include_router(ratings.router, prefix="/api/v1")
+app.include_router(photos.router)
 
 
 @app.on_event("startup")

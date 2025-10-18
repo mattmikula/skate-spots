@@ -1,0 +1,74 @@
+<form
+    id="photo-upload-form-{{ spot_id }}"
+    hx-post="/api/v1/skate-spots/{{ spot_id }}/photos"
+    hx-encoding="multipart/form-data"
+    hx-target="#photo-gallery-{{ spot_id }}"
+    hx-swap="outerHTML"
+    class="photo-upload-form">
+
+    <div class="form-group">
+        <label for="photo-file-{{ spot_id }}">Select Photo</label>
+        <input
+            type="file"
+            id="photo-file-{{ spot_id }}"
+            name="file"
+            accept="image/jpeg,image/png,image/webp"
+            required
+            class="form-control"
+            onchange="previewPhoto(this, 'photo-preview-{{ spot_id }}')"
+        />
+        <small class="form-text text-muted">
+            Supported formats: JPEG, PNG, WebP. Max size: 5MB
+        </small>
+    </div>
+
+    <div id="photo-preview-{{ spot_id }}" class="photo-preview"></div>
+
+    <div class="form-group">
+        <label for="photo-caption-{{ spot_id }}">Caption (Optional)</label>
+        <textarea
+            id="photo-caption-{{ spot_id }}"
+            name="caption"
+            maxlength="500"
+            rows="3"
+            class="form-control"
+            placeholder="Add a description of this photo..."></textarea>
+        <small class="form-text text-muted">Max 500 characters</small>
+    </div>
+
+    <div class="form-group">
+        <label>
+            <input
+                type="checkbox"
+                name="is_primary"
+                value="true"
+            />
+            Set as primary photo
+        </label>
+    </div>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Upload Photo</button>
+        <button
+            type="button"
+            onclick="htmx.ajax('GET', '/skate-spots/{{ spot_id }}/photo-upload-form', {target: '#upload-form-{{ spot_id }}', swap: 'outerHTML'})"
+            class="btn btn-secondary">
+            Cancel
+        </button>
+    </div>
+</form>
+
+<script>
+    function previewPhoto(input, previewId) {
+        const preview = document.getElementById(previewId);
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.innerHTML = '<img src="' + e.target.result + '" alt="Preview" class="photo-preview-img" />';
+            };
+            reader.readAsDataURL(input.files[0]);
+        } else {
+            preview.innerHTML = '';
+        }
+    }
+</script>
