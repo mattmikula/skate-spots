@@ -139,9 +139,7 @@ async def home(
     filters = _build_service_filters(filter_values)
     spots = service.list_spots(filters)
     favorite_spot_ids = (
-        favorite_service.favorite_ids_for_user(current_user.id)
-        if current_user
-        else set()
+        favorite_service.favorite_ids_for_user(current_user.id) if current_user else set()
     )
 
     context = _spot_list_context(
@@ -167,9 +165,7 @@ async def list_spots_page(
     filters = _build_service_filters(filter_values)
     spots = service.list_spots(filters)
     favorite_spot_ids = (
-        favorite_service.favorite_ids_for_user(current_user.id)
-        if current_user
-        else set()
+        favorite_service.favorite_ids_for_user(current_user.id) if current_user else set()
     )
 
     template_name = "partials/spot_list.html" if _is_htmx(request) else "index.html"
