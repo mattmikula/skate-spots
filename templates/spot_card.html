@@ -2,6 +2,14 @@
     <h3>{{ spot.name }}</h3>
     <p>{{ spot.description }}</p>
 
+    {% if spot.photos %}
+    <div class="spot-photos">
+        {% for photo in spot.photos[:4] %}
+        <img src="{{ photo.url }}" alt="Photo of {{ spot.name }}" loading="lazy">
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <div class="spot-meta">
         <span class="badge badge-type">{{ spot.spot_type }}</span>
         <span class="badge badge-difficulty {{ spot.difficulty }}">{{ spot.difficulty }}</span>

@@ -3,7 +3,15 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+    status,
+)
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, ValidationError
 
@@ -22,10 +30,8 @@ from app.models.skate_spot import (
     SkateSpotUpdate,
     SpotType,
 )
-from app.services.skate_spot_service import (
-    SkateSpotService,
-    get_skate_spot_service,
-)
+from app.services.photo_storage import PhotoStorageError, delete_photos, save_photo_upload
+from app.services.skate_spot_service import SkateSpotService, get_skate_spot_service
 from spots.filters import build_skate_spot_filters
 
 router = APIRouter(prefix="/skate-spots", tags=["skate-spots"])
@@ -54,11 +60,135 @@ def _coerce_form_bool(value: str | None, default: bool) -> bool:
     return normalised in _TRUE_VALUES
 
 
+def _extract_uploads(form, field_name: str) -> list[UploadFile]:
+    """Return a list of ``UploadFile`` instances for the given form field."""
+
+    uploads = []
+    for value in form.getlist(field_name):
+        if isinstance(value, UploadFile):
+            uploads.append(value)
+    return uploads
+
+
+async def _store_uploads(
+    uploads: list[UploadFile],
+) -> tuple[list[dict[str, str | None]], list[str]]:
+    """Persist uploads to disk and return payloads plus stored paths for cleanup."""
+
+    stored_payloads: list[dict[str, str | None]] = []
+    stored_paths: list[str] = []
+
+    for upload in uploads:
+        if not upload.filename:
+            await upload.close()
+            continue
+        try:
+            stored = save_photo_upload(upload)
+        except PhotoStorageError as exc:
+            delete_photos(stored_paths)
+            await upload.close()
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        else:
+            stored_paths.append(stored.path)
+            stored_payloads.append(
+                {"path": stored.path, "original_filename": stored.original_filename}
+            )
+        finally:
+            await upload.close()
+
+    return stored_payloads, stored_paths
+
+
+async def _parse_form_for_create(
+    request: Request,
+    *,
+    bool_defaults: dict[str, bool],
+) -> tuple[SkateSpotCreate, list[str]]:
+    """Parse a multipart form submission when creating a skate spot."""
+
+    form = await request.form()
+    location = await _parse_location_from_form(form)
+    uploads = _extract_uploads(form, "photo_files")
+    photo_payloads, stored_paths = await _store_uploads(uploads)
+
+    payload = {
+        "name": form.get("name"),
+        "description": form.get("description"),
+        "spot_type": SpotType(form.get("spot_type")),
+        "difficulty": Difficulty(form.get("difficulty")),
+        "location": location,
+        "photos": photo_payloads,
+    }
+    payload.update(
+        {
+            field: _coerce_form_bool(form.get(field), default)
+            for field, default in bool_defaults.items()
+        }
+    )
+
+    try:
+        return SkateSpotCreate(**payload), stored_paths
+    except ValidationError as exc:
+        delete_photos(stored_paths)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.errors()
+        ) from exc
+
+
+async def _parse_form_for_update(
+    request: Request,
+    existing_spot: SkateSpot,
+    *,
+    bool_defaults: dict[str, bool],
+) -> tuple[SkateSpotUpdate, list[str], list[str]]:
+    """Parse a multipart form submission when updating a skate spot."""
+
+    form = await request.form()
+    location = await _parse_location_from_form(form)
+    uploads = _extract_uploads(form, "photo_files")
+    new_photo_payloads, stored_paths = await _store_uploads(uploads)
+
+    delete_photo_ids = {value for value in form.getlist("delete_photo_ids") if value}
+    kept_photos = []
+    removed_paths = []
+    for photo in existing_spot.photos:
+        if str(photo.id) in delete_photo_ids:
+            removed_paths.append(photo.path)
+        else:
+            kept_photos.append(
+                {
+                    "path": photo.path,
+                    "original_filename": photo.original_filename,
+                }
+            )
+
+    payload: dict[str, object] = {
+        "name": form.get("name"),
+        "description": form.get("description"),
+        "spot_type": SpotType(form.get("spot_type")),
+        "difficulty": Difficulty(form.get("difficulty")),
+        "location": location,
+        "photos": kept_photos + new_photo_payloads,
+    }
+    payload.update(
+        {
+            field: _coerce_form_bool(form.get(field), default)
+            for field, default in bool_defaults.items()
+        }
+    )
+
+    try:
+        return SkateSpotUpdate(**payload), stored_paths, removed_paths
+    except ValidationError as exc:
+        delete_photos(stored_paths)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.errors()
+        ) from exc
+
+
 async def _parse_request_payload[SchemaT: BaseModel](
     request: Request,
     schema: type[SchemaT],
-    *,
-    bool_defaults: dict[str, bool],
 ) -> SchemaT:
     """Normalise request payloads to the desired schema for JSON or form submissions."""
 
@@ -67,22 +197,10 @@ async def _parse_request_payload[SchemaT: BaseModel](
         payload = await request.json()
         return schema(**payload)
 
-    form = await request.form()
-    location = await _parse_location_from_form(form)
-    payload = {
-        "name": form.get("name"),
-        "description": form.get("description"),
-        "spot_type": SpotType(form.get("spot_type")),
-        "difficulty": Difficulty(form.get("difficulty")),
-        "location": location,
-    }
-    payload.update(
-        {
-            field: _coerce_form_bool(form.get(field), default)
-            for field, default in bool_defaults.items()
-        }
+    raise HTTPException(
+        status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        detail="Unsupported content type",
     )
-    return schema(**payload)
 
 
 def _ensure_spot_can_be_modified(
@@ -121,12 +239,20 @@ async def create_skate_spot(
     current_user: Annotated[UserORM, Depends(get_current_user)],
 ) -> SkateSpot:
     """Create a new skate spot."""
-    try:
-        spot_data = await _parse_request_payload(
-            request,
-            SkateSpotCreate,
-            bool_defaults={"is_public": True, "requires_permission": False},
+    content_type = request.headers.get("content-type", "")
+
+    if "multipart/form-data" in content_type or "application/x-www-form-urlencoded" in content_type:
+        spot_data, stored_paths = await _parse_form_for_create(
+            request, bool_defaults={"is_public": True, "requires_permission": False}
         )
+        try:
+            return service.create_spot(spot_data, current_user.id)
+        except Exception:
+            delete_photos(stored_paths)
+            raise
+
+    try:
+        spot_data = await _parse_request_payload(request, SkateSpotCreate)
     except ValidationError as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=e.errors()
@@ -235,14 +361,32 @@ async def update_skate_spot(
     current_user: Annotated[UserORM, Depends(get_current_user)],
 ) -> SkateSpot:
     """Update an existing skate spot."""
-    _ensure_spot_can_be_modified(spot_id, service, current_user, action="update")
+    existing_spot = _ensure_spot_can_be_modified(spot_id, service, current_user, action="update")
 
-    try:
-        update_data = await _parse_request_payload(
+    content_type = request.headers.get("content-type", "")
+
+    if "multipart/form-data" in content_type or "application/x-www-form-urlencoded" in content_type:
+        update_data, stored_paths, removed_paths = await _parse_form_for_update(
             request,
-            SkateSpotUpdate,
+            existing_spot,
             bool_defaults={"is_public": False, "requires_permission": False},
         )
+        try:
+            updated_spot = service.update_spot(spot_id, update_data)
+        except Exception:
+            delete_photos(stored_paths)
+            raise
+        if not updated_spot:
+            delete_photos(stored_paths)
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Skate spot with id {spot_id} not found",
+            )
+        delete_photos(removed_paths)
+        return updated_spot
+
+    try:
+        update_data = await _parse_request_payload(request, SkateSpotUpdate)
     except ValidationError as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=e.errors()

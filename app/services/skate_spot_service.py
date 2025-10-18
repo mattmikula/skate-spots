@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from app.core.logging import get_logger
 from app.repositories.skate_spot_repository import SkateSpotRepository
+from app.services.photo_storage import delete_photos
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -60,9 +61,12 @@ class SkateSpotService:
     def delete_spot(self, spot_id: UUID) -> bool:
         """Delete a skate spot by ID."""
 
+        existing = self._repository.get_by_id(spot_id)
         deleted = self._repository.delete(spot_id)
         if deleted:
             self._logger.info("skate spot deleted", spot_id=str(spot_id))
+            if existing and existing.photos:
+                delete_photos(photo.path for photo in existing.photos)
         else:
             self._logger.warning("delete requested for missing skate spot", spot_id=str(spot_id))
         return deleted

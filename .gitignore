@@ -212,3 +212,7 @@ __marimo__/
 
 # VS Code
 .vscode/
+
+# Uploaded media files
+media/
+!media/.gitignore

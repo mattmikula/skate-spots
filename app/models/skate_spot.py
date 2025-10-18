@@ -1,10 +1,14 @@
 """Pydantic models for skate spots."""
 
+from __future__ import annotations
+
 from datetime import datetime
 from enum import Enum
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, computed_field, field_validator
+
+from app.core.config import get_settings
 
 
 class SpotType(str, Enum):
@@ -42,6 +46,43 @@ class Location(BaseModel):
     country: str = Field(..., min_length=1, description="Country name")
 
 
+class SpotPhotoBase(BaseModel):
+    """Shared fields for skate spot photos stored on disk."""
+
+    path: str = Field(
+        ...,
+        min_length=1,
+        description="Relative path to the photo within the media directory",
+    )
+    original_filename: str | None = Field(
+        None, description="Original filename supplied by the uploader"
+    )
+
+
+class SpotPhotoCreate(SpotPhotoBase):
+    """Payload for creating a new skate spot photo."""
+
+    pass
+
+
+class SpotPhoto(SpotPhotoBase):
+    """Representation of a stored skate spot photo."""
+
+    id: UUID = Field(default_factory=uuid4, description="Unique identifier for the photo")
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow, description="Timestamp when the photo was added"
+    )
+
+    @computed_field(return_type=str)
+    def url(self) -> str:
+        """Build the public URL for the stored photo based on application settings."""
+
+        settings = get_settings()
+        base = settings.media_url_path.rstrip("/") or "/media"
+        relative = self.path.lstrip("/")
+        return f"{base}/{relative}" if relative else base
+
+
 class SkateSpotBase(BaseModel):
     """Base model for skate spot data."""
 
@@ -57,7 +98,10 @@ class SkateSpotBase(BaseModel):
 class SkateSpotCreate(SkateSpotBase):
     """Model for creating a new skate spot."""
 
-    pass
+    photos: list[SpotPhotoCreate] = Field(
+        default_factory=list,
+        description="Optional collection of photos to associate with the new spot",
+    )
 
 
 class SkateSpotUpdate(BaseModel):
@@ -70,6 +114,13 @@ class SkateSpotUpdate(BaseModel):
     location: Location | None = None
     is_public: bool | None = None
     requires_permission: bool | None = None
+    photos: list[SpotPhotoCreate] | None = Field(
+        default=None,
+        description=(
+            "Optional replacement list of photos. ``None`` leaves photos unchanged, an empty"
+            " list removes all existing photos."
+        ),
+    )
 
 
 class SkateSpotFilters(BaseModel):
@@ -133,6 +184,10 @@ class SkateSpot(SkateSpotBase):
         ge=0,
         description="Total number of ratings submitted for this skate spot.",
     )
+    photos: list[SpotPhoto] = Field(
+        default_factory=list,
+        description="Photos that showcase the skate spot.",
+    )
 
     model_config = {
         "json_schema_extra": {
@@ -155,6 +210,15 @@ class SkateSpot(SkateSpotBase):
                 "updated_at": "2023-01-01T00:00:00Z",
                 "average_rating": 4.5,
                 "ratings_count": 12,
+                "photos": [
+                    {
+                        "id": "223e4567-e89b-12d3-a456-426614174111",
+                        "path": "2024/05/downtown-rails-1.jpg",
+                        "url": "/media/2024/05/downtown-rails-1.jpg",
+                        "original_filename": "downtown-rails-1.jpg",
+                        "created_at": "2023-01-01T00:00:00Z",
+                    }
+                ],
             }
         }
     }

@@ -1,5 +1,7 @@
 """Main FastAPI application entry point."""
 
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
@@ -24,6 +26,10 @@ app.state.rate_limiter = rate_limiter
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+media_directory = Path(settings.media_directory)
+media_directory.mkdir(parents=True, exist_ok=True)
+app.mount(settings.media_url_path, StaticFiles(directory=media_directory), name="media")
 
 # Include routers
 app.include_router(frontend.router)

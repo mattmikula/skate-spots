@@ -12,7 +12,9 @@
         hx-post="/api/v1/skate-spots/"
     {% endif %}
     hx-target="#form-container"
-    hx-swap="outerHTML">
+    hx-swap="outerHTML"
+    hx-encoding="multipart/form-data"
+    enctype="multipart/form-data">
 
     <div id="form-container">
         <div class="form-group">
@@ -105,6 +107,39 @@
                    {% if spot and spot.requires_permission %}checked{% endif %}>
             <label for="requires_permission" style="margin: 0;">Requires permission</label>
         </div>
+
+        <div class="form-group">
+            <label for="photo_files">Upload Photos</label>
+            <input
+                type="file"
+                id="photo_files"
+                name="photo_files"
+                accept="image/*"
+                multiple
+            >
+            <small class="form-help">You can upload multiple images at once. JPEG, PNG, GIF, and WebP are supported.</small>
+        </div>
+
+        {% if spot and spot.photos %}
+        <div class="existing-photos">
+            <h3 class="existing-photos__title">Existing Photos</h3>
+            <div class="existing-photos__grid">
+                {% for photo in spot.photos %}
+                <div class="existing-photos__item">
+                    <img src="{{ photo.url }}" alt="Photo of {{ spot.name }}">
+                    <label class="existing-photos__checkbox">
+                        <input type="checkbox" name="delete_photo_ids" value="{{ photo.id }}">
+                        Remove this photo
+                    </label>
+                    {% if photo.original_filename %}
+                    <div class="existing-photos__filename">{{ photo.original_filename }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <small class="form-help">Select the photos you want to remove before uploading new ones.</small>
+        </div>
+        {% endif %}
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">
