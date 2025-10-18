@@ -168,6 +168,20 @@ class SkateSpotRepository:
             spots = session.scalars(stmt).all()
             return self._with_rating_summaries(session, spots)
 
+    def get_many_by_ids(self, spot_ids: list[UUID]) -> list[SkateSpot]:
+        """Return skate spots matching the provided identifiers."""
+
+        if not spot_ids:
+            return []
+
+        with self._session_factory() as session:
+            normalised_ids = [str(spot_id) for spot_id in spot_ids]
+            stmt = select(SkateSpotORM).where(SkateSpotORM.id.in_(normalised_ids))
+            spots = session.scalars(stmt).all()
+            enriched = self._with_rating_summaries(session, spots)
+            spot_map = {str(spot.id): spot for spot in enriched}
+            return [spot_map[spot_id] for spot_id in normalised_ids if spot_id in spot_map]
+
     def is_owner(self, spot_id: UUID, user_id: str) -> bool:
         """Check if a user owns a skate spot."""
 

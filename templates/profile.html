@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h2>{{ current_user.username }}'s Profile</h2>
+    <p class="profile-subtitle">Manage your saved skate spots.</p>
+</div>
+
+{% if favorite_spots %}
+<div class="spot-list">
+    {% for spot in favorite_spots %}
+        {% include "spot_card.html" %}
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <p>You haven't saved any skate spots yet.</p>
+    <a href="/skate-spots" class="btn btn-primary" style="margin-top: 1rem;">Browse spots</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,101 @@
+"""Service layer for managing user favourite skate spots."""
+
+from __future__ import annotations
+
+from uuid import UUID  # noqa: TCH003
+
+from app.core.logging import get_logger
+from app.models.favorite import FavoriteStatus
+from app.models.skate_spot import SkateSpot  # noqa: TCH001
+from app.repositories.favorite_repository import FavoriteRepository
+from app.repositories.skate_spot_repository import SkateSpotRepository
+
+
+class FavoriteService:
+    """Business logic for favourite skate spots."""
+
+    def __init__(
+        self,
+        favorite_repository: FavoriteRepository,
+        skate_spot_repository: SkateSpotRepository,
+    ) -> None:
+        self._favorite_repository = favorite_repository
+        self._skate_spot_repository = skate_spot_repository
+        self._logger = get_logger(__name__)
+
+    def add_favorite(self, spot_id: UUID, user_id: str) -> FavoriteStatus:
+        """Ensure the spot is marked as a favourite for the user."""
+
+        self._ensure_spot_exists(spot_id)
+        if not self._favorite_repository.exists(user_id, spot_id):
+            self._favorite_repository.add(user_id, spot_id)
+            self._logger.info("favorite added", spot_id=str(spot_id), user_id=user_id)
+        else:
+            self._logger.debug("favorite already exists", spot_id=str(spot_id), user_id=user_id)
+        return FavoriteStatus(spot_id=spot_id, is_favorite=True)
+
+    def remove_favorite(self, spot_id: UUID, user_id: str) -> FavoriteStatus:
+        """Remove the spot from the user's favourites."""
+
+        self._ensure_spot_exists(spot_id)
+        removed = self._favorite_repository.remove(user_id, spot_id)
+        if removed:
+            self._logger.info("favorite removed", spot_id=str(spot_id), user_id=user_id)
+        else:
+            self._logger.debug(
+                "favorite removal requested for missing record",
+                spot_id=str(spot_id),
+                user_id=user_id,
+            )
+        return FavoriteStatus(spot_id=spot_id, is_favorite=False)
+
+    def toggle_favorite(self, spot_id: UUID, user_id: str) -> FavoriteStatus:
+        """Toggle favourite status for the given user and skate spot."""
+
+        self._ensure_spot_exists(spot_id)
+        if self._favorite_repository.exists(user_id, spot_id):
+            return self.remove_favorite(spot_id, user_id)
+        return self.add_favorite(spot_id, user_id)
+
+    def list_user_favorites(self, user_id: str) -> list[SkateSpot]:
+        """Return the favourite skate spots for the specified user."""
+
+        spot_ids = self._favorite_repository.list_spot_ids_for_user(user_id)
+        if not spot_ids:
+            return []
+        spots = self._skate_spot_repository.get_many_by_ids(spot_ids)
+        self._logger.debug(
+            "favorite spots listed",
+            user_id=user_id,
+            count=len(spots),
+        )
+        return spots
+
+    def favorite_ids_for_user(self, user_id: str) -> set[UUID]:
+        """Return a set of spot identifiers favourited by the user."""
+
+        return set(self._favorite_repository.list_spot_ids_for_user(user_id))
+
+    def _ensure_spot_exists(self, spot_id: UUID) -> SkateSpot:
+        """Raise when the requested spot cannot be found."""
+
+        spot = self._skate_spot_repository.get_by_id(spot_id)
+        if spot is None:
+            self._logger.warning("favorite requested for missing spot", spot_id=str(spot_id))
+            raise SpotNotFoundError(f"Skate spot with id {spot_id} not found.")
+        return spot
+
+
+class SpotNotFoundError(Exception):
+    """Raised when a skate spot cannot be found."""
+
+
+_favorite_repository = FavoriteRepository()
+_skate_spot_repository = SkateSpotRepository()
+favorite_service = FavoriteService(_favorite_repository, _skate_spot_repository)
+
+
+def get_favorite_service() -> FavoriteService:
+    """Dependency hook to provide the favourite service instance."""
+
+    return favorite_service

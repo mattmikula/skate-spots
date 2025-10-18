@@ -11,9 +11,11 @@ from app.core.rate_limiter import rate_limiter
 from app.core.security import create_access_token, get_password_hash
 from app.db.database import Base, get_db
 from app.models.user import UserCreate
+from app.repositories.favorite_repository import FavoriteRepository
 from app.repositories.rating_repository import RatingRepository
 from app.repositories.skate_spot_repository import SkateSpotRepository
 from app.repositories.user_repository import UserRepository
+from app.services.favorite_service import FavoriteService, get_favorite_service
 from app.services.rating_service import (
     RatingService,
     get_rating_service,
@@ -74,6 +76,8 @@ def client(session_factory):
     service = SkateSpotService(repository)
     rating_repository = RatingRepository(session_factory=session_factory)
     rating_service = RatingService(rating_repository, repository)
+    favorite_repository = FavoriteRepository(session_factory=session_factory)
+    favorite_service = FavoriteService(favorite_repository, repository)
 
     # Override database session
     def override_get_db():
@@ -94,6 +98,7 @@ def client(session_factory):
     app.dependency_overrides[get_rating_service] = lambda: rating_service
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_user_repository] = override_get_user_repository
+    app.dependency_overrides[get_favorite_service] = lambda: favorite_service
 
     try:
         with TestClient(app) as test_client:
@@ -103,6 +108,7 @@ def client(session_factory):
         app.dependency_overrides.pop(get_rating_service, None)
         app.dependency_overrides.pop(get_db, None)
         app.dependency_overrides.pop(get_user_repository, None)
+        app.dependency_overrides.pop(get_favorite_service, None)
 
 
 @pytest.fixture
