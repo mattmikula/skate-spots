@@ -179,19 +179,6 @@ async def list_spots_page(
     return templates.TemplateResponse(template_name, context)
 
 
-@router.get("/map", response_class=HTMLResponse)
-async def map_view(
-    request: Request,
-    current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
-) -> HTMLResponse:
-    """Display interactive map of all skate spots."""
-
-    return templates.TemplateResponse(
-        "map.html",
-        {"request": request, "current_user": current_user},
-    )
-
-
 @router.get("/profile", response_class=HTMLResponse)
 async def profile_page(
     request: Request,
@@ -416,4 +403,47 @@ async def delete_rating(
             "current_user": current_user,
             "message": message,
         },
+    )
+
+
+@router.get("/map", response_class=HTMLResponse)
+async def map_view(
+    request: Request,
+    current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
+) -> HTMLResponse:
+    """Display interactive map of all skate spots."""
+
+    return templates.TemplateResponse(
+        "map.html",
+        {"request": request, "current_user": current_user},
+    )
+
+
+@router.get("/login", response_class=HTMLResponse)
+async def login_page(
+    request: Request,
+    current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
+) -> HTMLResponse:
+    """Display login page."""
+
+    if current_user:
+        return RedirectResponse(url="/", status_code=303)
+    return templates.TemplateResponse(
+        "login.html",
+        {"request": request, "current_user": None},
+    )
+
+
+@router.get("/register", response_class=HTMLResponse)
+async def register_page(
+    request: Request,
+    current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
+) -> HTMLResponse:
+    """Display registration page."""
+
+    if current_user:
+        return RedirectResponse(url="/", status_code=303)
+    return templates.TemplateResponse(
+        "register.html",
+        {"request": request, "current_user": None},
     )
