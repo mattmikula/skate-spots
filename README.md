@@ -11,6 +11,7 @@ A modern FastAPI application for sharing and discovering skateboarding spots aro
 - **Interactive Web Frontend** built with HTMX for dynamic user interactions
 - **REST API** for managing skate spots with full CRUD operations and rich filtering
 - **User Ratings** so skaters can rate spots, manage their own feedback, and see community sentiment
+- **Community Comments** that let skaters discuss spots in real time via HTMX snippets and JSON APIs
 - **Inline Ratings UI** with HTMX-driven snippets that let logged-in users rate spots directly from the listings
 - **Dynamic Spot Filters** with HTMX-powered search and dropdowns so the catalogue updates instantly without full page reloads
 - **Spot Photo Uploads** with local media storage, editing, and responsive galleries on each spot card
@@ -190,6 +191,9 @@ Database schema changes are managed with [Alembic](https://alembic.sqlalchemy.or
 | `GET` | `/api/v1/skate-spots/{id}` | Get a specific skate spot (JSON) |
 | `PUT` | `/api/v1/skate-spots/{id}` | Update a skate spot (JSON or form data) |
 | `DELETE` | `/api/v1/skate-spots/{id}` | Delete a skate spot |
+| `GET` | `/api/v1/skate-spots/{id}/comments/` | List comments for a skate spot |
+| `POST` | `/api/v1/skate-spots/{id}/comments/` | Create a comment on a skate spot |
+| `DELETE` | `/api/v1/skate-spots/{id}/comments/{comment_id}` | Delete a comment (owner or admin only) |
 
 **Note**: The API endpoints accept both JSON payloads and HTML form data, making them compatible with both traditional API clients and HTMX-powered forms.
 

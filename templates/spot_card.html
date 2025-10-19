@@ -42,6 +42,16 @@
         <div class="rating-summary">Loading rating details...</div>
     </div>
 
+    <div
+        class="spot-comments-container"
+        hx-get="/skate-spots/{{ spot.id }}/comments-section"
+        hx-trigger="load"
+        hx-target="this"
+        hx-swap="outerHTML"
+    >
+        <div class="comment-loading">Loading comments...</div>
+    </div>
+
     <div class="spot-actions">
         <a href="/skate-spots/{{ spot.id }}/edit" class="btn btn-edit">Edit</a>
         <button
