@@ -1,0 +1,66 @@
+<div id="comment-section-{{ spot_id }}" class="spot-comments" hx-target="this">
+    <h4 class="comment-title">Comments</h4>
+
+    {% if message %}
+    <div class="comment-feedback comment-feedback--success">{{ message }}</div>
+    {% endif %}
+
+    {% if error %}
+    <div class="comment-feedback comment-feedback--error">{{ error }}</div>
+    {% endif %}
+
+    {% if comments %}
+    <ul class="comment-list">
+        {% for comment in comments %}
+        {% set comment_owner_id = comment.user_id | string %}
+        {% set can_remove = current_user and (current_user.is_admin or current_user.id == comment_owner_id) %}
+        <li class="comment-item" id="comment-{{ comment.id }}">
+            <div class="comment-meta">
+                <span class="comment-author">{{ comment.author.username }}</span>
+                <time datetime="{{ comment.created_at.isoformat() }}">
+                    {{ comment.created_at.strftime('%b %d, %Y %H:%M') }}
+                </time>
+            </div>
+            <p class="comment-content">{{ comment.content }}</p>
+            {% if can_remove %}
+            <button
+                class="comment-delete"
+                hx-delete="/skate-spots/{{ spot_id }}/comments/{{ comment.id }}"
+                hx-target="#comment-section-{{ spot_id }}"
+                hx-swap="outerHTML"
+                hx-confirm="Delete this comment?"
+            >Delete</button>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="comment-empty">No comments yet. Be the first to share your thoughts!</p>
+    {% endif %}
+
+    {% if current_user %}
+    <form
+        class="comment-form"
+        hx-post="/skate-spots/{{ spot_id }}/comments"
+        hx-target="#comment-section-{{ spot_id }}"
+        hx-swap="outerHTML"
+    >
+        <label for="comment-content-{{ spot_id }}" class="comment-form__label">Add a comment</label>
+        <textarea
+            id="comment-content-{{ spot_id }}"
+            name="content"
+            rows="3"
+            maxlength="1000"
+            required
+            placeholder="Share tips or stories about this spot"
+        ></textarea>
+        <div class="comment-form__actions">
+            <button type="submit" class="btn btn-primary">Post comment</button>
+        </div>
+    </form>
+    {% else %}
+    <p class="comment-login-prompt">
+        <a href="/login">Log in</a> to join the conversation.
+    </p>
+    {% endif %}
+</div>

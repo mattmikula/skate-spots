@@ -56,6 +56,11 @@ class UserORM(Base):
         back_populates="uploader",
         cascade="all, delete-orphan",
     )
+    comments: Mapped[list[SpotCommentORM]] = relationship(
+        "SpotCommentORM",
+        back_populates="author",
+        cascade="all, delete-orphan",
+    )
 
 
 class SkateSpotORM(Base):
@@ -98,6 +103,11 @@ class SkateSpotORM(Base):
     )
     photos: Mapped[list[SpotPhotoORM]] = relationship(
         "SpotPhotoORM",
+        back_populates="spot",
+        cascade="all, delete-orphan",
+    )
+    comments: Mapped[list[SpotCommentORM]] = relationship(
+        "SpotCommentORM",
         back_populates="spot",
         cascade="all, delete-orphan",
     )
@@ -176,3 +186,28 @@ class FavoriteSpotORM(Base):
 
     user: Mapped[UserORM] = relationship("UserORM", back_populates="favorite_spots")
     spot: Mapped[SkateSpotORM] = relationship("SkateSpotORM", back_populates="favorited_by")
+
+
+class SpotCommentORM(Base):
+    """Database model representing a comment left on a skate spot."""
+
+    __tablename__ = "spot_comments"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    spot_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("skate_spots.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    content: Mapped[str] = mapped_column(String(1000), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+    )
+
+    spot: Mapped[SkateSpotORM] = relationship("SkateSpotORM", back_populates="comments")
+    author: Mapped[UserORM] = relationship("UserORM", back_populates="comments")
