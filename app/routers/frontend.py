@@ -267,7 +267,7 @@ async def profile_page(
     favorite_service: Annotated[FavoriteService, Depends(get_favorite_service)],
     current_user: Annotated[UserORM, Depends(get_current_user)],
 ) -> HTMLResponse:
-    """Display the current user's profile with their favourite spots."""
+    """Display the current user's profile with their favourite spots and statistics."""
 
     message = None
     if request.query_params.get("updated") == "1":

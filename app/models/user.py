@@ -28,6 +28,14 @@ class UserLogin(BaseModel):
     password: str
 
 
+class UserUpdate(BaseModel):
+    """Model for updating user profile."""
+
+    bio: str | None = Field(None, max_length=500)
+    avatar_url: str | None = Field(None, max_length=500)
+    location: str | None = Field(None, max_length=100)
+
+
 class User(UserBase):
     """Model representing a user (returned in responses)."""
 
@@ -40,6 +48,9 @@ class User(UserBase):
     profile_photo_url: str | None = None
     is_active: bool
     is_admin: bool
+    bio: str | None = None
+    avatar_url: str | None = None
+    location: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -47,6 +58,38 @@ class User(UserBase):
         """Pydantic configuration."""
 
         from_attributes = True
+
+
+class UserPublicProfile(BaseModel):
+    """Public view of a user profile (without email)."""
+
+    id: UUID
+    username: str
+    bio: str | None = None
+    avatar_url: str | None = None
+    location: str | None = None
+    created_at: datetime
+
+    class Config:
+        """Pydantic configuration."""
+
+        from_attributes = True
+
+
+class UserStats(BaseModel):
+    """User statistics for profile display."""
+
+    spots_count: int = 0
+    photos_count: int = 0
+    comments_count: int = 0
+    ratings_count: int = 0
+    favorites_count: int = 0
+
+
+class UserProfileWithStats(UserPublicProfile):
+    """User profile with activity statistics."""
+
+    stats: UserStats
 
 
 class Token(BaseModel):
