@@ -16,7 +16,6 @@ A modern FastAPI application for sharing and discovering skateboarding spots aro
 - **Dynamic Spot Filters** with HTMX-powered search and dropdowns so the catalogue updates instantly without full page reloads
 - **Spot Photo Uploads** with local media storage, editing, and responsive galleries on each spot card
 - **Personal Collections** so logged-in skaters can favourite spots and revisit them from their profile
-- **User Profiles** with public profile pages showing activity statistics, recent spots, comments, ratings, and activity feed
 - **Secure Authentication** with registration, login, and cookie-based JWT tokens
 - **Rich Data Model** with locations, difficulty levels, and spot types
 - **Comprehensive Validation** using Pydantic models
@@ -179,8 +178,6 @@ Database schema changes are managed with [Alembic](https://alembic.sqlalchemy.or
 | `GET` | `/skate-spots` | View all skate spots (HTML) |
 | `GET` | `/skate-spots/new` | Create new spot form |
 | `GET` | `/skate-spots/{id}/edit` | Edit spot form |
-| `GET` | `/profile` | Current user's profile with favorites (requires auth) |
-| `GET` | `/users/{username}` | Public user profile page |
 | `GET` | `/map` | Interactive map view |
 | `GET` | `/login` | Login form (redirects if already authenticated) |
 | `GET` | `/register` | Registration form (redirects if already authenticated) |
@@ -208,12 +205,6 @@ Database schema changes are managed with [Alembic](https://alembic.sqlalchemy.or
 | `POST` | `/api/v1/auth/login` | Authenticate and receive a JWT access token cookie |
 | `POST` | `/api/v1/auth/logout` | Clear the authentication cookie |
 | `GET` | `/api/v1/auth/me` | Retrieve the currently authenticated user |
-
-### Profile Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/v1/profiles/{username}` | Get a user's public profile with statistics, recent activity, spots, comments, and ratings |
 
 ### Example Usage
 
@@ -286,11 +277,6 @@ curl -X PUT "http://localhost:8000/api/v1/skate-spots/<spot-id>/ratings/me" \
 curl "http://localhost:8000/api/v1/skate-spots/<spot-id>/ratings/summary" -b cookies.txt
 ```
 
-**Get User Profile:**
-```bash
-curl "http://localhost:8000/api/v1/profiles/kickflip_master"
-```
-
 ## 🏗️ Architecture
 
 This project follows **Clean Architecture** principles with clear separation of concerns:
@@ -313,78 +299,48 @@ skate-spots/
 │   │   ├── database.py          # Database configuration
 │   │   └── models.py            # SQLAlchemy models
 │   ├── models/           # Pydantic data models
-│   │   ├── comment.py
-│   │   ├── favorite.py
-│   │   ├── profile.py
 │   │   ├── rating.py
 │   │   ├── skate_spot.py
 │   │   └── user.py
 │   ├── repositories/     # Data access layer
-│   │   ├── comment_repository.py
-│   │   ├── favorite_repository.py
-│   │   ├── profile_repository.py
 │   │   ├── rating_repository.py
 │   │   ├── skate_spot_repository.py
 │   │   └── user_repository.py
 │   ├── routers/          # FastAPI route handlers
 │   │   ├── auth.py              # Authentication API
-│   │   ├── comments.py          # Comment API routes
-│   │   ├── favorites.py         # Favorites API routes
 │   │   ├── frontend.py          # HTML/HTMX routes
-│   │   ├── profile.py           # Profile API routes
 │   │   ├── ratings.py           # Rating API routes
 │   │   └── skate_spots.py       # REST API routes
 │   └── services/         # Business logic layer
-│       ├── comment_service.py
-│       ├── favorite_service.py
-│       ├── photo_storage.py
-│       ├── profile_service.py
 │       ├── rating_service.py
 │       └── skate_spot_service.py
 ├── static/               # Static assets
 │   └── style.css         # Application styles
 ├── templates/            # Jinja2 HTML templates
 │   ├── base.html         # Base template
-│   ├── error.html        # Error page template
 │   ├── index.html        # Spots list page
 │   ├── login.html        # Login form
 │   ├── map.html          # Interactive map view
-│   ├── profile.html      # Current user profile page
 │   ├── register.html     # Registration form
 │   ├── spot_card.html    # Spot card component
-│   ├── spot_form.html    # Create/edit form
-│   ├── user_profile.html # Public user profile page
 │   └── partials/
-│       ├── comment_section.html  # HTMX snippet for comments
-│       ├── favorite_button.html  # HTMX snippet for favorite button
-│       ├── rating_section.html   # HTMX snippet for rating summary & form
-│       └── spot_list.html        # HTMX snippet for spot listings
+│       └── rating_section.html  # HTMX snippet for rating summary & form
+│   └── spot_form.html    # Create/edit form
 ├── tests/                # Test suite (organized by app structure)
 │   ├── test_api/         # API integration tests
 │   │   ├── test_auth.py         # Authentication endpoint tests
-│   │   ├── test_comments.py     # Comment endpoint tests
-│   │   ├── test_favorites.py    # Favorite endpoint tests
 │   │   ├── test_frontend.py     # Frontend route tests
-│   │   ├── test_profile.py      # Profile endpoint tests
 │   │   ├── test_ratings.py      # Rating endpoint tests
 │   │   ├── test_root.py         # Root & docs endpoints
 │   │   └── test_skate_spots.py  # CRUD endpoint tests
 │   ├── test_models/      # Model validation tests
-│   │   ├── test_comment.py      # Comment model tests
-│   │   ├── test_geojson.py      # GeoJSON helper tests
 │   │   ├── test_rating.py       # Rating model tests
 │   │   ├── test_skate_spot.py   # Skate spot model tests
 │   │   └── test_user.py         # User model tests
 │   ├── test_repositories/ # Repository layer tests
-│   │   ├── test_comment_repository.py
-│   │   ├── test_favorite_repository.py
-│   │   ├── test_profile_repository.py
 │   │   ├── test_rating_repository.py
 │   │   └── test_user_repository.py
 │   ├── test_services/    # Service layer tests
-│   │   ├── test_comment_service.py
-│   │   ├── test_favorite_service.py
-│   │   ├── test_profile_service.py
 │   │   ├── test_rating_service.py
 │   │   └── test_skate_spot_service.py  # Repository & service tests
 │   └── conftest.py       # Test configuration

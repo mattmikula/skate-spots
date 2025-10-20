@@ -31,11 +31,6 @@ from app.services.favorite_service import (
 from app.services.favorite_service import (
     SpotNotFoundError as FavoriteSpotNotFoundError,
 )
-from app.services.profile_service import (
-    ProfileService,
-    UserNotFoundError,
-    get_profile_service,
-)
 from app.services.rating_service import (
     RatingNotFoundError,
     RatingService,
@@ -234,44 +229,6 @@ async def profile_page(
             "request": request,
             "current_user": current_user,
             "favorite_spots": favorite_spots,
-            "favorite_spot_ids": favorite_spot_ids,
-        },
-    )
-
-
-@router.get("/users/{username}", response_class=HTMLResponse)
-async def public_profile_page(
-    request: Request,
-    username: str,
-    profile_service: Annotated[ProfileService, Depends(get_profile_service)],
-    favorite_service: Annotated[FavoriteService, Depends(get_favorite_service)],
-    current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
-) -> HTMLResponse:
-    """Display a user's public profile page."""
-
-    try:
-        user_profile = profile_service.get_profile_by_username(username)
-    except UserNotFoundError:
-        return templates.TemplateResponse(
-            "error.html",
-            {
-                "request": request,
-                "current_user": current_user,
-                "error_message": f"User '{username}' not found.",
-            },
-            status_code=404,
-        )
-
-    favorite_spot_ids = (
-        favorite_service.favorite_ids_for_user(current_user.id) if current_user else set()
-    )
-
-    return templates.TemplateResponse(
-        "user_profile.html",
-        {
-            "request": request,
-            "current_user": current_user,
-            "profile": user_profile,
             "favorite_spot_ids": favorite_spot_ids,
         },
     )
