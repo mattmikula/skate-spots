@@ -109,9 +109,7 @@ class UserProfile(BaseModel):
     recent_comments: list[Comment] = Field(
         default_factory=list, description="Recently posted comments"
     )
-    recent_ratings: list[Rating] = Field(
-        default_factory=list, description="Recently given ratings"
-    )
+    recent_ratings: list[Rating] = Field(default_factory=list, description="Recently given ratings")
     activity: UserActivity = Field(default_factory=UserActivity, description="Recent activity feed")
 
     model_config = {"from_attributes": True}
