@@ -4,6 +4,9 @@
 <div class="page-header">
     <h2>{{ current_user.username }}'s Profile</h2>
     <p class="profile-subtitle">Manage your saved skate spots.</p>
+    <p class="profile-subtitle">
+        <a href="/users/{{ current_user.username }}" class="btn btn-secondary">View public profile</a>
+    </p>
 </div>
 
 {% if favorite_spots %}

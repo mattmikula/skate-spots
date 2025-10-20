@@ -32,6 +32,12 @@ class User(UserBase):
     """Model representing a user (returned in responses)."""
 
     id: UUID
+    display_name: str | None = None
+    bio: str | None = None
+    location: str | None = None
+    website_url: str | None = None
+    instagram_handle: str | None = None
+    profile_photo_url: str | None = None
     is_active: bool
     is_admin: bool
     created_at: datetime

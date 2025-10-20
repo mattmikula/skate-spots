@@ -199,6 +199,265 @@ footer {
     font-size: 0.9rem;
 }
 
+.profile-header {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    margin-bottom: 2rem;
+}
+
+.profile-avatar {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2563eb, #9333ea);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    font-weight: 600;
+    overflow: hidden;
+}
+
+.profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-header-text h2 {
+    margin-bottom: 0.3rem;
+    color: #1f2937;
+}
+
+.profile-username {
+    color: #6b7280;
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.profile-subtitle {
+    color: #6b7280;
+    margin-top: 0.5rem;
+}
+
+.profile-bio {
+    margin-bottom: 0.75rem;
+    color: #374151;
+    max-width: 60ch;
+}
+
+.profile-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-size: 0.9rem;
+    color: #4b5563;
+}
+
+.profile-meta-item {
+    background: #f3f4f6;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    text-decoration: none;
+    color: inherit;
+}
+
+.profile-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 1.25rem;
+    border-radius: 10px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
+    text-align: center;
+}
+
+.stat-value {
+    display: block;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.stat-label {
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+.profile-section {
+    margin-bottom: 3rem;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+}
+
+.section-header h3 {
+    color: #111827;
+}
+
+.spot-grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.spot-summary-card {
+    background: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.spot-summary-card h4 {
+    margin-bottom: 0.25rem;
+}
+
+.spot-summary-card a {
+    color: #1d4ed8;
+    text-decoration: none;
+}
+
+.spot-summary-card a:hover {
+    text-decoration: underline;
+}
+
+.spot-location {
+    color: #6b7280;
+}
+
+.spot-stat-row {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: #4b5563;
+}
+
+.activity-feed {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.activity-item {
+    display: flex;
+    gap: 1rem;
+    background: white;
+    padding: 1.25rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.activity-icon {
+    font-size: 1.5rem;
+}
+
+.activity-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.activity-timestamp {
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+.activity-body blockquote {
+    margin: 0.25rem 0 0;
+    padding-left: 0.75rem;
+    border-left: 3px solid #e5e7eb;
+    color: #374151;
+}
+
+.profile-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.profile-list li {
+    display: flex;
+    gap: 1rem;
+    background: white;
+    padding: 1rem 1.25rem;
+    border-radius: 10px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
+}
+
+.profile-list a {
+    color: #1d4ed8;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.profile-list a:hover {
+    text-decoration: underline;
+}
+
+.list-timestamp {
+    font-size: 0.85rem;
+    color: #6b7280;
+    min-width: 100px;
+}
+
+.empty-copy {
+    color: #6b7280;
+    font-style: italic;
+}
+
+@media (max-width: 768px) {
+    .profile-header {
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+    }
+
+    .profile-avatar {
+        width: 80px;
+        height: 80px;
+        font-size: 2rem;
+    }
+
+    .profile-stats {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    }
+
+    .activity-item {
+        flex-direction: column;
+    }
+
+    .profile-list li {
+        flex-direction: column;
+    }
+
+    .list-timestamp {
+        min-width: auto;
+    }
+}
+
 .badge {
     display: inline-block;
     padding: 0.25rem 0.75rem;

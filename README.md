@@ -16,6 +16,7 @@ A modern FastAPI application for sharing and discovering skateboarding spots aro
 - **Dynamic Spot Filters** with HTMX-powered search and dropdowns so the catalogue updates instantly without full page reloads
 - **Spot Photo Uploads** with local media storage, editing, and responsive galleries on each spot card
 - **Personal Collections** so logged-in skaters can favourite spots and revisit them from their profile
+- **Public User Profiles** with contribution statistics, activity feeds, and lists of each skater's spots, comments, and ratings
 - **Secure Authentication** with registration, login, and cookie-based JWT tokens
 - **Rich Data Model** with locations, difficulty levels, and spot types
 - **Comprehensive Validation** using Pydantic models
@@ -181,6 +182,7 @@ Database schema changes are managed with [Alembic](https://alembic.sqlalchemy.or
 | `GET` | `/map` | Interactive map view |
 | `GET` | `/login` | Login form (redirects if already authenticated) |
 | `GET` | `/register` | Registration form (redirects if already authenticated) |
+| `GET` | `/users/{username}` | Public profile showcasing a skater's activity |
 
 ### REST API Endpoints
 

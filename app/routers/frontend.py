@@ -36,9 +36,11 @@ from app.services.rating_service import (
     RatingService,
     get_rating_service,
 )
-from app.services.skate_spot_service import (
-    SkateSpotService,
-    get_skate_spot_service,
+from app.services.skate_spot_service import SkateSpotService, get_skate_spot_service
+from app.services.user_profile_service import (
+    UserProfileNotFoundError,
+    UserProfileService,
+    get_user_profile_service,
 )
 from spots.filters import build_skate_spot_filters
 
@@ -230,6 +232,39 @@ async def profile_page(
             "current_user": current_user,
             "favorite_spots": favorite_spots,
             "favorite_spot_ids": favorite_spot_ids,
+        },
+    )
+
+
+@router.get("/users/{username}", response_class=HTMLResponse)
+async def public_profile_page(
+    request: Request,
+    username: str,
+    service: Annotated[UserProfileService, Depends(get_user_profile_service)],
+    current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
+) -> HTMLResponse:
+    """Render the public profile page for a user."""
+
+    try:
+        profile = service.get_profile(username)
+    except UserProfileNotFoundError:
+        return templates.TemplateResponse(
+            "error.html",
+            {
+                "request": request,
+                "title": "Skater not found",
+                "message": "The requested skater profile could not be located.",
+                "current_user": current_user,
+            },
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+
+    return templates.TemplateResponse(
+        "user_profile.html",
+        {
+            "request": request,
+            "profile": profile,
+            "current_user": current_user,
         },
     )
 
