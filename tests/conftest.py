@@ -13,11 +13,13 @@ from app.db.database import Base, get_db
 from app.models.user import UserCreate
 from app.repositories.comment_repository import CommentRepository
 from app.repositories.favorite_repository import FavoriteRepository
+from app.repositories.profile_repository import ProfileRepository
 from app.repositories.rating_repository import RatingRepository
 from app.repositories.skate_spot_repository import SkateSpotRepository
 from app.repositories.user_repository import UserRepository
 from app.services.comment_service import CommentService, get_comment_service
 from app.services.favorite_service import FavoriteService, get_favorite_service
+from app.services.profile_service import ProfileService, get_profile_service
 from app.services.rating_service import (
     RatingService,
     get_rating_service,
@@ -82,6 +84,8 @@ def client(session_factory):
     comment_service = CommentService(comment_repository, repository)
     favorite_repository = FavoriteRepository(session_factory=session_factory)
     favorite_service = FavoriteService(favorite_repository, repository)
+    profile_repository = ProfileRepository(session_factory=session_factory)
+    profile_service = ProfileService(profile_repository)
 
     # Override database session
     def override_get_db():
@@ -104,6 +108,7 @@ def client(session_factory):
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_user_repository] = override_get_user_repository
     app.dependency_overrides[get_favorite_service] = lambda: favorite_service
+    app.dependency_overrides[get_profile_service] = lambda: profile_service
 
     try:
         with TestClient(app) as test_client:
@@ -115,6 +120,7 @@ def client(session_factory):
         app.dependency_overrides.pop(get_db, None)
         app.dependency_overrides.pop(get_user_repository, None)
         app.dependency_overrides.pop(get_favorite_service, None)
+        app.dependency_overrides.pop(get_profile_service, None)
 
 
 @pytest.fixture
