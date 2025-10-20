@@ -339,6 +339,8 @@ async def public_profile_page(
     request: Request,
     username: str,
     service: Annotated[UserProfileService, Depends(get_user_profile_service)],
+    user_repo: Annotated[UserRepository, Depends(get_user_repository)],
+    spot_service: Annotated[SkateSpotService, Depends(get_skate_spot_service)],
     current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
 ) -> HTMLResponse:
     """Render the public profile page for a user."""
@@ -357,12 +359,17 @@ async def public_profile_page(
             status_code=status.HTTP_404_NOT_FOUND,
         )
 
+    # Get user's spots
+    user = user_repo.get_by_username(username)
+    user_spots = spot_service.list_spots_by_user_id(str(user.id))
+
     return templates.TemplateResponse(
         "user_profile.html",
         {
             "request": request,
             "profile": profile,
             "current_user": current_user,
+            "user_spots": user_spots,
         },
     )
 
