@@ -16,6 +16,7 @@ def upgrade() -> None:
         batch_op.alter_column(
             "url", new_column_name="file_path", existing_type=sa.String(length=2048)
         )
+    with op.batch_alter_table("spot_photos") as batch_op:
         batch_op.alter_column(
             "file_path", existing_type=sa.String(length=2048), type_=sa.String(length=512)
         )
@@ -28,6 +29,7 @@ def downgrade() -> None:
         batch_op.alter_column(
             "file_path", existing_type=sa.String(length=512), type_=sa.String(length=2048)
         )
+    with op.batch_alter_table("spot_photos") as batch_op:
         batch_op.alter_column(
             "file_path", new_column_name="url", existing_type=sa.String(length=2048)
         )
