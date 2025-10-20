@@ -108,7 +108,10 @@ class ProfileRepository:
         with self._session_factory() as session:
             stmt = (
                 select(SpotCommentORM)
-                .options(selectinload(SpotCommentORM.author))
+                .options(
+                    selectinload(SpotCommentORM.author),
+                    selectinload(SpotCommentORM.spot),
+                )
                 .where(SpotCommentORM.user_id == str(user_id))
                 .order_by(SpotCommentORM.created_at.desc())
                 .limit(limit)
@@ -191,13 +194,15 @@ class ProfileRepository:
 
             for comment in comments:
                 spot = comment.spot
+                truncated_content = comment.content[:50]
+                ellipsis = "..." if len(comment.content) > 50 else ""
                 activities.append(
                     ActivityItem(
                         activity_type=ActivityType.COMMENT_POSTED,
                         timestamp=comment.created_at,
                         spot_id=spot.id,
                         spot_name=spot.name,
-                        details=f"Commented: {comment.content[:50]}...",
+                        details=f"Commented: {truncated_content}{ellipsis}",
                     )
                 )
 
@@ -273,6 +278,9 @@ class ProfileRepository:
 
     def _comment_orm_to_pydantic(self, comment: SpotCommentORM) -> Comment:
         """Convert a SpotCommentORM to Comment Pydantic model."""
+        # Include spot_name if the spot relationship is loaded
+        spot_name = comment.spot.name if hasattr(comment, "spot") and comment.spot else None
+
         return Comment(
             id=comment.id,
             spot_id=comment.spot_id,
@@ -281,6 +289,7 @@ class ProfileRepository:
             author=CommentAuthor(id=comment.author.id, username=comment.author.username),
             created_at=comment.created_at,
             updated_at=comment.updated_at,
+            spot_name=spot_name,
         )
 
     def _rating_orm_to_pydantic(self, rating: RatingORM) -> Rating:

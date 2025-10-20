@@ -77,7 +77,7 @@
         {% for comment in profile.recent_comments %}
         <div class="comment-preview">
             <div class="comment-content">{{ comment.content[:100] }}{% if comment.content|length > 100 %}...{% endif %}</div>
-            <div class="comment-meta">On <strong>{{ comment.spot_id }}</strong> - {{ comment.created_at.strftime('%B %d, %Y') }}</div>
+            <div class="comment-meta">On <a href="/spots/{{ comment.spot_id }}"><strong>{{ comment.spot_name or 'Unknown Spot' }}</strong></a> - {{ comment.created_at.strftime('%B %d, %Y') }}</div>
         </div>
         {% endfor %}
     </div>
