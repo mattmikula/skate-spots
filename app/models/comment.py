@@ -44,7 +44,6 @@ class Comment(CommentBase):
     author: CommentAuthor
     created_at: datetime
     updated_at: datetime
-    spot_name: str | None = None  # Optional field for profile/listing contexts
 
     class Config:
         """Enable ORM mode for compatibility with SQLAlchemy objects."""
