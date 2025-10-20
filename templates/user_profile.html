@@ -91,11 +91,17 @@
         <h3>Recent activity</h3>
     </div>
     {% if profile.activity %}
+        {% set activity_icons = {
+            'spot_created': '🛹',
+            'commented': '💬',
+            'rated': '⭐',
+            'photo_uploaded': '📷'
+        } %}
         <ul class="activity-feed">
             {% for entry in profile.activity %}
                 <li class="activity-item activity-{{ entry.type }}">
                     <div class="activity-icon">
-                        {% if entry.type == 'spot_created' %}🛹{% elif entry.type == 'commented' %}💬{% elif entry.type == 'rated' %}⭐{% else %}📷{% endif %}
+                        {{ activity_icons.get(entry.type, '📷') }}
                     </div>
                     <div class="activity-body">
                         <span class="activity-timestamp">{{ entry.created_at.strftime('%b %d, %Y %H:%M') }}</span>
