@@ -244,6 +244,7 @@ async def public_profile_page(
     request: Request,
     username: str,
     profile_service: Annotated[ProfileService, Depends(get_profile_service)],
+    favorite_service: Annotated[FavoriteService, Depends(get_favorite_service)],
     current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
 ) -> HTMLResponse:
     """Display a user's public profile page."""
@@ -261,12 +262,17 @@ async def public_profile_page(
             status_code=404,
         )
 
+    favorite_spot_ids = (
+        favorite_service.favorite_ids_for_user(current_user.id) if current_user else set()
+    )
+
     return templates.TemplateResponse(
         "user_profile.html",
         {
             "request": request,
             "current_user": current_user,
             "profile": user_profile,
+            "favorite_spot_ids": favorite_spot_ids,
         },
     )
 
