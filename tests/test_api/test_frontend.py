@@ -5,6 +5,7 @@ import copy
 import pytest
 
 from app.models.skate_spot import Difficulty, SpotType
+from app.repositories.user_repository import UserRepository
 
 
 @pytest.fixture
@@ -266,3 +267,35 @@ def test_profile_page_shows_favourites(client, created_spot_id, auth_token):
     response = client.get("/profile", cookies={"access_token": auth_token})
     assert response.status_code == 200
     assert "Frontend Test Spot" in response.text
+
+
+def test_user_can_update_profile_via_form(client, auth_token, session_factory):
+    client.cookies.set("access_token", auth_token)
+
+    response = client.post(
+        "/profile",
+        data={
+            "display_name": "Frontend Skater",
+            "bio": "Testing profile updates from the UI.",
+            "location": "San Francisco, USA",
+            "website_url": "https://example.com/skater",
+            "instagram_handle": "@frontendskater",
+            "profile_photo_url": "https://img.example.com/avatar.jpg",
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert "Profile updated successfully." in response.text
+    assert "Frontend Skater" in response.text
+
+    with session_factory() as session:
+        repo = UserRepository(session)
+        user = repo.get_by_username("testuser")
+
+        assert user.display_name == "Frontend Skater"
+        assert user.bio == "Testing profile updates from the UI."
+        assert user.location == "San Francisco, USA"
+        assert user.website_url == "https://example.com/skater"
+        assert user.instagram_handle == "@frontendskater"
+        assert user.profile_photo_url == "https://img.example.com/avatar.jpg"
