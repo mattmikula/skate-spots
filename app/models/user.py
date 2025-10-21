@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class UserBase(BaseModel):
@@ -32,6 +32,12 @@ class User(UserBase):
     """Model representing a user (returned in responses)."""
 
     id: UUID
+    display_name: str | None = None
+    bio: str | None = None
+    location: str | None = None
+    website_url: str | None = None
+    instagram_handle: str | None = None
+    profile_photo_url: str | None = None
     is_active: bool
     is_admin: bool
     created_at: datetime
@@ -55,3 +61,32 @@ class TokenData(BaseModel):
 
     user_id: str | None = None
     username: str | None = None
+
+
+class UserProfileUpdate(BaseModel):
+    """Model representing editable profile fields for a user."""
+
+    display_name: str | None = Field(default=None, max_length=100)
+    bio: str | None = Field(default=None, max_length=500)
+    location: str | None = Field(default=None, max_length=100)
+    website_url: str | None = Field(default=None, max_length=255)
+    instagram_handle: str | None = Field(default=None, max_length=100)
+    profile_photo_url: str | None = Field(default=None, max_length=512)
+
+    @field_validator(
+        "display_name",
+        "bio",
+        "location",
+        "website_url",
+        "instagram_handle",
+        "profile_photo_url",
+        mode="before",
+    )
+    @classmethod
+    def _blank_to_none(cls, value: str | None) -> str | None:
+        """Convert blank strings submitted via forms into ``None``."""
+
+        if isinstance(value, str):
+            stripped = value.strip()
+            return stripped or None
+        return value
