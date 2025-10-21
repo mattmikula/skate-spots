@@ -52,7 +52,7 @@ class UserRepository:
     def update_profile(self, user: UserORM, profile_data: UserProfileUpdate) -> UserORM:
         """Persist editable profile fields for the given user."""
 
-        updates = profile_data.model_dump()
+        updates = profile_data.model_dump(exclude_unset=True)
         for field, value in updates.items():
             setattr(user, field, value)
 
