@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy.orm import Session
 
-    from app.models.user import UserCreate
+    from app.models.user import UserCreate, UserProfileUpdate
 
 
 class UserRepository:
@@ -48,3 +48,15 @@ class UserRepository:
     def list_all(self) -> list[UserORM]:
         """Get all users."""
         return list(self.db.query(UserORM).all())
+
+    def update_profile(self, user: UserORM, profile_data: UserProfileUpdate) -> UserORM:
+        """Persist editable profile fields for the given user."""
+
+        updates = profile_data.model_dump()
+        for field, value in updates.items():
+            setattr(user, field, value)
+
+        self.db.add(user)
+        self.db.commit()
+        self.db.refresh(user)
+        return user
