@@ -188,7 +188,7 @@ class UserProfileRepository:
                 UserActivityItem(
                     type=UserActivityType.PHOTO_UPLOADED,
                     created_at=photo.created_at,
-                    spot_id=UUID(photo.spot_id) if photo.spot_id else None,
+                    spot_id=UUID(photo.spot_id),
                     spot_name=spot_name,
                     photo_path=photo.file_path,
                 )
