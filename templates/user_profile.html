@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="profile-header">
+    <div class="profile-avatar">
+        {% if profile.profile_photo_url %}
+            <img src="{{ profile.profile_photo_url }}" alt="{{ profile.display_name or profile.username }}" />
+        {% else %}
+            <span>{{ (profile.display_name or profile.username)[0]|upper }}</span>
+        {% endif %}
+    </div>
+    <div class="profile-header-text">
+        <h2>{{ profile.display_name or profile.username }}</h2>
+        <p class="profile-username">@{{ profile.username }}</p>
+        {% if profile.bio %}
+            <p class="profile-bio">{{ profile.bio }}</p>
+        {% endif %}
+        <div class="profile-meta">
+            {% if profile.location %}
+                <span class="profile-meta-item">📍 {{ profile.location }}</span>
+            {% endif %}
+            {% if profile.website_url %}
+                <a class="profile-meta-item" href="{{ profile.website_url }}" target="_blank" rel="noopener">🌐 Website</a>
+            {% endif %}
+            {% if profile.instagram_handle %}
+                <span class="profile-meta-item">📸 {{ profile.instagram_handle }}</span>
+            {% endif %}
+            <span class="profile-meta-item">🎉 Joined {{ profile.joined_at.strftime('%B %Y') }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="profile-stats">
+    <div class="stat-card">
+        <span class="stat-value">{{ profile.stats.spots_added }}</span>
+        <span class="stat-label">Spots added</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-value">{{ profile.stats.photos_uploaded }}</span>
+        <span class="stat-label">Photos uploaded</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-value">{{ profile.stats.comments_posted }}</span>
+        <span class="stat-label">Comments posted</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-value">{{ profile.stats.ratings_left }}</span>
+        <span class="stat-label">Ratings left</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-value">
+            {% if profile.stats.average_rating_given %}
+                {{ '%.1f'|format(profile.stats.average_rating_given) }}
+            {% else %}
+                —
+            {% endif %}
+        </span>
+        <span class="stat-label">Avg rating given</span>
+    </div>
+</div>
+
+<section class="profile-section">
+    <div class="section-header">
+        <h3>Spots created</h3>
+    </div>
+    {% if profile.spots %}
+        <div class="spot-grid">
+            {% for spot in profile.spots %}
+                <article class="spot-summary-card">
+                    <h4><a href="/skate-spots/{{ spot.id }}">{{ spot.name }}</a></h4>
+                    <p class="spot-location">{{ spot.city }}, {{ spot.country }}</p>
+                    <p class="spot-meta">Added on {{ spot.created_at.strftime('%b %d, %Y') }}</p>
+                    <div class="spot-stat-row">
+                        <span>📷 {{ spot.photo_count }} photos</span>
+                        {% if spot.average_rating %}
+                            <span>⭐ {{ '%.1f'|format(spot.average_rating) }} ({{ spot.ratings_count }})</span>
+                        {% else %}
+                            <span>⭐ No ratings yet</span>
+                        {% endif %}
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="empty-copy">This skater hasn't added any spots yet.</p>
+    {% endif %}
+</section>
+
+<section class="profile-section">
+    <div class="section-header">
+        <h3>Recent activity</h3>
+    </div>
+    {% if profile.activity %}
+        <ul class="activity-feed">
+            {% for entry in profile.activity %}
+                <li class="activity-item activity-{{ entry.type }}">
+                    <div class="activity-icon">
+                        {% if entry.type == 'spot_created' %}🛹{% elif entry.type == 'commented' %}💬{% elif entry.type == 'rated' %}⭐{% else %}📷{% endif %}
+                    </div>
+                    <div class="activity-body">
+                        <span class="activity-timestamp">{{ entry.created_at.strftime('%b %d, %Y %H:%M') }}</span>
+                        {% if entry.type == 'spot_created' %}
+                            <p><strong>{{ profile.display_name or profile.username }}</strong> added a new spot <a href="/skate-spots/{{ entry.spot_id }}">{{ entry.spot_name }}</a>.</p>
+                        {% elif entry.type == 'commented' %}
+                            <p><strong>{{ profile.display_name or profile.username }}</strong> commented on <a href="/skate-spots/{{ entry.spot_id }}">{{ entry.spot_name }}</a>:</p>
+                            <blockquote>{{ entry.comment }}</blockquote>
+                        {% elif entry.type == 'rated' %}
+                            <p><strong>{{ profile.display_name or profile.username }}</strong> rated <a href="/skate-spots/{{ entry.spot_id }}">{{ entry.spot_name }}</a> <strong>{{ entry.rating_score }}/5</strong>.</p>
+                            {% if entry.comment %}<blockquote>{{ entry.comment }}</blockquote>{% endif %}
+                        {% else %}
+                            <p><strong>{{ profile.display_name or profile.username }}</strong> uploaded a new photo to <a href="/skate-spots/{{ entry.spot_id }}">{{ entry.spot_name }}</a>.</p>
+                        {% endif %}
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="empty-copy">No activity to show yet.</p>
+    {% endif %}
+</section>
+
+<section class="profile-section">
+    <div class="section-header">
+        <h3>Recent comments</h3>
+    </div>
+    {% if profile.recent_comments %}
+        <ul class="profile-list">
+            {% for comment in profile.recent_comments %}
+                <li>
+                    <span class="list-timestamp">{{ comment.created_at.strftime('%b %d, %Y') }}</span>
+                    <div>
+                        <a href="/skate-spots/{{ comment.spot_id }}">{{ comment.spot_name }}</a>
+                        <p>{{ comment.content }}</p>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="empty-copy">No comments yet.</p>
+    {% endif %}
+</section>
+
+<section class="profile-section">
+    <div class="section-header">
+        <h3>Recent ratings</h3>
+    </div>
+    {% if profile.recent_ratings %}
+        <ul class="profile-list">
+            {% for rating in profile.recent_ratings %}
+                <li>
+                    <span class="list-timestamp">{{ rating.created_at.strftime('%b %d, %Y') }}</span>
+                    <div>
+                        <a href="/skate-spots/{{ rating.spot_id }}">{{ rating.spot_name }}</a>
+                        <p>Rated <strong>{{ rating.score }}/5</strong></p>
+                        {% if rating.comment %}<blockquote>{{ rating.comment }}</blockquote>{% endif %}
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="empty-copy">No ratings yet.</p>
+    {% endif %}
+</section>
+{% endblock %}
