@@ -3,7 +3,14 @@ from uuid import uuid4
 
 import pytest
 
-from app.db.models import RatingORM, SkateSpotORM, SpotCommentORM, SpotPhotoORM
+from app.db.models import (
+    RatingORM,
+    SessionORM,
+    SessionRSVPORM,
+    SkateSpotORM,
+    SpotCommentORM,
+    SpotPhotoORM,
+)
 from app.models.user import UserCreate
 from app.repositories.user_profile_repository import UserProfileRepository
 from app.repositories.user_repository import UserRepository
@@ -82,6 +89,34 @@ def _seed_user_with_activity(session_factory):
         )
         session.add(photo)
 
+        skate_session = SessionORM(
+            id=str(uuid4()),
+            spot_id=spot.id,
+            organizer_id=str(user.id),
+            title="Morning Jam",
+            description="Warm-up laps",
+            start_time=base_time + timedelta(hours=4),
+            end_time=base_time + timedelta(hours=5),
+            meet_location="North stair set",
+            skill_level="Intermediate",
+            capacity=5,
+            status="scheduled",
+            created_at=base_time + timedelta(hours=4),
+            updated_at=base_time + timedelta(hours=4),
+        )
+        session.add(skate_session)
+
+        rsvp = SessionRSVPORM(
+            id=str(uuid4()),
+            session_id=skate_session.id,
+            user_id=str(user.id),
+            response="going",
+            note="Bringing a camera",
+            created_at=base_time + timedelta(hours=4, minutes=30),
+            updated_at=base_time + timedelta(hours=4, minutes=30),
+        )
+        session.add(rsvp)
+
         session.commit()
         return str(user.username)
 
@@ -100,7 +135,11 @@ def test_get_profile_returns_activity(session_factory):
     assert profile.stats.photos_uploaded == 1
     assert profile.stats.comments_posted == 1
     assert profile.stats.ratings_left == 1
+    assert profile.stats.sessions_hosted == 1
+    assert profile.stats.sessions_attended == 1
     assert any(item.type.value == "spot_created" for item in profile.activity)
+    assert any(item.type.value == "session_hosted" for item in profile.activity)
+    assert any(item.type.value == "session_attended" for item in profile.activity)
 
 
 def test_get_profile_missing_user_raises(session_factory):

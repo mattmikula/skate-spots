@@ -57,6 +57,14 @@
         </span>
         <span class="stat-label">Avg rating given</span>
     </div>
+    <div class="stat-card">
+        <span class="stat-value">{{ profile.stats.sessions_hosted }}</span>
+        <span class="stat-label">Sessions hosted</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-value">{{ profile.stats.sessions_attended }}</span>
+        <span class="stat-label">Sessions attended</span>
+    </div>
 </div>
 
 <section class="profile-section">
@@ -95,7 +103,19 @@
             {% for entry in profile.activity %}
                 <li class="activity-item activity-{{ entry.type.value }}">
                     <div class="activity-icon">
-                        {% if entry.type.value == 'spot_created' %}🛹{% elif entry.type.value == 'commented' %}💬{% elif entry.type.value == 'rated' %}⭐{% else %}📷{% endif %}
+                        {% if entry.type.value == 'spot_created' %}
+                            🛹
+                        {% elif entry.type.value == 'commented' %}
+                            💬
+                        {% elif entry.type.value == 'rated' %}
+                            ⭐
+                        {% elif entry.type.value == 'photo_uploaded' %}
+                            📷
+                        {% elif entry.type.value == 'session_hosted' %}
+                            📅
+                        {% else %}
+                            ✅
+                        {% endif %}
                     </div>
                     <div class="activity-body">
                         <span class="activity-timestamp">{{ entry.created_at.strftime('%b %d, %Y %H:%M') }}</span>
@@ -107,8 +127,19 @@
                         {% elif entry.type.value == 'rated' %}
                             <p><strong>{{ profile.display_name or profile.username }}</strong> rated <a href="/skate-spots/{{ entry.spot_id }}">{{ entry.spot_name }}</a> <strong>{{ entry.rating_score }}/5</strong>.</p>
                             {% if entry.comment %}<blockquote>{{ entry.comment }}</blockquote>{% endif %}
-                        {% else %}
+                        {% elif entry.type.value == 'photo_uploaded' %}
                             <p><strong>{{ profile.display_name or profile.username }}</strong> uploaded a new photo to <a href="/skate-spots/{{ entry.spot_id }}">{{ entry.spot_name }}</a>.</p>
+                        {% elif entry.type.value == 'session_hosted' %}
+                            <p><strong>{{ profile.display_name or profile.username }}</strong> scheduled <a href="/skate-spots/{{ entry.spot_id }}">{{ entry.session_title }}</a>.</p>
+                            {% if entry.session_start_time %}
+                                <p class="activity-meta">Starts {{ entry.session_start_time.strftime('%b %d, %Y %H:%M') }}</p>
+                            {% endif %}
+                            <p class="activity-meta">Status: {{ entry.session_status | replace('_', ' ') | title }}</p>
+                        {% else %}
+                            <p><strong>{{ profile.display_name or profile.username }}</strong> RSVP'd to <a href="/skate-spots/{{ entry.spot_id }}">{{ entry.session_title }}</a>.</p>
+                            {% if entry.session_start_time %}
+                                <p class="activity-meta">Session on {{ entry.session_start_time.strftime('%b %d, %Y %H:%M') }}</p>
+                            {% endif %}
                         {% endif %}
                     </div>
                 </li>
