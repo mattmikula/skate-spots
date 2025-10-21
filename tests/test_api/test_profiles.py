@@ -1,7 +1,14 @@
 from datetime import datetime, timedelta
 from uuid import uuid4
 
-from app.db.models import RatingORM, SkateSpotORM, SpotCommentORM, SpotPhotoORM
+from app.db.models import (
+    RatingORM,
+    SessionORM,
+    SessionRSVPORM,
+    SkateSpotORM,
+    SpotCommentORM,
+    SpotPhotoORM,
+)
 from app.models.user import UserCreate
 from app.repositories.user_repository import UserRepository
 
@@ -71,6 +78,33 @@ def _seed_profile(session_factory):
             created_at=base_time + timedelta(hours=3),
         )
         session.add(photo)
+
+        hosted_session = SessionORM(
+            id=str(uuid4()),
+            spot_id=spot.id,
+            organizer_id=str(user.id),
+            title="Evening Lines",
+            description="Work on manuals",
+            start_time=base_time + timedelta(hours=4),
+            end_time=base_time + timedelta(hours=5),
+            meet_location="Central ledge",
+            skill_level="Intermediate",
+            capacity=6,
+            status="scheduled",
+            created_at=base_time + timedelta(hours=4),
+            updated_at=base_time + timedelta(hours=4),
+        )
+        session.add(hosted_session)
+
+        rsvp = SessionRSVPORM(
+            id=str(uuid4()),
+            session_id=hosted_session.id,
+            user_id=str(user.id),
+            response="going",
+            created_at=base_time + timedelta(hours=4, minutes=15),
+            updated_at=base_time + timedelta(hours=4, minutes=15),
+        )
+        session.add(rsvp)
 
         session.commit()
         return user.username

@@ -17,6 +17,8 @@ class UserProfileStats(BaseModel):
     comments_posted: int
     ratings_left: int
     average_rating_given: float | None = None
+    sessions_hosted: int = 0
+    sessions_attended: int = 0
 
 
 class UserSpotSummary(BaseModel):
@@ -60,6 +62,8 @@ class UserActivityType(str, Enum):
     COMMENTED = "commented"
     RATED = "rated"
     PHOTO_UPLOADED = "photo_uploaded"
+    SESSION_HOSTED = "session_hosted"
+    SESSION_ATTENDED = "session_attended"
 
 
 class UserActivityItem(BaseModel):
@@ -72,6 +76,10 @@ class UserActivityItem(BaseModel):
     comment: str | None = None
     rating_score: int | None = None
     photo_path: str | None = None
+    session_id: UUID | None = None
+    session_title: str | None = None
+    session_status: str | None = None
+    session_start_time: datetime | None = None
 
 
 class UserProfile(BaseModel):

@@ -13,6 +13,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -54,6 +55,16 @@ class UserORM(Base):
     )
     favorite_spots: Mapped[list[FavoriteSpotORM]] = relationship(
         "FavoriteSpotORM",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    hosted_sessions: Mapped[list[SessionORM]] = relationship(
+        "SessionORM",
+        back_populates="organizer",
+        cascade="all, delete-orphan",
+    )
+    session_rsvps: Mapped[list[SessionRSVPORM]] = relationship(
+        "SessionRSVPORM",
         back_populates="user",
         cascade="all, delete-orphan",
     )
@@ -109,6 +120,11 @@ class SkateSpotORM(Base):
     )
     photos: Mapped[list[SpotPhotoORM]] = relationship(
         "SpotPhotoORM",
+        back_populates="spot",
+        cascade="all, delete-orphan",
+    )
+    sessions: Mapped[list[SessionORM]] = relationship(
+        "SessionORM",
         back_populates="spot",
         cascade="all, delete-orphan",
     )
@@ -217,3 +233,95 @@ class SpotCommentORM(Base):
 
     spot: Mapped[SkateSpotORM] = relationship("SkateSpotORM", back_populates="comments")
     author: Mapped[UserORM] = relationship("UserORM", back_populates="comments")
+
+
+class SessionORM(Base):
+    """Database model representing an organised skate session."""
+
+    __tablename__ = "spot_sessions"
+    __table_args__ = (
+        CheckConstraint(
+            "capacity IS NULL OR capacity >= 1",
+            name="ck_spot_sessions_capacity_positive",
+        ),
+        CheckConstraint(
+            "status IN ('scheduled', 'cancelled', 'completed')",
+            name="ck_spot_sessions_status_enum",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    spot_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("skate_spots.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    organizer_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    title: Mapped[str] = mapped_column(String(120), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    start_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    end_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    meet_location: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    skill_level: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    capacity: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="scheduled")
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+    )
+
+    spot: Mapped[SkateSpotORM] = relationship("SkateSpotORM", back_populates="sessions")
+    organizer: Mapped[UserORM] = relationship("UserORM", back_populates="hosted_sessions")
+    rsvps: Mapped[list[SessionRSVPORM]] = relationship(
+        "SessionRSVPORM",
+        back_populates="session",
+        cascade="all, delete-orphan",
+    )
+
+
+class SessionRSVPORM(Base):
+    """Database model tracking attendance responses for a session."""
+
+    __tablename__ = "session_rsvps"
+    __table_args__ = (
+        UniqueConstraint("session_id", "user_id", name="uq_session_rsvps_session_user"),
+        CheckConstraint(
+            "response IN ('going', 'maybe', 'waitlist')",
+            name="ck_session_rsvps_response_enum",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    session_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("spot_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    response: Mapped[str] = mapped_column(String(20), nullable=False, default="going")
+    note: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+    )
+
+    session: Mapped[SessionORM] = relationship("SessionORM", back_populates="rsvps")
+    user: Mapped[UserORM] = relationship("UserORM", back_populates="session_rsvps")

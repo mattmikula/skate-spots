@@ -19,6 +19,7 @@ A modern FastAPI application for sharing and discovering skateboarding spots aro
 - **Public User Profiles** with contribution statistics, activity feeds, and lists of each skater's spots, comments, and ratings
 - **Customizable Profiles** so skaters can edit their bio, links, and avatar directly from the dashboard
 - **Secure Authentication** with registration, login, and cookie-based JWT tokens
+- **Session Scheduling** that lets crews organise meetups, manage RSVPs, and automatically promote waitlisted skaters when spots open up
 - **Rich Data Model** with locations, difficulty levels, and spot types
 - **Comprehensive Validation** using Pydantic models
 - **Clean Architecture** with separation of concerns
