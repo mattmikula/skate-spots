@@ -33,6 +33,16 @@
     {% endwith %}
 
     <div
+        class="spot-checkin-container"
+        hx-get="/skate-spots/{{ spot.id }}/checkin-section"
+        hx-trigger="load"
+        hx-target="this"
+        hx-swap="outerHTML"
+    >
+        <div class="checkin-loading">Loading check-ins...</div>
+    </div>
+
+    <div
         class="spot-rating-container"
         hx-get="/skate-spots/{{ spot.id }}/rating-section"
         hx-trigger="load"

@@ -12,10 +12,12 @@ from app.db.database import SessionLocal
 from app.db.models import (
     RatingORM,
     SkateSpotORM,
+    SpotCheckinORM,
     SpotCommentORM,
     SpotPhotoORM,
     UserORM,
 )
+from app.models.checkin import CheckinSummary
 from app.models.user_profile import (
     UserActivityItem,
     UserActivityType,
@@ -47,6 +49,7 @@ class UserProfileRepository:
                     selectinload(UserORM.comments).selectinload(SpotCommentORM.spot),
                     selectinload(UserORM.ratings).selectinload(RatingORM.spot),
                     selectinload(UserORM.uploaded_photos).selectinload(SpotPhotoORM.spot),
+                    selectinload(UserORM.checkins).selectinload(SpotCheckinORM.spot),
                 )
                 .where(UserORM.username == username)
             )
@@ -61,20 +64,23 @@ class UserProfileRepository:
         comments = sorted(user.comments, key=lambda comment: comment.created_at, reverse=True)
         ratings = sorted(user.ratings, key=lambda rating: rating.created_at, reverse=True)
         photos = sorted(user.uploaded_photos, key=lambda photo: photo.created_at, reverse=True)
+        checkins = sorted(user.checkins, key=lambda checkin: checkin.checked_in_at, reverse=True)
 
         stats = UserProfileStats(
             spots_added=len(spots),
             photos_uploaded=len(photos),
             comments_posted=len(comments),
             ratings_left=len(ratings),
+            checkins_count=len(checkins),
             average_rating_given=self._average_rating_given(ratings),
         )
 
         spot_summaries = [self._spot_summary(spot) for spot in spots[:12]]
         comment_summaries = [self._comment_summary(comment) for comment in comments[:10]]
         rating_summaries = [self._rating_summary(rating) for rating in ratings[:10]]
+        checkin_summaries = [self._checkin_summary(checkin) for checkin in checkins[:10]]
 
-        activity = self._activity_feed(spots, comments, ratings, photos)
+        activity = self._activity_feed(spots, comments, ratings, photos, checkins)
 
         return UserProfile(
             id=UUID(user.id),
@@ -90,6 +96,7 @@ class UserProfileRepository:
             spots=spot_summaries,
             recent_comments=comment_summaries,
             recent_ratings=rating_summaries,
+            recent_checkins=checkin_summaries,
             activity=activity,
         )
 
@@ -140,12 +147,24 @@ class UserProfileRepository:
             created_at=rating.created_at,
         )
 
+    @staticmethod
+    def _checkin_summary(checkin: SpotCheckinORM) -> CheckinSummary:
+        spot_name = checkin.spot.name if checkin.spot is not None else "Unknown spot"
+        return CheckinSummary(
+            id=UUID(checkin.id),
+            spot_id=UUID(checkin.spot_id),
+            spot_name=spot_name,
+            checked_in_at=checkin.checked_in_at,
+            notes=checkin.notes,
+        )
+
     def _activity_feed(
         self,
         spots: list[SkateSpotORM],
         comments: list[SpotCommentORM],
         ratings: list[RatingORM],
         photos: list[SpotPhotoORM],
+        checkins: list[SpotCheckinORM] | None = None,
     ) -> list[UserActivityItem]:
         entries: list[UserActivityItem] = []
 
@@ -193,6 +212,18 @@ class UserProfileRepository:
                     photo_path=photo.file_path,
                 )
             )
+
+        if checkins:
+            for checkin in checkins:
+                entries.append(
+                    UserActivityItem(
+                        type=UserActivityType.CHECKED_IN,
+                        created_at=checkin.checked_in_at,
+                        spot_id=UUID(checkin.spot_id),
+                        spot_name=checkin.spot.name if checkin.spot else None,
+                        comment=checkin.notes,
+                    )
+                )
 
         entries.sort(key=lambda item: item.created_at, reverse=True)
         return entries[:20]

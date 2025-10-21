@@ -1,0 +1,194 @@
+<div class="spot-checkin-container">
+    <div class="checkin-stats">
+        <div class="stat-item">
+            <span class="stat-label">📍 Check-ins</span>
+            <div class="stat-values">
+                {% if checkin_stats.today_count > 0 %}
+                    <span class="stat-value">{{ checkin_stats.today_count }} today</span>
+                {% endif %}
+                {% if checkin_stats.week_count > 0 %}
+                    <span class="stat-value">{{ checkin_stats.week_count }} this week</span>
+                {% endif %}
+                {% if checkin_stats.total_count == 0 %}
+                    <span class="stat-value">Be the first!</span>
+                {% elif checkin_stats.total_count > 0 %}
+                    <span class="stat-value">{{ checkin_stats.total_count }} total</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if current_user %}
+        {% if not checkin_stats.user_checked_in_today %}
+            <button
+                class="btn btn-checkin"
+                hx-get="/skate-spots/{{ spot_id }}/checkin-form"
+                hx-target="#checkin-form-{{ spot_id }}"
+                hx-swap="innerHTML">
+                ✓ Check in here
+            </button>
+        {% else %}
+            <div class="checkin-status">
+                ✓ You checked in today
+            </div>
+        {% endif %}
+    {% else %}
+        <p class="login-prompt">
+            <a href="/login">Log in</a> to check in to this spot
+        </p>
+    {% endif %}
+
+    <div id="checkin-form-{{ spot_id }}" class="checkin-form-container"></div>
+
+    {% if recent_checkins %}
+        <div class="recent-checkins">
+            <h4>Recent Check-ins</h4>
+            <div class="checkin-list">
+                {% for checkin in recent_checkins[:5] %}
+                    <div class="checkin-item">
+                        <div class="checkin-user">
+                            <strong>{{ checkin.user.username }}</strong>
+                        </div>
+                        <div class="checkin-time">
+                            {{ checkin.checked_in_at.strftime('%b %d, %H:%M') }}
+                        </div>
+                        {% if checkin.notes %}
+                            <div class="checkin-notes">
+                                {{ checkin.notes }}
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.spot-checkin-container {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: #f9f9f9;
+    border-radius: 8px;
+}
+
+.checkin-stats {
+    margin-bottom: 1rem;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.stat-label {
+    font-weight: 600;
+    color: #333;
+}
+
+.stat-values {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.stat-value {
+    background: #e8f4f8;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    color: #0077b6;
+}
+
+.btn-checkin {
+    background: #06aed5;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    margin: 0.5rem 0;
+    transition: background 0.2s;
+}
+
+.btn-checkin:hover {
+    background: #0596c1;
+}
+
+.checkin-status {
+    color: #28a745;
+    font-weight: 500;
+    padding: 0.5rem;
+    background: #d4edda;
+    border-radius: 4px;
+    margin: 0.5rem 0;
+}
+
+.login-prompt {
+    margin: 0.5rem 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.login-prompt a {
+    color: #0077b6;
+    text-decoration: none;
+}
+
+.login-prompt a:hover {
+    text-decoration: underline;
+}
+
+.checkin-form-container {
+    margin: 0.5rem 0;
+}
+
+.recent-checkins {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #ddd;
+}
+
+.recent-checkins h4 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+    font-size: 0.95rem;
+}
+
+.checkin-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.checkin-item {
+    background: white;
+    padding: 0.5rem;
+    border-radius: 4px;
+    border-left: 3px solid #06aed5;
+}
+
+.checkin-user {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.9rem;
+}
+
+.checkin-time {
+    font-size: 0.8rem;
+    color: #999;
+    margin: 0.25rem 0;
+}
+
+.checkin-notes {
+    font-size: 0.85rem;
+    color: #555;
+    margin-top: 0.25rem;
+    padding: 0.25rem;
+    background: #fafafa;
+    border-radius: 3px;
+}
+</style>

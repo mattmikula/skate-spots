@@ -8,6 +8,8 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+from app.models.checkin import CheckinSummary  # noqa: TC001
+
 
 class UserProfileStats(BaseModel):
     """Aggregate counts for a user's contributions."""
@@ -16,6 +18,7 @@ class UserProfileStats(BaseModel):
     photos_uploaded: int
     comments_posted: int
     ratings_left: int
+    checkins_count: int = 0
     average_rating_given: float | None = None
 
 
@@ -60,6 +63,7 @@ class UserActivityType(str, Enum):
     COMMENTED = "commented"
     RATED = "rated"
     PHOTO_UPLOADED = "photo_uploaded"
+    CHECKED_IN = "checked_in"
 
 
 class UserActivityItem(BaseModel):
@@ -90,4 +94,5 @@ class UserProfile(BaseModel):
     spots: list[UserSpotSummary]
     recent_comments: list[UserCommentSummary]
     recent_ratings: list[UserRatingSummary]
+    recent_checkins: list[CheckinSummary] | None = None
     activity: list[UserActivityItem]

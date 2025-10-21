@@ -22,6 +22,10 @@ from app.models.skate_spot import Difficulty, SpotType
 from app.models.user import UserProfileUpdate
 from app.repositories.user_repository import UserRepository  # noqa: TCH001
 from app.services.activity_service import ActivityService, get_activity_service
+from app.services.checkin_service import (
+    CheckinService,
+    get_checkin_service,
+)
 from app.services.comment_service import (
     CommentNotFoundError,
     CommentPermissionError,
@@ -896,6 +900,33 @@ async def feed_page(
     )
 
 
+@router.get(
+    "/skate-spots/{spot_id}/checkin-section",
+    response_class=HTMLResponse,
+)
+async def checkin_section(
+    request: Request,
+    spot_id: UUID,
+    checkin_service: Annotated[CheckinService, Depends(get_checkin_service)],
+    current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
+) -> HTMLResponse:
+    """Render the check-in stats and form snippet for a skate spot."""
+
+    stats = checkin_service.get_spot_stats(spot_id, current_user.id if current_user else None)
+    recent_checkins = checkin_service.get_spot_recent_checkins(spot_id)
+
+    return templates.TemplateResponse(
+        "partials/checkin_section.html",
+        {
+            "request": request,
+            "spot_id": spot_id,
+            "checkin_stats": stats,
+            "recent_checkins": recent_checkins,
+            "current_user": current_user,
+        },
+    )
+
+
 @router.get("/feed/partials/personalized", response_class=HTMLResponse)
 async def feed_personalized_partial(
     request: Request,
@@ -956,3 +987,23 @@ async def feed_public_partial(
             "next_offset": offset + limit,
         },
     )
+
+
+@router.get(
+    "/skate-spots/{spot_id}/checkin-form",
+    response_class=HTMLResponse,
+)
+async def checkin_form(
+    request: Request,
+    spot_id: UUID,
+) -> HTMLResponse:
+    """Render the check-in form for HTMX submission."""
+
+    return templates.TemplateResponse(
+        "partials/checkin_form.html",
+        {
+            "request": request,
+            "spot_id": spot_id,
+        },
+    )
+

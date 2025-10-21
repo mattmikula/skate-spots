@@ -88,6 +88,11 @@ class UserORM(Base):
         back_populates="actor",
         cascade="all, delete-orphan",
     )
+    checkins: Mapped[list[SpotCheckinORM]] = relationship(
+        "SpotCheckinORM",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
 
 
 class SkateSpotORM(Base):
@@ -135,6 +140,11 @@ class SkateSpotORM(Base):
     )
     comments: Mapped[list[SpotCommentORM]] = relationship(
         "SpotCommentORM",
+        back_populates="spot",
+        cascade="all, delete-orphan",
+    )
+    checkins: Mapped[list[SpotCheckinORM]] = relationship(
+        "SpotCheckinORM",
         back_populates="spot",
         cascade="all, delete-orphan",
     )
@@ -293,3 +303,24 @@ class ActivityFeedORM(Base):
     )
 
     actor: Mapped[UserORM] = relationship("UserORM", back_populates="activities")
+
+
+class SpotCheckinORM(Base):
+    """Database model representing a user check-in at a skate spot."""
+
+    __tablename__ = "spot_checkins"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    spot_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("skate_spots.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    notes: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    checked_in_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow
+    )
+
+    spot: Mapped[SkateSpotORM] = relationship("SkateSpotORM", back_populates="checkins")
+    user: Mapped[UserORM] = relationship("UserORM", back_populates="checkins")

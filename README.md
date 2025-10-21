@@ -18,7 +18,8 @@ A modern FastAPI application for sharing and discovering skateboarding spots aro
 - **Spot Photo Uploads** with local media storage, editing, and responsive galleries on each spot card
 - **Personal Collections** so logged-in skaters can favourite spots and revisit them from their profile
 - **Social Feed** with activity tracking, user follows/followers, and personalized activity feeds from users you follow
-- **Public User Profiles** with contribution statistics, activity feeds, and lists of each skater's spots, comments, and ratings
+- **Spot Check-ins / Session Logging** where skaters can log when they visit a spot with optional notes, track activity with time-range stats (today/week/total), and view recent check-in activity
+- **Public User Profiles** with contribution statistics, activity feeds, and lists of each skater's spots, comments, ratings, and check-ins
 - **Customizable Profiles** so skaters can edit their bio, links, and avatar directly from the dashboard
 - **Secure Authentication** with registration, login, and cookie-based JWT tokens
 - **Rich Data Model** with locations, difficulty levels, and spot types
@@ -239,6 +240,11 @@ Database schema changes are managed with [Alembic](https://alembic.sqlalchemy.or
 | `GET` | `/api/v1/skate-spots/{id}/comments/` | List comments for a skate spot |
 | `POST` | `/api/v1/skate-spots/{id}/comments/` | Create a comment on a skate spot |
 | `DELETE` | `/api/v1/skate-spots/{id}/comments/{comment_id}` | Delete a comment (owner or admin only) |
+| `POST` | `/api/v1/spots/{spot_id}/checkins` | Check in to a spot (one per day per user) |
+| `GET` | `/api/v1/spots/{spot_id}/checkins/stats` | Get check-in statistics (today/week/total counts) |
+| `GET` | `/api/v1/spots/{spot_id}/checkins` | List recent check-ins for a spot |
+| `GET` | `/api/v1/users/me/checkins` | Get current user's check-in history |
+| `DELETE` | `/api/v1/checkins/{checkin_id}` | Delete a check-in (owner or admin only) |
 
 ### Social Feed Endpoints
 
