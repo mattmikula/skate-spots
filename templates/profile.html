@@ -2,20 +2,144 @@
 
 {% block content %}
 <div class="page-header">
-    <h2>{{ current_user.username }}'s Profile</h2>
-    <p class="profile-subtitle">Manage your saved skate spots.</p>
+    <h2>{{ (current_user.display_name or current_user.username) }}'s Profile</h2>
+    <p class="profile-subtitle">Update your public details and manage saved skate spots.</p>
+    <p class="profile-subtitle">
+        <a href="/users/{{ current_user.username }}" class="btn btn-secondary">View public profile</a>
+    </p>
 </div>
 
-{% if favorite_spots %}
-<div class="spot-list">
-    {% for spot in favorite_spots %}
-        {% include "spot_card.html" %}
-    {% endfor %}
-</div>
-{% else %}
-<div class="empty-state">
-    <p>You haven't saved any skate spots yet.</p>
-    <a href="/skate-spots" class="btn btn-primary" style="margin-top: 1rem;">Browse spots</a>
-</div>
+{% if profile_message %}
+<div class="alert alert-success">{{ profile_message }}</div>
 {% endif %}
+
+<div class="profile-layout">
+    <section class="profile-settings-card">
+        <h3>Edit profile details</h3>
+        <p class="profile-settings-description">
+            These details appear on your public profile page. Leave a field blank to hide it.
+        </p>
+
+        {% if profile_form_errors.get('__all__') %}
+        <div class="alert alert-error">
+            {% for error in profile_form_errors['__all__'] %}
+                <p>{{ error }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% set form_values = profile_form_data if profile_form_data else {} %}
+
+        <form method="post" class="profile-form">
+            <div class="form-field">
+                <label for="display_name">Display name</label>
+                <input
+                    type="text"
+                    id="display_name"
+                    name="display_name"
+                    value="{{ form_values.get('display_name', current_user.display_name or '') }}"
+                    maxlength="100"
+                />
+                {% if profile_form_errors.get('display_name') %}
+                    <p class="form-error">{{ profile_form_errors['display_name'] | join(', ') }}</p>
+                {% endif %}
+            </div>
+
+            <div class="form-field">
+                <label for="bio">Bio</label>
+                <textarea
+                    id="bio"
+                    name="bio"
+                    rows="4"
+                    maxlength="500"
+                >{{ form_values.get('bio', current_user.bio or '') }}</textarea>
+                {% if profile_form_errors.get('bio') %}
+                    <p class="form-error">{{ profile_form_errors['bio'] | join(', ') }}</p>
+                {% endif %}
+            </div>
+
+            <div class="form-field">
+                <label for="location">Location</label>
+                <input
+                    type="text"
+                    id="location"
+                    name="location"
+                    value="{{ form_values.get('location', current_user.location or '') }}"
+                    maxlength="100"
+                />
+                {% if profile_form_errors.get('location') %}
+                    <p class="form-error">{{ profile_form_errors['location'] | join(', ') }}</p>
+                {% endif %}
+            </div>
+
+            <div class="form-field">
+                <label for="website_url">Website URL</label>
+                <input
+                    type="url"
+                    id="website_url"
+                    name="website_url"
+                    value="{{ form_values.get('website_url', current_user.website_url or '') }}"
+                    maxlength="255"
+                    placeholder="https://example.com"
+                />
+                {% if profile_form_errors.get('website_url') %}
+                    <p class="form-error">{{ profile_form_errors['website_url'] | join(', ') }}</p>
+                {% endif %}
+            </div>
+
+            <div class="form-field">
+                <label for="instagram_handle">Instagram handle</label>
+                <input
+                    type="text"
+                    id="instagram_handle"
+                    name="instagram_handle"
+                    value="{{ form_values.get('instagram_handle', current_user.instagram_handle or '') }}"
+                    maxlength="100"
+                    placeholder="@skater"
+                />
+                {% if profile_form_errors.get('instagram_handle') %}
+                    <p class="form-error">{{ profile_form_errors['instagram_handle'] | join(', ') }}</p>
+                {% endif %}
+            </div>
+
+            <div class="form-field">
+                <label for="profile_photo_url">Profile photo URL</label>
+                <input
+                    type="url"
+                    id="profile_photo_url"
+                    name="profile_photo_url"
+                    value="{{ form_values.get('profile_photo_url', current_user.profile_photo_url or '') }}"
+                    maxlength="512"
+                    placeholder="https://example.com/avatar.jpg"
+                />
+                {% if profile_form_errors.get('profile_photo_url') %}
+                    <p class="form-error">{{ profile_form_errors['profile_photo_url'] | join(', ') }}</p>
+                {% endif %}
+            </div>
+
+            <div class="profile-form-actions">
+                <button type="submit" class="btn btn-primary">Save changes</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="profile-favorites">
+        <div class="section-header">
+            <h3>Saved spots</h3>
+        </div>
+
+        {% if favorite_spots %}
+            <div class="spot-list">
+                {% for spot in favorite_spots %}
+                    {% include "spot_card.html" %}
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <p>You haven't saved any skate spots yet.</p>
+                <a href="/skate-spots" class="btn btn-primary" style="margin-top: 1rem;">Browse spots</a>
+            </div>
+        {% endif %}
+    </section>
+</div>
 {% endblock %}
