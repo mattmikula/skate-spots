@@ -93,18 +93,18 @@
     {% if profile.activity %}
         <ul class="activity-feed">
             {% for entry in profile.activity %}
-                <li class="activity-item activity-{{ entry.type }}">
+                <li class="activity-item activity-{{ entry.type.value }}">
                     <div class="activity-icon">
-                        {% if entry.type == 'spot_created' %}🛹{% elif entry.type == 'commented' %}💬{% elif entry.type == 'rated' %}⭐{% else %}📷{% endif %}
+                        {% if entry.type.value == 'spot_created' %}🛹{% elif entry.type.value == 'commented' %}💬{% elif entry.type.value == 'rated' %}⭐{% else %}📷{% endif %}
                     </div>
                     <div class="activity-body">
                         <span class="activity-timestamp">{{ entry.created_at.strftime('%b %d, %Y %H:%M') }}</span>
-                        {% if entry.type == 'spot_created' %}
+                        {% if entry.type.value == 'spot_created' %}
                             <p><strong>{{ profile.display_name or profile.username }}</strong> added a new spot <a href="/skate-spots/{{ entry.spot_id }}">{{ entry.spot_name }}</a>.</p>
-                        {% elif entry.type == 'commented' %}
+                        {% elif entry.type.value == 'commented' %}
                             <p><strong>{{ profile.display_name or profile.username }}</strong> commented on <a href="/skate-spots/{{ entry.spot_id }}">{{ entry.spot_name }}</a>:</p>
                             <blockquote>{{ entry.comment }}</blockquote>
-                        {% elif entry.type == 'rated' %}
+                        {% elif entry.type.value == 'rated' %}
                             <p><strong>{{ profile.display_name or profile.username }}</strong> rated <a href="/skate-spots/{{ entry.spot_id }}">{{ entry.spot_name }}</a> <strong>{{ entry.rating_score }}/5</strong>.</p>
                             {% if entry.comment %}<blockquote>{{ entry.comment }}</blockquote>{% endif %}
                         {% else %}
