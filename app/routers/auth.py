@@ -22,10 +22,11 @@ from app.core.security import (
     verify_password,
 )
 from app.db import models as db_models
-from app.models.user import Token, User, UserCreate, UserLogin, UserProfileWithStats, UserUpdate
+from app.models.user import Token, User, UserCreate, UserLogin, UserUpdate
+from app.models.user_profile import UserProfile
 from app.repositories import user_repository
 from app.services.user_profile_service import (
-    UserNotFoundError,
+    UserProfileNotFoundError,
     get_user_profile_service,
 )
 
@@ -281,17 +282,16 @@ async def register_form(
     return redirect_response
 
 
-@router.get("/users/{username}", response_model=UserProfileWithStats)
+@router.get("/users/{username}", response_model=UserProfile)
 async def get_user_profile(
     username: str,
-    user_repo: Annotated[UserRepository, Depends(get_user_repository)],
-) -> UserProfileWithStats:
+) -> UserProfile:
     """Get a user's public profile with statistics."""
-    profile_service = get_user_profile_service(user_repo)
+    profile_service = get_user_profile_service()
 
     try:
-        return profile_service.get_user_profile(username)
-    except UserNotFoundError as exc:
+        return profile_service.get_profile(username)
+    except UserProfileNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User '{username}' not found",

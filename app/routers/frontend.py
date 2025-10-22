@@ -339,7 +339,6 @@ async def public_profile_page(
     request: Request,
     username: str,
     service: Annotated[UserProfileService, Depends(get_user_profile_service)],
-    user_repo: Annotated[UserRepository, Depends(get_user_repository)],
     current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
 ) -> HTMLResponse:
     """Render the public profile page for a user."""
@@ -358,25 +357,12 @@ async def public_profile_page(
             status_code=status.HTTP_404_NOT_FOUND,
         )
 
-    # Get user's spots using the user ORM object
-    user = user_repo.get_by_username(username)
-    if user:
-        # Convert ORM spots to Pydantic models
-        from app.models.skate_spot import SkateSpot
-
-        user_spots = [
-            SkateSpot.model_validate(spot, from_attributes=True) for spot in user.skate_spots
-        ]
-    else:
-        user_spots = []
-
     return templates.TemplateResponse(
         "user_profile.html",
         {
             "request": request,
             "profile": profile,
             "current_user": current_user,
-            "user_spots": user_spots,
         },
     )
 
