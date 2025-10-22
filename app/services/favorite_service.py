@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID  # noqa: TCH003
 
+from fastapi import Depends
+
+from app.core.dependencies import get_db
 from app.core.logging import get_logger
 from app.models.favorite import FavoriteStatus
 from app.models.skate_spot import SkateSpot  # noqa: TCH001
@@ -103,12 +106,20 @@ class SpotNotFoundError(Exception):
     """Raised when a skate spot cannot be found."""
 
 
-_favorite_repository = FavoriteRepository()
-_skate_spot_repository = SkateSpotRepository()
-favorite_service = FavoriteService(_favorite_repository, _skate_spot_repository)
+def get_favorite_service(
+    db: Annotated[Any, Depends(get_db)],
+) -> FavoriteService:
+    """FastAPI dependency hook to create favorite service with activity tracking.
 
+    Args:
+        db: Database session from dependency injection
 
-def get_favorite_service() -> FavoriteService:
-    """Dependency hook to provide the favourite service instance."""
+    Returns:
+        FavoriteService instance with repositories initialized
+    """
+    from app.services.activity_service import get_activity_service
 
-    return favorite_service
+    favorite_repository = FavoriteRepository(db)
+    skate_spot_repository = SkateSpotRepository(db)
+    activity_service = get_activity_service(db)
+    return FavoriteService(favorite_repository, skate_spot_repository, activity_service)

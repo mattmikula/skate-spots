@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 
 from app.db.models import UserFollowORM, UserORM
 
@@ -113,13 +113,10 @@ class FollowRepository:
         Returns:
             Tuple of (list of UserORM objects, total count)
         """
-        # Get total count
-        total = (
-            self.session.execute(select(UserFollowORM).where(UserFollowORM.following_id == user_id))
-            .scalars()
-            .all()
-        )
-        total_count = len(total)
+        # Get total count efficiently
+        total_count = self.session.execute(
+            select(func.count(UserFollowORM.id)).where(UserFollowORM.following_id == user_id)
+        ).scalar()
 
         # Get paginated results with user details
         followers = (
@@ -135,7 +132,7 @@ class FollowRepository:
             .all()
         )
 
-        return followers, total_count
+        return followers, total_count or 0
 
     def get_following(
         self, user_id: str, limit: int = 50, offset: int = 0
@@ -150,13 +147,10 @@ class FollowRepository:
         Returns:
             Tuple of (list of UserORM objects, total count)
         """
-        # Get total count
-        total = (
-            self.session.execute(select(UserFollowORM).where(UserFollowORM.follower_id == user_id))
-            .scalars()
-            .all()
-        )
-        total_count = len(total)
+        # Get total count efficiently
+        total_count = self.session.execute(
+            select(func.count(UserFollowORM.id)).where(UserFollowORM.follower_id == user_id)
+        ).scalar()
 
         # Get paginated results with user details
         following = (
@@ -172,7 +166,7 @@ class FollowRepository:
             .all()
         )
 
-        return following, total_count
+        return following, total_count or 0
 
     def get_follow_stats(self, user_id: str) -> dict[str, int]:
         """Get follower and following counts for a user.
@@ -183,19 +177,13 @@ class FollowRepository:
         Returns:
             Dictionary with 'followers_count' and 'following_count' keys
         """
-        followers_count = (
-            self.session.execute(select(UserFollowORM).where(UserFollowORM.following_id == user_id))
-            .scalars()
-            .all()
-        )
-        followers_count = len(followers_count)
+        followers_count = self.session.execute(
+            select(func.count(UserFollowORM.id)).where(UserFollowORM.following_id == user_id)
+        ).scalar() or 0
 
-        following_count = (
-            self.session.execute(select(UserFollowORM).where(UserFollowORM.follower_id == user_id))
-            .scalars()
-            .all()
-        )
-        following_count = len(following_count)
+        following_count = self.session.execute(
+            select(func.count(UserFollowORM.id)).where(UserFollowORM.follower_id == user_id)
+        ).scalar() or 0
 
         return {
             "followers_count": followers_count,

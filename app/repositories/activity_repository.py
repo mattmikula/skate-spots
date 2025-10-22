@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
-from sqlalchemy import and_, delete, select
+from sqlalchemy import and_, delete, func, select
 
 from app.db.models import ActivityFeedORM, UserFollowORM
 
@@ -77,9 +77,10 @@ class ActivityRepository:
             # If not following anyone, return empty list
             return [], 0
 
-        # Get activities from followed users
-        total_query = select(ActivityFeedORM).where(ActivityFeedORM.user_id.in_(followed_users))
-        total_count = len(self.session.execute(total_query).scalars().all())
+        # Get activities from followed users - use efficient count query
+        total_count = self.session.execute(
+            select(func.count(ActivityFeedORM.id)).where(ActivityFeedORM.user_id.in_(followed_users))
+        ).scalar() or 0
 
         activities = (
             self.session.execute(
@@ -107,8 +108,7 @@ class ActivityRepository:
         Returns:
             Tuple of (list of activities, total count)
         """
-        total_query = select(ActivityFeedORM)
-        total_count = len(self.session.execute(total_query).scalars().all())
+        total_count = self.session.execute(select(func.count(ActivityFeedORM.id))).scalar() or 0
 
         activities = (
             self.session.execute(
@@ -136,8 +136,9 @@ class ActivityRepository:
         Returns:
             Tuple of (list of activities, total count)
         """
-        total_query = select(ActivityFeedORM).where(ActivityFeedORM.user_id == user_id)
-        total_count = len(self.session.execute(total_query).scalars().all())
+        total_count = self.session.execute(
+            select(func.count(ActivityFeedORM.id)).where(ActivityFeedORM.user_id == user_id)
+        ).scalar() or 0
 
         activities = (
             self.session.execute(

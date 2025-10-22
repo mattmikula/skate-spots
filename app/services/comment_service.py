@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import uuid  # noqa: TC003
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated, Any
 
+from fastapi import Depends
+
+from app.core.dependencies import get_db
 from app.core.logging import get_logger
 from app.models.comment import Comment, CommentCreate  # noqa: TC001
 from app.repositories.comment_repository import CommentRepository
@@ -116,12 +119,20 @@ class CommentService:
         return self._comment_repository.list_for_spot(spot_id)
 
 
-_comment_repository = CommentRepository()
-_skate_spot_repository = SkateSpotRepository()
-_comment_service = CommentService(_comment_repository, _skate_spot_repository)
+def get_comment_service(
+    db: Annotated[Any, Depends(get_db)],
+) -> CommentService:
+    """FastAPI dependency hook to create comment service with activity tracking.
 
+    Args:
+        db: Database session from dependency injection
 
-def get_comment_service() -> CommentService:
-    """FastAPI dependency hook for the shared comment service."""
+    Returns:
+        CommentService instance with repositories initialized
+    """
+    from app.services.activity_service import get_activity_service
 
-    return _comment_service
+    comment_repository = CommentRepository(db)
+    skate_spot_repository = SkateSpotRepository(db)
+    activity_service = get_activity_service(db)
+    return CommentService(comment_repository, skate_spot_repository, activity_service)

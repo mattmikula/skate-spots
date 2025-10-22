@@ -4,11 +4,14 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 
 from app.core.dependencies import get_current_user
 from app.db.models import UserORM  # noqa: TCH001
 from app.models.follow import FollowersResponse, FollowingResponse, FollowStats, IsFollowingResponse
+from app.repositories.user_repository import UserRepository
 from app.services.follow_service import (
     AlreadyFollowingError,
     FollowService,
@@ -19,10 +22,12 @@ from app.services.follow_service import (
 )
 
 router = APIRouter(prefix="/api/v1/users", tags=["follows"])
+templates = Jinja2Templates(directory="templates")
 
 
 @router.post(
     "/{username}/follow",
+    response_class=HTMLResponse,
     status_code=status.HTTP_200_OK,
     summary="Follow a user",
     responses={
@@ -32,23 +37,33 @@ router = APIRouter(prefix="/api/v1/users", tags=["follows"])
     },
 )
 async def follow_user(
+    request: Request,
     username: str,
     current_user: Annotated[UserORM, Depends(get_current_user)],
     follow_service: Annotated[FollowService, Depends(get_follow_service)],
-):
+) -> HTMLResponse:
     """Follow a user by username.
 
     Args:
+        request: HTTP request object
         username: Username of the user to follow
         current_user: Current authenticated user
         follow_service: Follow service dependency
 
     Returns:
-        Follow status dictionary
+        HTML fragment of updated follow button
     """
     try:
-        result = follow_service.follow_user(current_user.id, username)
-        return result
+        follow_service.follow_user(current_user.id, username)
+        return templates.TemplateResponse(
+            "partials/follow_button.html",
+            {
+                "request": request,
+                "target_username": username,
+                "is_following": True,
+                "current_user": current_user,
+            },
+        )
     except UserNotFoundError as e:  # noqa: B904
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -68,6 +83,7 @@ async def follow_user(
 
 @router.delete(
     "/{username}/follow",
+    response_class=HTMLResponse,
     status_code=status.HTTP_200_OK,
     summary="Unfollow a user",
     responses={
@@ -76,23 +92,33 @@ async def follow_user(
     },
 )
 async def unfollow_user(
+    request: Request,
     username: str,
     current_user: Annotated[UserORM, Depends(get_current_user)],
     follow_service: Annotated[FollowService, Depends(get_follow_service)],
-):
+) -> HTMLResponse:
     """Unfollow a user by username.
 
     Args:
+        request: HTTP request object
         username: Username of the user to unfollow
         current_user: Current authenticated user
         follow_service: Follow service dependency
 
     Returns:
-        Dictionary with success message
+        HTML fragment of updated follow button
     """
     try:
         follow_service.unfollow_user(current_user.id, username)
-        return {"status": "unfollowed", "username": username}
+        return templates.TemplateResponse(
+            "partials/follow_button.html",
+            {
+                "request": request,
+                "target_username": username,
+                "is_following": False,
+                "current_user": current_user,
+            },
+        )
     except UserNotFoundError as e:  # noqa: B904
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -141,11 +167,11 @@ async def is_following(
     summary="Get user's followers",
 )
 async def get_followers(
-    username: str,  # noqa: ARG001
-    follow_service: Annotated[FollowService, Depends(get_follow_service)],  # noqa: ARG001
-    limit: int = 50,  # noqa: ARG001
-    offset: int = 0,  # noqa: ARG001
-):
+    username: str,
+    follow_service: Annotated[FollowService, Depends(get_follow_service)],
+    limit: int = 50,
+    offset: int = 0,
+) -> FollowersResponse:
     """Get list of users following a specific user.
 
     Args:
@@ -157,12 +183,21 @@ async def get_followers(
     Returns:
         FollowersResponse with list of followers
     """
-    # Would need to fetch user by username first - implementation depends on UserRepository
-    # This is a simplified version that assumes user_id is available
-    # In practice, you'd need to get the user_id from username first
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="This endpoint requires user lookup by username",
+    # Get user by username
+    user_repo = UserRepository()
+    user = user_repo.get_by_username(username)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User '{username}' not found",
+        )
+
+    followers, total_count = follow_service.get_followers(str(user.id), limit, offset)
+    return FollowersResponse(
+        followers=followers,
+        total=total_count,
+        limit=limit,
+        offset=offset,
     )
 
 
@@ -172,26 +207,37 @@ async def get_followers(
     summary="Get users that a user is following",
 )
 async def get_following(
-    username: str,  # noqa: ARG001
-    follow_service: Annotated[FollowService, Depends(get_follow_service)],  # noqa: ARG001
-    limit: int = 50,  # noqa: ARG001
-    offset: int = 0,  # noqa: ARG001
-):
+    username: str,
+    follow_service: Annotated[FollowService, Depends(get_follow_service)],
+    limit: int = 50,
+    offset: int = 0,
+) -> FollowingResponse:
     """Get list of users that a specific user is following.
 
     Args:
         username: Username of the user
+        follow_service: Follow service dependency
         limit: Maximum number of results
         offset: Number of results to skip
-        follow_service: Follow service dependency
 
     Returns:
         FollowingResponse with list of users being followed
     """
-    # Would need to fetch user by username first
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="This endpoint requires user lookup by username",
+    # Get user by username
+    user_repo = UserRepository()
+    user = user_repo.get_by_username(username)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User '{username}' not found",
+        )
+
+    following, total_count = follow_service.get_following(str(user.id), limit, offset)
+    return FollowingResponse(
+        following=following,
+        total=total_count,
+        limit=limit,
+        offset=offset,
     )
 
 
@@ -201,9 +247,9 @@ async def get_following(
     summary="Get user's follow statistics",
 )
 async def get_follow_stats(
-    username: str,  # noqa: ARG001
-    follow_service: Annotated[FollowService, Depends(get_follow_service)] = None,  # noqa: ARG001
-):
+    username: str,
+    follow_service: Annotated[FollowService, Depends(get_follow_service)],
+) -> FollowStats:
     """Get follower and following counts for a user.
 
     Args:
@@ -213,8 +259,17 @@ async def get_follow_stats(
     Returns:
         FollowStats with follower and following counts
     """
-    # Would need to fetch user by username first
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="This endpoint requires user lookup by username",
+    # Get user by username
+    user_repo = UserRepository()
+    user = user_repo.get_by_username(username)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User '{username}' not found",
+        )
+
+    stats = follow_service.get_follow_stats(str(user.id))
+    return FollowStats(
+        followers_count=stats["followers_count"],
+        following_count=stats["following_count"],
     )
