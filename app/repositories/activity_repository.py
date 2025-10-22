@@ -78,9 +78,14 @@ class ActivityRepository:
             return [], 0
 
         # Get activities from followed users - use efficient count query
-        total_count = self.session.execute(
-            select(func.count(ActivityFeedORM.id)).where(ActivityFeedORM.user_id.in_(followed_users))
-        ).scalar() or 0
+        total_count = (
+            self.session.execute(
+                select(func.count(ActivityFeedORM.id)).where(
+                    ActivityFeedORM.user_id.in_(followed_users)
+                )
+            ).scalar()
+            or 0
+        )
 
         activities = (
             self.session.execute(
@@ -136,9 +141,12 @@ class ActivityRepository:
         Returns:
             Tuple of (list of activities, total count)
         """
-        total_count = self.session.execute(
-            select(func.count(ActivityFeedORM.id)).where(ActivityFeedORM.user_id == user_id)
-        ).scalar() or 0
+        total_count = (
+            self.session.execute(
+                select(func.count(ActivityFeedORM.id)).where(ActivityFeedORM.user_id == user_id)
+            ).scalar()
+            or 0
+        )
 
         activities = (
             self.session.execute(

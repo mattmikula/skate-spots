@@ -177,13 +177,19 @@ class FollowRepository:
         Returns:
             Dictionary with 'followers_count' and 'following_count' keys
         """
-        followers_count = self.session.execute(
-            select(func.count(UserFollowORM.id)).where(UserFollowORM.following_id == user_id)
-        ).scalar() or 0
+        followers_count = (
+            self.session.execute(
+                select(func.count(UserFollowORM.id)).where(UserFollowORM.following_id == user_id)
+            ).scalar()
+            or 0
+        )
 
-        following_count = self.session.execute(
-            select(func.count(UserFollowORM.id)).where(UserFollowORM.follower_id == user_id)
-        ).scalar() or 0
+        following_count = (
+            self.session.execute(
+                select(func.count(UserFollowORM.id)).where(UserFollowORM.follower_id == user_id)
+            ).scalar()
+            or 0
+        )
 
         return {
             "followers_count": followers_count,
