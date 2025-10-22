@@ -899,10 +899,10 @@ async def feed_page(
 @router.get("/feed/partials/personalized", response_class=HTMLResponse)
 async def feed_personalized_partial(
     request: Request,
+    activity_service: Annotated[ActivityService, Depends(get_activity_service)],
     limit: int = 20,
     offset: int = 0,
     current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
-    activity_service: Annotated[ActivityService, Depends(get_activity_service)] = None,
 ) -> HTMLResponse:
     """Get personalized feed partial (HTMX)."""
 
@@ -932,9 +932,9 @@ async def feed_personalized_partial(
 @router.get("/feed/partials/public", response_class=HTMLResponse)
 async def feed_public_partial(
     request: Request,
+    activity_service: Annotated[ActivityService, Depends(get_activity_service)],
     limit: int = 20,
     offset: int = 0,
-    activity_service: Annotated[ActivityService, Depends(get_activity_service)] = None,
 ) -> HTMLResponse:
     """Get public feed partial (HTMX)."""
 
