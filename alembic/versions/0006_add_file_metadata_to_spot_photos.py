@@ -13,11 +13,12 @@ depends_on = None
 
 def upgrade() -> None:
     with op.batch_alter_table("spot_photos") as batch_op:
+        # Rename column and change its type in one operation
         batch_op.alter_column(
-            "url", new_column_name="file_path", existing_type=sa.String(length=2048)
-        )
-        batch_op.alter_column(
-            "file_path", existing_type=sa.String(length=2048), type_=sa.String(length=512)
+            "url",
+            new_column_name="file_path",
+            existing_type=sa.String(length=2048),
+            type_=sa.String(length=512),
         )
         batch_op.add_column(sa.Column("original_filename", sa.String(length=255), nullable=True))
 
@@ -26,8 +27,8 @@ def downgrade() -> None:
     with op.batch_alter_table("spot_photos") as batch_op:
         batch_op.drop_column("original_filename")
         batch_op.alter_column(
-            "file_path", existing_type=sa.String(length=512), type_=sa.String(length=2048)
-        )
-        batch_op.alter_column(
-            "file_path", new_column_name="url", existing_type=sa.String(length=2048)
+            "file_path",
+            new_column_name="url",
+            existing_type=sa.String(length=512),
+            type_=sa.String(length=2048),
         )

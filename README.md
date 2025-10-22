@@ -10,6 +10,7 @@ A modern FastAPI application for sharing and discovering skateboarding spots aro
 
 - **Interactive Web Frontend** built with HTMX for dynamic user interactions
 - **REST API** for managing skate spots with full CRUD operations and rich filtering
+- **User Profiles** with customizable bio, avatar, and location, plus activity statistics dashboard
 - **User Ratings** so skaters can rate spots with 1-5 scores, manage their own feedback, and see community sentiment
 - **Community Comments** that let skaters share detailed feedback and discuss spots in real time via HTMX snippets and JSON APIs
 - **Inline Ratings UI** with HTMX-driven snippets that let logged-in users rate spots directly from the listings with instant feedback
@@ -60,6 +61,7 @@ make serve
 
 The application will be available at:
 - **Web Frontend**: http://localhost:8000/skate-spots
+- **User Profiles**: http://localhost:8000/profile (own profile) or http://localhost:8000/users/{username} (public profiles)
 - **Authentication Pages**: http://localhost:8000/login and http://localhost:8000/register
 - **API Base**: http://localhost:8000/api/v1
 - **Interactive API Docs**: http://localhost:8000/docs
@@ -107,6 +109,43 @@ The same parameters can be used with the GeoJSON endpoint to power filtered map 
 4. **Logout** using the button in the UI or `POST /api/v1/auth/logout` to clear the cookie.
 
 The JSON API endpoints also accept traditional form submissions for HTMX-driven pages.
+
+### User Profiles
+
+Every user has a customizable profile showcasing their skateboarding activity:
+
+**Profile Features:**
+- **Bio** - Personal description (up to 500 characters)
+- **Avatar** - Profile picture via URL
+- **Location** - City, state, or country
+- **Activity Statistics** - Automatic tracking of:
+  - Spots added
+  - Photos uploaded
+  - Comments posted
+  - Ratings given
+  - Favorites count
+
+**Accessing Profiles:**
+- **Your Profile**: Visit `/profile` while logged in to view your statistics, edit your profile, and see your favorite spots
+- **Public Profiles**: Anyone can view `/users/{username}` to see a user's public information, stats, and contributed spots
+- **API Access**: Use `GET /api/v1/auth/users/{username}` to retrieve profile data programmatically
+
+**Example: Update Your Profile**
+```bash
+curl -X PUT "http://localhost:8000/api/v1/auth/me/profile" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: access_token=YOUR_TOKEN" \
+  -d '{
+    "bio": "Skateboarding enthusiast from LA. Love street spots!",
+    "location": "Los Angeles, CA",
+    "avatar_url": "https://example.com/my-avatar.jpg"
+  }'
+```
+
+**Example: Get a User's Profile**
+```bash
+curl "http://localhost:8000/api/v1/auth/users/kickflip_master"
+```
 
 ### Development Commands
 
@@ -182,11 +221,11 @@ Database schema changes are managed with [Alembic](https://alembic.sqlalchemy.or
 | `GET` | `/skate-spots/new` | Create new spot form |
 | `GET` | `/skate-spots/{id}/edit` | Edit spot form |
 | `GET` | `/map` | Interactive map view |
+| `GET` | `/profile` | Current user's profile with stats and favorites (requires auth) |
+| `POST` | `/profile` | Update profile bio, avatar, and location (requires auth) |
+| `GET` | `/users/{username}` | Public profile page for any user |
 | `GET` | `/login` | Login form (redirects if already authenticated) |
 | `GET` | `/register` | Registration form (redirects if already authenticated) |
-| `GET` | `/profile` | Private dashboard for editing your profile and favourites |
-| `POST` | `/profile` | Handles profile form submissions (HTML form) |
-| `GET` | `/users/{username}` | Public profile showcasing a skater's activity |
 
 ### REST API Endpoints
 
@@ -225,6 +264,8 @@ Database schema changes are managed with [Alembic](https://alembic.sqlalchemy.or
 | `POST` | `/api/v1/auth/login` | Authenticate and receive a JWT access token cookie |
 | `POST` | `/api/v1/auth/logout` | Clear the authentication cookie |
 | `GET` | `/api/v1/auth/me` | Retrieve the currently authenticated user |
+| `GET` | `/api/v1/auth/users/{username}` | Get a user's public profile with activity statistics |
+| `PUT` | `/api/v1/auth/me/profile` | Update the authenticated user's profile (bio, avatar, location) |
 
 ### Example Usage
 

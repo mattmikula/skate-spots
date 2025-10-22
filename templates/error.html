@@ -2,11 +2,12 @@
 
 {% block content %}
 <div class="page-header">
-    <h2>{{ title or "Something went wrong" }}</h2>
-    <p class="profile-subtitle">{{ message or "Please try again later." }}</p>
+    <h2>{{ title }}</h2>
+    {# Prefer 'error' over 'message' for clarity. #}
+    <p class="profile-subtitle">{{ error or message or "Please try again later." }}</p>
 </div>
 
 <div class="empty-state">
-    <a href="/" class="btn btn-primary">Back to home</a>
+    <a href="/" class="btn btn-primary">Go Home</a>
 </div>
 {% endblock %}
