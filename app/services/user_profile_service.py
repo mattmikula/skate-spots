@@ -42,4 +42,3 @@ def get_user_profile_service() -> UserProfileService:
     """FastAPI dependency for the user profile service."""
 
     return _service
-
