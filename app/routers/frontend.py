@@ -415,7 +415,7 @@ async def rating_section(
     spot_id: UUID,
     rating_service: Annotated[RatingService, Depends(get_rating_service)],
     current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
-):
+) -> HTMLResponse:
     """Render the rating summary and form snippet for a skate spot."""
 
     try:
@@ -596,7 +596,7 @@ async def comment_section(
     spot_id: UUID,
     comment_service: Annotated[CommentService, Depends(get_comment_service)],
     current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
-):
+) -> HTMLResponse:
     """Render the comment list and form snippet for a skate spot."""
 
     try:

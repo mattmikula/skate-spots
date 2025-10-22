@@ -59,14 +59,18 @@ class FollowersResponse(BaseModel):
     """Response containing a list of followers."""
 
     followers: list[FollowerUser]
-    total: int
+    total: int = Field(..., ge=0)
+    limit: int = Field(..., ge=0)
+    offset: int = Field(..., ge=0)
 
 
 class FollowingResponse(BaseModel):
     """Response containing a list of users being followed."""
 
     following: list[FollowerUser]
-    total: int
+    total: int = Field(..., ge=0)
+    limit: int = Field(..., ge=0)
+    offset: int = Field(..., ge=0)
 
 
 class IsFollowingResponse(BaseModel):

@@ -119,7 +119,7 @@ def get_favorite_service(
     """
     from app.services.activity_service import get_activity_service
 
-    favorite_repository = FavoriteRepository()  # Uses default SessionLocal
+    favorite_repository = FavoriteRepository(db)
     skate_spot_repository = SkateSpotRepository(db)
     activity_service = get_activity_service(db)
     return FavoriteService(favorite_repository, skate_spot_repository, activity_service)

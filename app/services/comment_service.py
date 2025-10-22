@@ -132,7 +132,7 @@ def get_comment_service(
     """
     from app.services.activity_service import get_activity_service
 
-    comment_repository = CommentRepository()  # Uses default SessionLocal
-    skate_spot_repository = SkateSpotRepository()  # Uses default SessionLocal
+    comment_repository = CommentRepository(db)
+    skate_spot_repository = SkateSpotRepository(db)
     activity_service = get_activity_service(db)
     return CommentService(comment_repository, skate_spot_repository, activity_service)
