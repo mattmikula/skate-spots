@@ -1,0 +1,78 @@
+<!-- Follow statistics display -->
+<div class="follow-stats">
+    <div class="stat-item">
+        <a href="/users/{{ username }}/followers" class="stat-link">
+            <span class="stat-number">{{ followers_count }}</span>
+            <span class="stat-label">Followers</span>
+        </a>
+    </div>
+    <div class="stat-item">
+        <a href="/users/{{ username }}/following" class="stat-link">
+            <span class="stat-number">{{ following_count }}</span>
+            <span class="stat-label">Following</span>
+        </a>
+    </div>
+    <div class="stat-item">
+        <a href="/users/{{ username }}/activity" class="stat-link">
+            <span class="stat-label">Activity</span>
+        </a>
+    </div>
+</div>
+
+<style>
+    .follow-stats {
+        display: flex;
+        gap: 2rem;
+        margin: 1rem 0;
+        padding: 1rem;
+        background: #f9f9f9;
+        border-radius: 0.5rem;
+        justify-content: center;
+    }
+
+    .stat-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .stat-link {
+        text-decoration: none;
+        color: #333;
+        transition: color 0.2s ease;
+    }
+
+    .stat-link:hover {
+        color: #667eea;
+    }
+
+    .stat-number {
+        font-size: 1.5rem;
+        font-weight: 700;
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+        font-size: 0.85rem;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    @media (max-width: 600px) {
+        .follow-stats {
+            gap: 1.5rem;
+            padding: 0.75rem;
+        }
+
+        .stat-number {
+            font-size: 1.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+        }
+    }
+</style>

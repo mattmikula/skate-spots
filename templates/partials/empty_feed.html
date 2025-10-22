@@ -1,0 +1,51 @@
+<!-- Empty feed state -->
+<div class="empty-feed">
+    <div class="empty-state-icon">🌗</div>
+    <h3>{% if feed_type == 'personalized' %}No activity yet{% else %}No activities found{% endif %}</h3>
+    <p>
+        {% if feed_type == 'personalized' %}
+            Start following skaters to see their activity here!
+            <a href="/users" class="empty-state-link">Browse users</a>
+        {% else %}
+            Be the first to create a spot, rate, or comment to get started.
+            <a href="/skate-spots/new" class="empty-state-link">Create a spot</a>
+        {% endif %}
+    </p>
+</div>
+
+<style>
+    .empty-feed {
+        text-align: center;
+        padding: 3rem 2rem;
+        background: white;
+        border: 1px solid #eee;
+        border-radius: 0.5rem;
+    }
+
+    .empty-state-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .empty-feed h3 {
+        margin: 0 0 0.5rem 0;
+        color: #333;
+    }
+
+    .empty-feed p {
+        color: #666;
+        margin: 0.5rem 0 0 0;
+        font-size: 0.95rem;
+    }
+
+    .empty-state-link {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 600;
+        margin-left: 0.25rem;
+    }
+
+    .empty-state-link:hover {
+        text-decoration: underline;
+    }
+</style>

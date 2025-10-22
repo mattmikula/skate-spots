@@ -12,6 +12,7 @@ from app.repositories.skate_spot_repository import SkateSpotRepository
 
 if TYPE_CHECKING:
     from app.models.skate_spot import SkateSpot
+    from app.services.activity_service import ActivityService
 
 
 class SpotNotFoundError(Exception):
@@ -29,9 +30,11 @@ class RatingService:
         self,
         rating_repository: RatingRepository,
         skate_spot_repository: SkateSpotRepository,
+        activity_service: ActivityService | None = None,
     ) -> None:
         self._rating_repository = rating_repository
         self._skate_spot_repository = skate_spot_repository
+        self._activity_service = activity_service
         self._logger = get_logger(__name__)
 
     def _ensure_spot_exists(self, spot_id: uuid.UUID) -> SkateSpot:
@@ -55,6 +58,16 @@ class RatingService:
             user_id=user_id,
             score=rating.score,
         )
+
+        # Record activity
+        if self._activity_service:
+            try:
+                self._activity_service.record_spot_rated(
+                    user_id, str(spot_id), str(rating.id), rating.score
+                )
+            except Exception as e:
+                self._logger.warning("failed to record rating activity", error=str(e))
+
         return RatingSummaryResponse(**summary.model_dump(), user_rating=rating)
 
     def get_user_rating(self, spot_id: uuid.UUID, user_id: str) -> Rating:

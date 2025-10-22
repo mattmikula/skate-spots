@@ -179,3 +179,46 @@ def auth_token(test_user):
 def admin_token(test_admin):
     """Create an authentication token for the admin user."""
     return create_access_token(data={"sub": str(test_admin.id), "username": test_admin.username})
+
+
+@pytest.fixture
+def db(session_factory):
+    """Provide a database session for repository tests."""
+    session = session_factory()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+@pytest.fixture
+def users(db):
+    """Create test users for testing."""
+    user_repo = UserRepository(db)
+    user1_data = UserCreate(
+        email="user1@example.com",
+        username="user1",
+        password="password123",
+    )
+    user2_data = UserCreate(
+        email="user2@example.com",
+        username="user2",
+        password="password123",
+    )
+    user3_data = UserCreate(
+        email="user3@example.com",
+        username="user3",
+        password="password123",
+    )
+
+    hashed_password = get_password_hash("password123")
+    user1 = user_repo.create(user1_data, hashed_password)
+    user2 = user_repo.create(user2_data, hashed_password)
+    user3 = user_repo.create(user3_data, hashed_password)
+
+    db.commit()
+    db.refresh(user1)
+    db.refresh(user2)
+    db.refresh(user3)
+
+    return user1, user2, user3

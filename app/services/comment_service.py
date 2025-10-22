@@ -13,6 +13,7 @@ from app.repositories.skate_spot_repository import SkateSpotRepository
 if TYPE_CHECKING:  # pragma: no cover - for type checking only
     from app.db.models import UserORM
     from app.models.skate_spot import SkateSpot
+    from app.services.activity_service import ActivityService
 
 
 class SpotNotFoundError(Exception):
@@ -34,9 +35,11 @@ class CommentService:
         self,
         comment_repository: CommentRepository,
         skate_spot_repository: SkateSpotRepository,
+        activity_service: ActivityService | None = None,
     ) -> None:
         self._comment_repository = comment_repository
         self._skate_spot_repository = skate_spot_repository
+        self._activity_service = activity_service
         self._logger = get_logger(__name__)
 
     def _ensure_spot_exists(self, spot_id: uuid.UUID) -> SkateSpot:
@@ -63,6 +66,16 @@ class CommentService:
             user_id=user.id,
             comment_id=str(comment.id),
         )
+
+        # Record activity
+        if self._activity_service:
+            try:
+                self._activity_service.record_spot_commented(
+                    str(user.id), str(spot_id), str(comment.id)
+                )
+            except Exception as e:
+                self._logger.warning("failed to record comment activity", error=str(e))
+
         return self._comment_repository.list_for_spot(spot_id)
 
     def delete_comment(

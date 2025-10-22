@@ -27,14 +27,6 @@
             {% endfor %}
         </select>
 
-        <label for="rating-comment-{{ spot_id }}">Comment (optional)</label>
-        <textarea
-            id="rating-comment-{{ spot_id }}"
-            name="comment"
-            rows="2"
-            placeholder="Share why you picked this rating"
-        >{{ summary.user_rating.comment if summary.user_rating and summary.user_rating.comment else '' }}</textarea>
-
         <div class="rating-form-actions">
             <button type="submit" class="btn btn-primary">Save rating</button>
             {% if summary.user_rating %}

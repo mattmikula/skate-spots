@@ -17,13 +17,17 @@ if TYPE_CHECKING:
         SkateSpotFilters,
         SkateSpotUpdate,
     )
+    from app.services.activity_service import ActivityService
 
 
 class SkateSpotService:
     """Service class for skate spot business logic."""
 
-    def __init__(self, repository: SkateSpotRepository) -> None:
+    def __init__(
+        self, repository: SkateSpotRepository, activity_service: ActivityService | None = None
+    ) -> None:
         self._repository = repository
+        self._activity_service = activity_service
         self._logger = get_logger(__name__)
 
     def create_spot(self, spot_data: SkateSpotCreate, user_id: str) -> SkateSpot:
@@ -31,6 +35,14 @@ class SkateSpotService:
 
         spot = self._repository.create(spot_data, user_id)
         self._logger.info("skate spot created", spot_id=str(spot.id), owner_id=user_id)
+
+        # Record activity
+        if self._activity_service:
+            try:
+                self._activity_service.record_spot_created(user_id, str(spot.id), spot.name)
+            except Exception as e:
+                self._logger.warning("failed to record spot creation activity", error=str(e))
+
         return spot
 
     def get_spot(self, spot_id: UUID) -> SkateSpot | None:

@@ -1,0 +1,216 @@
+<!-- Activity feed item -->
+<div class="activity-item activity-{{ activity.activity_type }}">
+    <div class="activity-avatar">
+        {% if activity.actor and activity.actor.profile_photo_url %}
+            <img src="{{ activity.actor.profile_photo_url }}"
+                 alt="{{ activity.actor.username }}"
+                 class="avatar">
+        {% else %}
+            <div class="avatar-placeholder">{{ activity.actor.username[0].upper() if activity.actor else '?' }}</div>
+        {% endif %}
+    </div>
+
+    <div class="activity-content">
+        <div class="activity-header">
+            {% if activity.actor %}
+                <a href="/users/{{ activity.actor.username }}" class="username">
+                    {{ activity.actor.display_name or activity.actor.username }}
+                </a>
+                <span class="activity-action">
+                    {% if activity.activity_type == 'spot_created' %}
+                        created a spot
+                    {% elif activity.activity_type == 'spot_rated' %}
+                        rated a spot
+                    {% elif activity.activity_type == 'spot_commented' %}
+                        commented on a spot
+                    {% elif activity.activity_type == 'spot_favorited' %}
+                        favorited a spot
+                    {% elif activity.activity_type == 'session_created' %}
+                        created a session
+                    {% elif activity.activity_type == 'session_rsvp' %}
+                        RSVPed to a session
+                    {% else %}
+                        did something
+                    {% endif %}
+                </span>
+            {% else %}
+                <span class="username">Unknown User</span>
+            {% endif %}
+        </div>
+
+        {% if activity.metadata %}
+            <div class="activity-details">
+                {% if activity.metadata.spot_name %}
+                    <p class="spot-name">📍 {{ activity.metadata.spot_name }}</p>
+                {% endif %}
+                {% if activity.metadata.score %}
+                    <p class="rating-score">⭐ {{ activity.metadata.score }}/5</p>
+                {% endif %}
+                {% if activity.metadata.response %}
+                    <p class="rsvp-response">✓ {{ activity.metadata.response.capitalize() }}</p>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        <div class="activity-timestamp">
+            {{ activity.created_at.strftime('%b %d, %Y') }}
+        </div>
+    </div>
+
+    {% if request and current_user %}
+        <div class="activity-actions">
+            {% if activity.activity_type == 'spot_created' or activity.activity_type == 'spot_rated' or activity.activity_type == 'spot_commented' or activity.activity_type == 'spot_favorited' %}
+                <a href="/skate-spots/{{ activity.target_id }}"
+                   class="action-link"
+                   title="View spot">
+                    →
+                </a>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .activity-item {
+        display: flex;
+        gap: 1rem;
+        padding: 1rem;
+        border: 1px solid #eee;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+        transition: background-color 0.2s ease;
+    }
+
+    .activity-item:hover {
+        background-color: #f9f9f9;
+    }
+
+    .activity-avatar {
+        flex-shrink: 0;
+    }
+
+    .avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .avatar-placeholder {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1.2rem;
+    }
+
+    .activity-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .activity-header {
+        display: flex;
+        align-items: baseline;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .username {
+        font-weight: 600;
+        color: #000;
+        text-decoration: none;
+    }
+
+    .username:hover {
+        text-decoration: underline;
+    }
+
+    .activity-action {
+        color: #666;
+        font-size: 0.95rem;
+    }
+
+    .activity-details {
+        margin: 0.5rem 0;
+        padding: 0.5rem;
+        background: #f5f5f5;
+        border-radius: 0.25rem;
+        font-size: 0.9rem;
+    }
+
+    .activity-details p {
+        margin: 0.25rem 0;
+    }
+
+    .spot-name {
+        font-weight: 500;
+        color: #333;
+    }
+
+    .rating-score,
+    .rsvp-response {
+        color: #666;
+    }
+
+    .activity-timestamp {
+        font-size: 0.85rem;
+        color: #999;
+        margin-top: 0.5rem;
+    }
+
+    .activity-actions {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+    }
+
+    .action-link {
+        color: #667eea;
+        text-decoration: none;
+        font-size: 1.5rem;
+        padding: 0.5rem;
+        transition: color 0.2s ease;
+    }
+
+    .action-link:hover {
+        color: #764ba2;
+    }
+
+    /* Activity type specific colors */
+    .activity-spot_created::before {
+        content: '🎨';
+        margin-right: 0.5rem;
+    }
+
+    .activity-spot_rated::before {
+        content: '⭐';
+        margin-right: 0.5rem;
+    }
+
+    .activity-spot_commented::before {
+        content: '💬';
+        margin-right: 0.5rem;
+    }
+
+    .activity-spot_favorited::before {
+        content: '❤️';
+        margin-right: 0.5rem;
+    }
+
+    .activity-session_created::before {
+        content: '📅';
+        margin-right: 0.5rem;
+    }
+
+    .activity-session_rsvp::before {
+        content: '✓';
+        margin-right: 0.5rem;
+    }
+</style>

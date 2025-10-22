@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Activity Feed - Skate Spots{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="feed-header">
+        <h1>Activity Feed</h1>
+        <p class="subtitle">
+            {% if is_authenticated %}
+                See what the skaters you follow are up to
+            {% else %}
+                <a href="/login">Log in</a> to see your personalized feed
+            {% endif %}
+        </p>
+    </div>
+
+    {% if is_authenticated %}
+        <div class="feed-tabs">
+            <button class="tab-button active"
+                    hx-get="/feed/partials/personalized"
+                    hx-target="#feed-container"
+                    hx-trigger="load"
+                    hx-swap="innerHTML">
+                Following
+            </button>
+            <button class="tab-button"
+                    hx-get="/feed/partials/public"
+                    hx-target="#feed-container"
+                    hx-swap="innerHTML">
+                Explore
+            </button>
+        </div>
+    {% else %}
+        <div class="feed-tabs">
+            <button class="tab-button active"
+                    hx-get="/feed/partials/public"
+                    hx-target="#feed-container"
+                    hx-trigger="load"
+                    hx-swap="innerHTML">
+                Explore
+            </button>
+        </div>
+    {% endif %}
+
+    <div id="feed-container" class="feed-container">
+        <!-- Activity feed items will be loaded here -->
+    </div>
+</div>
+
+<style>
+    .feed-header {
+        text-align: center;
+        margin: 2rem 0;
+        border-bottom: 2px solid #eee;
+        padding-bottom: 1.5rem;
+    }
+
+    .feed-header h1 {
+        margin: 0 0 0.5rem 0;
+        font-size: 2.5rem;
+    }
+
+    .subtitle {
+        color: #666;
+        font-size: 1rem;
+        margin: 0;
+    }
+
+    .feed-tabs {
+        display: flex;
+        gap: 1rem;
+        margin: 2rem 0;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .tab-button {
+        padding: 0.75rem 1.5rem;
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
+        font-size: 1rem;
+        font-weight: 500;
+        color: #666;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .tab-button:hover {
+        color: #333;
+    }
+
+    .tab-button.active {
+        color: #000;
+        border-bottom-color: #000;
+    }
+
+    .feed-container {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .htmx-request .htmx-indicator {
+        display: inline-block;
+    }
+
+    .htmx-request.htmx-swapping .htmx-indicator {
+        opacity: 1;
+    }
+
+    .htmx-indicator {
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
+    }
+</style>
+
+<script>
+    // Handle tab switching
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+</script>
+{% endblock %}

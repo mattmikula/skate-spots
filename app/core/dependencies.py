@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import Annotated, Any
 
 from fastapi import Cookie, Depends, HTTPException, status
 
@@ -14,20 +14,15 @@ from app.repositories import user_repository
 UserRepository = user_repository.UserRepository
 UserORM = db_models.UserORM
 
-if TYPE_CHECKING:
-    from sqlalchemy.orm import Session
-else:
-    Session = Any
 
-
-def get_user_repository(db: Annotated[Session, Depends(get_db)]) -> UserRepository:
+def get_user_repository(db: Annotated[Any, Depends(get_db)]) -> UserRepository:
     """Get user repository instance."""
     return UserRepository(db)
 
 
 async def get_current_user(
+    user_repo: Annotated[UserRepository, Depends(get_user_repository)],
     access_token: Annotated[str | None, Cookie()] = None,
-    user_repo: Annotated[UserRepository, Depends(get_user_repository)] = None,
 ) -> UserORM:
     """Get the current authenticated user from the access token cookie."""
     if not access_token:
@@ -81,8 +76,8 @@ async def get_current_active_user(
 
 
 async def get_optional_user(
+    user_repo: Annotated[UserRepository, Depends(get_user_repository)],
     access_token: Annotated[str | None, Cookie()] = None,
-    user_repo: Annotated[UserRepository, Depends(get_user_repository)] = None,
 ) -> UserORM | None:
     """Get the current user if authenticated, otherwise return None."""
     if not access_token:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from uuid import UUID  # noqa: TCH003
 
 from app.core.logging import get_logger
@@ -9,6 +10,9 @@ from app.models.favorite import FavoriteStatus
 from app.models.skate_spot import SkateSpot  # noqa: TCH001
 from app.repositories.favorite_repository import FavoriteRepository
 from app.repositories.skate_spot_repository import SkateSpotRepository
+
+if TYPE_CHECKING:
+    from app.services.activity_service import ActivityService
 
 
 class FavoriteService:
@@ -18,9 +22,11 @@ class FavoriteService:
         self,
         favorite_repository: FavoriteRepository,
         skate_spot_repository: SkateSpotRepository,
+        activity_service: ActivityService | None = None,
     ) -> None:
         self._favorite_repository = favorite_repository
         self._skate_spot_repository = skate_spot_repository
+        self._activity_service = activity_service
         self._logger = get_logger(__name__)
 
     def add_favorite(self, spot_id: UUID, user_id: str) -> FavoriteStatus:
@@ -30,6 +36,13 @@ class FavoriteService:
         if not self._favorite_repository.exists(user_id, spot_id):
             self._favorite_repository.add(user_id, spot_id)
             self._logger.info("favorite added", spot_id=str(spot_id), user_id=user_id)
+
+            # Record activity
+            if self._activity_service:
+                try:
+                    self._activity_service.record_spot_favorited(user_id, str(spot_id))
+                except Exception as e:
+                    self._logger.warning("failed to record favorite activity", error=str(e))
         else:
             self._logger.debug("favorite already exists", spot_id=str(spot_id), user_id=user_id)
         return FavoriteStatus(spot_id=spot_id, is_favorite=True)
