@@ -191,7 +191,7 @@ class TestActivityService:
 
         assert feed.total == 2
         assert len(feed.activities) == 2
-        assert all(str(a.user_id) == user1.id for a in feed.activities)
+        assert all(a.user_id == user1.id for a in feed.activities)
 
     def test_delete_activities_for_target(
         self, activity_service: ActivityService, users: tuple[UserORM, UserORM, UserORM]

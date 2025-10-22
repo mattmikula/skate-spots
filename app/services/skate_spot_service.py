@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated, Any
 
+from fastapi import Depends
+
+from app.core.dependencies import get_db
 from app.core.logging import get_logger
 from app.repositories.skate_spot_repository import SkateSpotRepository
 from app.services.photo_storage import delete_photos
@@ -93,11 +96,17 @@ class SkateSpotService:
         return is_owner
 
 
-_repository = SkateSpotRepository()
-skate_spot_service = SkateSpotService(_repository)
+def get_skate_spot_service(db: Annotated[Any, Depends(get_db)]) -> SkateSpotService:
+    """Provide the skate spot service with activity tracking for dependency injection.
 
+    Args:
+        db: Database session from dependency injection
 
-def get_skate_spot_service() -> SkateSpotService:
-    """Provide the default skate spot service for dependency injection."""
+    Returns:
+        SkateSpotService instance with activity service
+    """
+    from app.services.activity_service import get_activity_service
 
-    return skate_spot_service
+    repository = SkateSpotRepository(db)
+    activity_service = get_activity_service(db)
+    return SkateSpotService(repository, activity_service)

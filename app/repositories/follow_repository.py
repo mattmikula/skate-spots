@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import and_, func, select
 
 from app.db.models import UserFollowORM, UserORM
+from app.models.follow import FollowStats
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -168,14 +169,14 @@ class FollowRepository:
 
         return following, total_count or 0
 
-    def get_follow_stats(self, user_id: str) -> dict[str, int]:
+    def get_follow_stats(self, user_id: str) -> FollowStats:
         """Get follower and following counts for a user.
 
         Args:
             user_id: ID of the user
 
         Returns:
-            Dictionary with 'followers_count' and 'following_count' keys
+            FollowStats model with follower and following counts
         """
         followers_count = (
             self.session.execute(
@@ -191,7 +192,7 @@ class FollowRepository:
             or 0
         )
 
-        return {
-            "followers_count": followers_count,
-            "following_count": following_count,
-        }
+        return FollowStats(
+            followers_count=followers_count,
+            following_count=following_count,
+        )

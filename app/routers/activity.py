@@ -81,27 +81,14 @@ async def get_public_feed(
     response_model=ActivityFeedResponse,
     summary="Get user's activity history",
 )
-async def get_user_activity(
-    username: str,  # noqa: ARG001
-    activity_service: Annotated[ActivityService, Depends(get_activity_service)],  # noqa: ARG001
-    limit: int = 20,  # noqa: ARG001
-    offset: int = 0,  # noqa: ARG001
-) -> ActivityFeedResponse:
+async def get_user_activity() -> ActivityFeedResponse:
     """Get activity history for a specific user.
 
-    Shows all activities performed by a specific user.
-
-    Args:
-        username: Username of the user
-        limit: Maximum number of activities to return (default: 20, max: 100)
-        offset: Number of activities to skip for pagination (default: 0)
-        activity_service: Activity service dependency
+    Note: This endpoint is not yet implemented and requires user lookup by username.
 
     Returns:
-        ActivityFeedResponse with user's activities
+        501 Not Implemented error
     """
-    # Note: This would require looking up user by username first
-    # Implementation assumes user_id is passed instead of username
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
         detail="This endpoint requires user lookup by username",

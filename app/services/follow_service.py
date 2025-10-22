@@ -188,11 +188,7 @@ class FollowService:
         Returns:
             FollowStats model with counts
         """
-        stats = self.follow_repository.get_follow_stats(user_id)
-        return FollowStats(
-            followers_count=stats["followers_count"],
-            following_count=stats["following_count"],
-        )
+        return self.follow_repository.get_follow_stats(user_id)
 
 
 def get_follow_service(db: Annotated[Any, Depends(get_db)]) -> FollowService:

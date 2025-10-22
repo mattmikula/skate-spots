@@ -8,10 +8,10 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, get_user_repository
 from app.db.models import UserORM  # noqa: TCH001
 from app.models.follow import FollowersResponse, FollowingResponse, FollowStats, IsFollowingResponse
-from app.repositories.user_repository import UserRepository
+from app.repositories.user_repository import UserRepository  # noqa: TCH001
 from app.services.follow_service import (
     AlreadyFollowingError,
     FollowService,
@@ -169,6 +169,7 @@ async def is_following(
 async def get_followers(
     username: str,
     follow_service: Annotated[FollowService, Depends(get_follow_service)],
+    user_repo: Annotated[UserRepository, Depends(get_user_repository)],
     limit: int = 50,
     offset: int = 0,
 ) -> FollowersResponse:
@@ -177,6 +178,7 @@ async def get_followers(
     Args:
         username: Username of the user
         follow_service: Follow service dependency
+        user_repo: User repository dependency
         limit: Maximum number of results
         offset: Number of results to skip
 
@@ -184,7 +186,6 @@ async def get_followers(
         FollowersResponse with list of followers
     """
     # Get user by username
-    user_repo = UserRepository()
     user = user_repo.get_by_username(username)
     if not user:
         raise HTTPException(
@@ -209,6 +210,7 @@ async def get_followers(
 async def get_following(
     username: str,
     follow_service: Annotated[FollowService, Depends(get_follow_service)],
+    user_repo: Annotated[UserRepository, Depends(get_user_repository)],
     limit: int = 50,
     offset: int = 0,
 ) -> FollowingResponse:
@@ -217,6 +219,7 @@ async def get_following(
     Args:
         username: Username of the user
         follow_service: Follow service dependency
+        user_repo: User repository dependency
         limit: Maximum number of results
         offset: Number of results to skip
 
@@ -224,7 +227,6 @@ async def get_following(
         FollowingResponse with list of users being followed
     """
     # Get user by username
-    user_repo = UserRepository()
     user = user_repo.get_by_username(username)
     if not user:
         raise HTTPException(
@@ -249,18 +251,19 @@ async def get_following(
 async def get_follow_stats(
     username: str,
     follow_service: Annotated[FollowService, Depends(get_follow_service)],
+    user_repo: Annotated[UserRepository, Depends(get_user_repository)],
 ) -> FollowStats:
     """Get follower and following counts for a user.
 
     Args:
         username: Username of the user
         follow_service: Follow service dependency
+        user_repo: User repository dependency
 
     Returns:
         FollowStats with follower and following counts
     """
     # Get user by username
-    user_repo = UserRepository()
     user = user_repo.get_by_username(username)
     if not user:
         raise HTTPException(
@@ -268,8 +271,4 @@ async def get_follow_stats(
             detail=f"User '{username}' not found",
         )
 
-    stats = follow_service.get_follow_stats(str(user.id))
-    return FollowStats(
-        followers_count=stats["followers_count"],
-        following_count=stats["following_count"],
-    )
+    return follow_service.get_follow_stats(str(user.id))
