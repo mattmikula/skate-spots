@@ -1006,4 +1006,3 @@ async def checkin_form(
             "spot_id": spot_id,
         },
     )
-
