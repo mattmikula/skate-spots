@@ -3,11 +3,8 @@
 from __future__ import annotations
 
 import uuid  # noqa: TC003
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import TYPE_CHECKING
 
-from fastapi import Depends
-
-from app.core.dependencies import get_db
 from app.core.logging import get_logger
 from app.models.rating import Rating, RatingCreate, RatingSummaryResponse
 from app.repositories.rating_repository import RatingRepository
@@ -116,20 +113,12 @@ class RatingService:
         return RatingSummaryResponse(**summary.model_dump(), user_rating=user_rating)
 
 
-def get_rating_service(
-    db: Annotated[Any, Depends(get_db)],
-) -> RatingService:
-    """FastAPI dependency hook to create rating service with activity tracking.
+_rating_repository = RatingRepository()
+_skate_spot_repository = SkateSpotRepository()
+rating_service = RatingService(_rating_repository, _skate_spot_repository)
 
-    Args:
-        db: Database session from dependency injection
 
-    Returns:
-        RatingService instance with repositories initialized
-    """
-    from app.services.activity_service import get_activity_service
+def get_rating_service() -> RatingService:
+    """FastAPI dependency hook for obtaining the rating service."""
 
-    rating_repository = RatingRepository(db)
-    skate_spot_repository = SkateSpotRepository(db)
-    activity_service = get_activity_service(db)
-    return RatingService(rating_repository, skate_spot_repository, activity_service)
+    return rating_service

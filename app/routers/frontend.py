@@ -43,6 +43,9 @@ from app.services.rating_service import (
     RatingService,
     get_rating_service,
 )
+from app.services.rating_service import (
+    SpotNotFoundError as RatingSpotNotFoundError,
+)
 from app.services.skate_spot_service import SkateSpotService, get_skate_spot_service
 from app.services.user_profile_service import (
     UserProfileNotFoundError,
@@ -412,10 +415,24 @@ async def rating_section(
     spot_id: UUID,
     rating_service: Annotated[RatingService, Depends(get_rating_service)],
     current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
-) -> HTMLResponse:
+):
     """Render the rating summary and form snippet for a skate spot."""
 
-    summary = rating_service.get_summary(spot_id, current_user.id if current_user else None)
+    try:
+        summary = rating_service.get_summary(spot_id, current_user.id if current_user else None)
+    except RatingSpotNotFoundError:
+        return templates.TemplateResponse(
+            "partials/rating_section.html",
+            {
+                "request": request,
+                "spot_id": spot_id,
+                "summary": None,
+                "current_user": current_user,
+                "error": "This skate spot is no longer available.",
+            },
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+
     return templates.TemplateResponse(
         "partials/rating_section.html",
         {
@@ -579,7 +596,7 @@ async def comment_section(
     spot_id: UUID,
     comment_service: Annotated[CommentService, Depends(get_comment_service)],
     current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
-) -> HTMLResponse:
+):
     """Render the comment list and form snippet for a skate spot."""
 
     try:
