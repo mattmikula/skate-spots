@@ -222,13 +222,10 @@ Database schema changes are managed with [Alembic](https://alembic.sqlalchemy.or
 | `GET` | `/skate-spots/{id}/edit` | Edit spot form |
 | `GET` | `/map` | Interactive map view |
 | `GET` | `/profile` | Current user's profile with stats and favorites (requires auth) |
-| `POST` | `/profile/update` | Update profile bio, avatar, and location (requires auth) |
+| `POST` | `/profile` | Update profile bio, avatar, and location (requires auth) |
 | `GET` | `/users/{username}` | Public profile page for any user |
 | `GET` | `/login` | Login form (redirects if already authenticated) |
 | `GET` | `/register` | Registration form (redirects if already authenticated) |
-| `GET` | `/profile` | Private dashboard for editing your profile and favorites |
-| `POST` | `/profile` | Handles profile form submissions (HTML form) |
-| `GET` | `/users/{username}` | Public profile showcasing a skater's activity |
 
 ### REST API Endpoints
 
