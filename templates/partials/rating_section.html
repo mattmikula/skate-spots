@@ -1,10 +1,14 @@
 <div id="rating-section-{{ spot_id }}" class="spot-rating" hx-target="this">
     <div class="rating-summary">
-        {% if message %}
+        {% if error %}
+        <div class="rating-error">{{ error }}</div>
+        {% elif message %}
         <div class="rating-message">{{ message }}</div>
         {% endif %}
 
-        {% if summary.ratings_count %}
+        {% if error %}
+        <!-- Error state, no ratings displayed -->
+        {% elif summary.ratings_count %}
         <strong>{{ '{:.1f}'.format(summary.average_score or 0) }}</strong>/5
         <span>({{ summary.ratings_count }} rating{% if summary.ratings_count != 1 %}s{% endif %})</span>
         {% else %}
@@ -12,7 +16,9 @@
         {% endif %}
     </div>
 
-    {% if current_user %}
+    {% if error %}
+        <!-- Error state: no rating form available -->
+    {% elif current_user %}
     <form
         class="rating-form"
         hx-post="/skate-spots/{{ spot_id }}/ratings"
@@ -26,14 +32,6 @@
             <option value="{{ value }}" {% if current_score == value %}selected{% endif %}>{{ value }}</option>
             {% endfor %}
         </select>
-
-        <label for="rating-comment-{{ spot_id }}">Comment (optional)</label>
-        <textarea
-            id="rating-comment-{{ spot_id }}"
-            name="comment"
-            rows="2"
-            placeholder="Share why you picked this rating"
-        >{{ summary.user_rating.comment if summary.user_rating and summary.user_rating.comment else '' }}</textarea>
 
         <div class="rating-form-actions">
             <button type="submit" class="btn btn-primary">Save rating</button>

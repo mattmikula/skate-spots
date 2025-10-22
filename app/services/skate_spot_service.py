@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated, Any
 
+from fastapi import Depends
+
+from app.core.dependencies import get_db
 from app.core.logging import get_logger
 from app.repositories.skate_spot_repository import SkateSpotRepository
 from app.services.photo_storage import delete_photos
@@ -17,13 +20,17 @@ if TYPE_CHECKING:
         SkateSpotFilters,
         SkateSpotUpdate,
     )
+    from app.services.activity_service import ActivityService
 
 
 class SkateSpotService:
     """Service class for skate spot business logic."""
 
-    def __init__(self, repository: SkateSpotRepository) -> None:
+    def __init__(
+        self, repository: SkateSpotRepository, activity_service: ActivityService | None = None
+    ) -> None:
         self._repository = repository
+        self._activity_service = activity_service
         self._logger = get_logger(__name__)
 
     def create_spot(self, spot_data: SkateSpotCreate, user_id: str) -> SkateSpot:
@@ -31,6 +38,14 @@ class SkateSpotService:
 
         spot = self._repository.create(spot_data, user_id)
         self._logger.info("skate spot created", spot_id=str(spot.id), owner_id=user_id)
+
+        # Record activity
+        if self._activity_service:
+            try:
+                self._activity_service.record_spot_created(user_id, str(spot.id), spot.name)
+            except Exception as e:
+                self._logger.warning("failed to record spot creation activity", error=str(e))
+
         return spot
 
     def get_spot(self, spot_id: UUID) -> SkateSpot | None:
@@ -81,11 +96,17 @@ class SkateSpotService:
         return is_owner
 
 
-_repository = SkateSpotRepository()
-skate_spot_service = SkateSpotService(_repository)
+def get_skate_spot_service(db: Annotated[Any, Depends(get_db)]) -> SkateSpotService:
+    """Provide the skate spot service with activity tracking for dependency injection.
 
+    Args:
+        db: Database session from dependency injection
 
-def get_skate_spot_service() -> SkateSpotService:
-    """Provide the default skate spot service for dependency injection."""
+    Returns:
+        SkateSpotService instance with activity service
+    """
+    from app.services.activity_service import get_activity_service
 
-    return skate_spot_service
+    repository = SkateSpotRepository(db)
+    activity_service = get_activity_service(db)
+    return SkateSpotService(repository, activity_service)

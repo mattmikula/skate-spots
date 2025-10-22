@@ -216,3 +216,6 @@ __marimo__/
 # Uploaded media files
 media/
 !media/.gitignore
+
+# Feature planning documents (private planning)
+FEATURE_IDEAS.md

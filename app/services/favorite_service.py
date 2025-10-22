@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID  # noqa: TCH003
 
+from fastapi import Depends
+
+from app.core.dependencies import get_db
 from app.core.logging import get_logger
 from app.models.favorite import FavoriteStatus
 from app.models.skate_spot import SkateSpot  # noqa: TCH001
 from app.repositories.favorite_repository import FavoriteRepository
 from app.repositories.skate_spot_repository import SkateSpotRepository
+
+if TYPE_CHECKING:
+    from app.services.activity_service import ActivityService
 
 
 class FavoriteService:
@@ -18,9 +25,11 @@ class FavoriteService:
         self,
         favorite_repository: FavoriteRepository,
         skate_spot_repository: SkateSpotRepository,
+        activity_service: ActivityService | None = None,
     ) -> None:
         self._favorite_repository = favorite_repository
         self._skate_spot_repository = skate_spot_repository
+        self._activity_service = activity_service
         self._logger = get_logger(__name__)
 
     def add_favorite(self, spot_id: UUID, user_id: str) -> FavoriteStatus:
@@ -30,6 +39,13 @@ class FavoriteService:
         if not self._favorite_repository.exists(user_id, spot_id):
             self._favorite_repository.add(user_id, spot_id)
             self._logger.info("favorite added", spot_id=str(spot_id), user_id=user_id)
+
+            # Record activity
+            if self._activity_service:
+                try:
+                    self._activity_service.record_spot_favorited(user_id, str(spot_id))
+                except Exception as e:
+                    self._logger.warning("failed to record favorite activity", error=str(e))
         else:
             self._logger.debug("favorite already exists", spot_id=str(spot_id), user_id=user_id)
         return FavoriteStatus(spot_id=spot_id, is_favorite=True)
@@ -90,12 +106,20 @@ class SpotNotFoundError(Exception):
     """Raised when a skate spot cannot be found."""
 
 
-_favorite_repository = FavoriteRepository()
-_skate_spot_repository = SkateSpotRepository()
-favorite_service = FavoriteService(_favorite_repository, _skate_spot_repository)
+def get_favorite_service(
+    db: Annotated[Any, Depends(get_db)],
+) -> FavoriteService:
+    """FastAPI dependency hook to create favorite service with activity tracking.
 
+    Args:
+        db: Database session from dependency injection
 
-def get_favorite_service() -> FavoriteService:
-    """Dependency hook to provide the favourite service instance."""
+    Returns:
+        FavoriteService instance with repositories initialized
+    """
+    from app.services.activity_service import get_activity_service
 
-    return favorite_service
+    favorite_repository = FavoriteRepository(db)
+    skate_spot_repository = SkateSpotRepository(db)
+    activity_service = get_activity_service(db)
+    return FavoriteService(favorite_repository, skate_spot_repository, activity_service)

@@ -21,6 +21,7 @@ from app.models.rating import RatingCreate
 from app.models.skate_spot import Difficulty, SpotType
 from app.models.user import UserProfileUpdate
 from app.repositories.user_repository import UserRepository  # noqa: TCH001
+from app.services.activity_service import ActivityService, get_activity_service
 from app.services.comment_service import (
     CommentNotFoundError,
     CommentPermissionError,
@@ -41,6 +42,9 @@ from app.services.rating_service import (
     RatingNotFoundError,
     RatingService,
     get_rating_service,
+)
+from app.services.rating_service import (
+    SpotNotFoundError as RatingSpotNotFoundError,
 )
 from app.services.skate_spot_service import SkateSpotService, get_skate_spot_service
 from app.services.user_profile_service import (
@@ -414,7 +418,21 @@ async def rating_section(
 ) -> HTMLResponse:
     """Render the rating summary and form snippet for a skate spot."""
 
-    summary = rating_service.get_summary(spot_id, current_user.id if current_user else None)
+    try:
+        summary = rating_service.get_summary(spot_id, current_user.id if current_user else None)
+    except RatingSpotNotFoundError:
+        return templates.TemplateResponse(
+            "partials/rating_section.html",
+            {
+                "request": request,
+                "spot_id": spot_id,
+                "summary": None,
+                "current_user": current_user,
+                "error": "This skate spot is no longer available.",
+            },
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+
     return templates.TemplateResponse(
         "partials/rating_section.html",
         {
@@ -858,4 +876,83 @@ async def register_page(
     return templates.TemplateResponse(
         "register.html",
         {"request": request, "current_user": None},
+    )
+
+
+@router.get("/feed", response_class=HTMLResponse)
+async def feed_page(
+    request: Request,
+    current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
+) -> HTMLResponse:
+    """Display activity feed page."""
+
+    return templates.TemplateResponse(
+        "feed.html",
+        {
+            "request": request,
+            "current_user": current_user,
+            "is_authenticated": current_user is not None,
+        },
+    )
+
+
+@router.get("/feed/partials/personalized", response_class=HTMLResponse)
+async def feed_personalized_partial(
+    request: Request,
+    activity_service: Annotated[ActivityService, Depends(get_activity_service)],
+    limit: int = 20,
+    offset: int = 0,
+    current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
+) -> HTMLResponse:
+    """Get personalized feed partial (HTMX)."""
+
+    if not current_user:
+        return HTMLResponse(status_code=401)
+
+    feed_response = activity_service.get_personalized_feed(str(current_user.id), limit, offset)
+
+    if not feed_response.activities:
+        return templates.TemplateResponse(
+            "partials/empty_feed.html",
+            {"request": request, "feed_type": "personalized"},
+        )
+
+    return templates.TemplateResponse(
+        "partials/activity_feed.html",
+        {
+            "request": request,
+            "activities": feed_response.activities,
+            "current_user": current_user,
+            "has_more": feed_response.has_more,
+            "next_offset": offset + limit,
+        },
+    )
+
+
+@router.get("/feed/partials/public", response_class=HTMLResponse)
+async def feed_public_partial(
+    request: Request,
+    activity_service: Annotated[ActivityService, Depends(get_activity_service)],
+    limit: int = 20,
+    offset: int = 0,
+) -> HTMLResponse:
+    """Get public feed partial (HTMX)."""
+
+    feed_response = activity_service.get_public_feed(limit, offset)
+
+    if not feed_response.activities:
+        return templates.TemplateResponse(
+            "partials/empty_feed.html",
+            {"request": request, "feed_type": "public"},
+        )
+
+    return templates.TemplateResponse(
+        "partials/activity_feed.html",
+        {
+            "request": request,
+            "activities": feed_response.activities,
+            "current_user": None,
+            "has_more": feed_response.has_more,
+            "next_offset": offset + limit,
+        },
     )

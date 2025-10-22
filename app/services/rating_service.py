@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import uuid  # noqa: TC003
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated, Any
 
+from fastapi import Depends
+
+from app.core.dependencies import get_db
 from app.core.logging import get_logger
 from app.models.rating import Rating, RatingCreate, RatingSummaryResponse
 from app.repositories.rating_repository import RatingRepository
@@ -12,6 +15,7 @@ from app.repositories.skate_spot_repository import SkateSpotRepository
 
 if TYPE_CHECKING:
     from app.models.skate_spot import SkateSpot
+    from app.services.activity_service import ActivityService
 
 
 class SpotNotFoundError(Exception):
@@ -29,9 +33,11 @@ class RatingService:
         self,
         rating_repository: RatingRepository,
         skate_spot_repository: SkateSpotRepository,
+        activity_service: ActivityService | None = None,
     ) -> None:
         self._rating_repository = rating_repository
         self._skate_spot_repository = skate_spot_repository
+        self._activity_service = activity_service
         self._logger = get_logger(__name__)
 
     def _ensure_spot_exists(self, spot_id: uuid.UUID) -> SkateSpot:
@@ -55,6 +61,16 @@ class RatingService:
             user_id=user_id,
             score=rating.score,
         )
+
+        # Record activity
+        if self._activity_service:
+            try:
+                self._activity_service.record_spot_rated(
+                    user_id, str(spot_id), str(rating.id), rating.score
+                )
+            except Exception as e:
+                self._logger.warning("failed to record rating activity", error=str(e))
+
         return RatingSummaryResponse(**summary.model_dump(), user_rating=rating)
 
     def get_user_rating(self, spot_id: uuid.UUID, user_id: str) -> Rating:
@@ -100,12 +116,18 @@ class RatingService:
         return RatingSummaryResponse(**summary.model_dump(), user_rating=user_rating)
 
 
-_rating_repository = RatingRepository()
-_skate_spot_repository = SkateSpotRepository()
-rating_service = RatingService(_rating_repository, _skate_spot_repository)
+def get_rating_service(db: Annotated[Any, Depends(get_db)]) -> RatingService:
+    """FastAPI dependency hook for obtaining the rating service with activity tracking.
 
+    Args:
+        db: Database session from dependency injection
 
-def get_rating_service() -> RatingService:
-    """FastAPI dependency hook for obtaining the rating service."""
+    Returns:
+        RatingService instance with activity service
+    """
+    from app.services.activity_service import get_activity_service
 
-    return rating_service
+    rating_repository = RatingRepository(db)
+    skate_spot_repository = SkateSpotRepository(db)
+    activity_service = get_activity_service(db)
+    return RatingService(rating_repository, skate_spot_repository, activity_service)

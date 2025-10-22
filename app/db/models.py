@@ -13,6 +13,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -65,6 +66,23 @@ class UserORM(Base):
     comments: Mapped[list[SpotCommentORM]] = relationship(
         "SpotCommentORM",
         back_populates="author",
+        cascade="all, delete-orphan",
+    )
+    followers: Mapped[list[UserFollowORM]] = relationship(
+        "UserFollowORM",
+        foreign_keys="UserFollowORM.following_id",
+        back_populates="following_user",
+        cascade="all, delete-orphan",
+    )
+    following: Mapped[list[UserFollowORM]] = relationship(
+        "UserFollowORM",
+        foreign_keys="UserFollowORM.follower_id",
+        back_populates="follower_user",
+        cascade="all, delete-orphan",
+    )
+    activities: Mapped[list[ActivityFeedORM]] = relationship(
+        "ActivityFeedORM",
+        back_populates="actor",
         cascade="all, delete-orphan",
     )
 
@@ -217,3 +235,58 @@ class SpotCommentORM(Base):
 
     spot: Mapped[SkateSpotORM] = relationship("SkateSpotORM", back_populates="comments")
     author: Mapped[UserORM] = relationship("UserORM", back_populates="comments")
+
+
+class UserFollowORM(Base):
+    """Database model representing a user follow relationship."""
+
+    __tablename__ = "user_follows"
+    __table_args__ = (
+        UniqueConstraint("follower_id", "following_id", name="uq_user_follows_follower_following"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    follower_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    following_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+
+    follower_user: Mapped[UserORM] = relationship(
+        "UserORM", foreign_keys=[follower_id], back_populates="following"
+    )
+    following_user: Mapped[UserORM] = relationship(
+        "UserORM", foreign_keys=[following_id], back_populates="followers"
+    )
+
+
+class ActivityFeedORM(Base):
+    """Database model representing an activity in the user feed."""
+
+    __tablename__ = "activity_feed"
+    __table_args__ = (
+        CheckConstraint(
+            "activity_type IN ('spot_created', 'spot_rated', 'spot_commented', 'spot_favorited', 'session_created', 'session_rsvp')",
+            name="ck_activity_feed_activity_type",
+        ),
+        CheckConstraint(
+            "target_type IN ('spot', 'rating', 'comment', 'favorite', 'session', 'rsvp')",
+            name="ck_activity_feed_target_type",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    activity_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    target_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    target_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    activity_metadata: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow, index=True
+    )
+
+    actor: Mapped[UserORM] = relationship("UserORM", back_populates="activities")

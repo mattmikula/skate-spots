@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import uuid  # noqa: TC003
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated, Any
 
+from fastapi import Depends
+
+from app.core.dependencies import get_db
 from app.core.logging import get_logger
 from app.models.comment import Comment, CommentCreate  # noqa: TC001
 from app.repositories.comment_repository import CommentRepository
@@ -13,6 +16,7 @@ from app.repositories.skate_spot_repository import SkateSpotRepository
 if TYPE_CHECKING:  # pragma: no cover - for type checking only
     from app.db.models import UserORM
     from app.models.skate_spot import SkateSpot
+    from app.services.activity_service import ActivityService
 
 
 class SpotNotFoundError(Exception):
@@ -34,9 +38,11 @@ class CommentService:
         self,
         comment_repository: CommentRepository,
         skate_spot_repository: SkateSpotRepository,
+        activity_service: ActivityService | None = None,
     ) -> None:
         self._comment_repository = comment_repository
         self._skate_spot_repository = skate_spot_repository
+        self._activity_service = activity_service
         self._logger = get_logger(__name__)
 
     def _ensure_spot_exists(self, spot_id: uuid.UUID) -> SkateSpot:
@@ -63,6 +69,16 @@ class CommentService:
             user_id=user.id,
             comment_id=str(comment.id),
         )
+
+        # Record activity
+        if self._activity_service:
+            try:
+                self._activity_service.record_spot_commented(
+                    str(user.id), str(spot_id), str(comment.id)
+                )
+            except Exception as e:
+                self._logger.warning("failed to record comment activity", error=str(e))
+
         return self._comment_repository.list_for_spot(spot_id)
 
     def delete_comment(
@@ -103,12 +119,20 @@ class CommentService:
         return self._comment_repository.list_for_spot(spot_id)
 
 
-_comment_repository = CommentRepository()
-_skate_spot_repository = SkateSpotRepository()
-_comment_service = CommentService(_comment_repository, _skate_spot_repository)
+def get_comment_service(
+    db: Annotated[Any, Depends(get_db)],
+) -> CommentService:
+    """FastAPI dependency hook to create comment service with activity tracking.
 
+    Args:
+        db: Database session from dependency injection
 
-def get_comment_service() -> CommentService:
-    """FastAPI dependency hook for the shared comment service."""
+    Returns:
+        CommentService instance with repositories initialized
+    """
+    from app.services.activity_service import get_activity_service
 
-    return _comment_service
+    comment_repository = CommentRepository(db)
+    skate_spot_repository = SkateSpotRepository(db)
+    activity_service = get_activity_service(db)
+    return CommentService(comment_repository, skate_spot_repository, activity_service)
