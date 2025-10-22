@@ -226,7 +226,7 @@ Database schema changes are managed with [Alembic](https://alembic.sqlalchemy.or
 | `GET` | `/users/{username}` | Public profile page for any user |
 | `GET` | `/login` | Login form (redirects if already authenticated) |
 | `GET` | `/register` | Registration form (redirects if already authenticated) |
-| `GET` | `/profile` | Private dashboard for editing your profile and favourites |
+| `GET` | `/profile` | Private dashboard for editing your profile and favorites |
 | `POST` | `/profile` | Handles profile form submissions (HTML form) |
 | `GET` | `/users/{username}` | Public profile showcasing a skater's activity |
 
