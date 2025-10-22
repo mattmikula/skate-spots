@@ -3,7 +3,8 @@
 {% block content %}
 <div class="page-header">
     <h2>{{ title }}</h2>
-    <p class="profile-subtitle">{{ message or error or "Please try again later." }}</p>
+    {# Prefer 'error' over 'message' for clarity. #}
+    <p class="profile-subtitle">{{ error or message or "Please try again later." }}</p>
 </div>
 
 <div class="empty-state">
