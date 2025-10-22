@@ -169,8 +169,8 @@ class TestFollowRepository:
 
         stats_user2 = follow_repo.get_follow_stats(user2.id)
 
-        assert stats_user2["followers_count"] == 2
-        assert stats_user2["following_count"] == 1
+        assert stats_user2.followers_count == 2
+        assert stats_user2.following_count == 1
 
     def test_get_followers_pagination(
         self, follow_repo: FollowRepository, users: tuple[UserORM, UserORM, UserORM]
