@@ -127,7 +127,7 @@ def get_rating_service(db: Annotated[Any, Depends(get_db)]) -> RatingService:
     """
     from app.services.activity_service import get_activity_service
 
-    rating_repository = RatingRepository()  # Uses default SessionLocal
+    rating_repository = RatingRepository(db)
     skate_spot_repository = SkateSpotRepository(db)
     activity_service = get_activity_service(db)
     return RatingService(rating_repository, skate_spot_repository, activity_service)
