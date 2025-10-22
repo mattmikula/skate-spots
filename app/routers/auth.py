@@ -22,7 +22,7 @@ from app.core.security import (
     verify_password,
 )
 from app.db import models as db_models
-from app.models.user import Token, User, UserCreate, UserLogin, UserUpdate
+from app.models.user import Token, User, UserCreate, UserLogin, UserProfileUpdate
 from app.models.user_profile import UserProfile
 from app.repositories import user_repository
 from app.services.user_profile_service import (
@@ -300,18 +300,12 @@ async def get_user_profile(
 
 @router.put("/me/profile", response_model=User)
 async def update_my_profile(
-    profile_data: UserUpdate,
+    profile_data: UserProfileUpdate,
     current_user: Annotated[UserORM, Depends(get_current_user)],
     user_repo: Annotated[UserRepository, Depends(get_user_repository)],
 ) -> User:
     """Update the current user's profile."""
-    updated_user = user_repo.update_profile(current_user.id, profile_data)
-
-    if not updated_user:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update profile",
-        )
+    updated_user = user_repo.update_profile(current_user, profile_data)
 
     logger.info("profile updated", user_id=str(updated_user.id), username=updated_user.username)
     return User.model_validate(updated_user)
