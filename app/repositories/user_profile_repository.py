@@ -164,7 +164,7 @@ class UserProfileRepository:
         comments: list[SpotCommentORM],
         ratings: list[RatingORM],
         photos: list[SpotPhotoORM],
-        checkins: list[SpotCheckinORM] | None = None,
+        checkins: list[SpotCheckinORM],
     ) -> list[UserActivityItem]:
         entries: list[UserActivityItem] = []
 

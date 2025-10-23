@@ -8,6 +8,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+# TC001 suppressed: Pydantic requires this import at runtime for model validation
 from app.models.checkin import CheckinSummary  # noqa: TC001
 
 
