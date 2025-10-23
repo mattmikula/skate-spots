@@ -19,7 +19,12 @@
 
     <div class="form-actions">
         <button type="submit" class="btn btn-primary">Check In</button>
-        <button type="button" class="btn btn-secondary" onclick="document.getElementById('checkin-form-{{ spot_id }}').innerHTML = ''">Cancel</button>
+        <button 
+            type="button" 
+            class="btn btn-secondary" 
+            hx-get="/skate-spots/{{ spot_id }}/checkin-section"
+            hx-target="#checkin-form-{{ spot_id }}"
+            hx-swap="innerHTML">Cancel</button>
     </div>
 </form>
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import (
@@ -319,7 +319,7 @@ class SpotCheckinORM(Base):
     )
     notes: Mapped[str | None] = mapped_column(String(500), nullable=True)
     checked_in_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.utcnow
+        DateTime, nullable=False, default=lambda: datetime.now(UTC)
     )
 
     spot: Mapped[SkateSpotORM] = relationship("SkateSpotORM", back_populates="checkins")

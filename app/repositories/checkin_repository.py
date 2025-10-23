@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import and_, delete, func, select
 from sqlalchemy.orm import Session, joinedload
@@ -28,7 +28,7 @@ class CheckinRepository:
                 spot_id=spot_id,
                 user_id=user_id,
                 notes=notes,
-                checked_in_at=datetime.utcnow(),
+                checked_in_at=datetime.now(UTC),
             )
             session.add(checkin)
             session.commit()
@@ -79,7 +79,7 @@ class CheckinRepository:
         """Get check-in statistics for a spot."""
 
         with self._session_factory() as session:
-            now = datetime.utcnow()
+            now = datetime.now(UTC)
             today = date.today()
             week_ago = now - timedelta(days=7)
 
