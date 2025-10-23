@@ -55,11 +55,12 @@ class CheckinRepository:
         with self._session_factory() as session:
             stmt = (
                 select(SpotCheckinORM)
+                .options(joinedload(SpotCheckinORM.user))
                 .where(SpotCheckinORM.spot_id == spot_id)
                 .order_by(SpotCheckinORM.checked_in_at.desc())
                 .limit(limit)
             )
-            return session.scalars(stmt).all()
+            return session.scalars(stmt).unique().all()
 
     def list_for_user(self, user_id: str, limit: int = 50) -> list[SpotCheckinORM]:
         """Get user's recent check-ins, ordered newest first."""
