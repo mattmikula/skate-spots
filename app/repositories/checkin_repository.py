@@ -60,7 +60,7 @@ class CheckinRepository:
                 .order_by(SpotCheckinORM.checked_in_at.desc())
                 .limit(limit)
             )
-            return session.scalars(stmt).all()
+            return session.scalars(stmt).unique().all()
 
     def list_for_user(self, user_id: str, limit: int = 50) -> list[dict]:
         """Get user's recent check-ins with spot data, ordered newest first.
