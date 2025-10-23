@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 from app.core.dependencies import get_current_user, get_optional_user
 from app.db.models import UserORM  # noqa: TCH001
-from app.models.checkin import Checkin, CheckinCreate, CheckinStats
+from app.models.checkin import Checkin, CheckinCreate, CheckinStats, CheckinSummary
 from app.services.checkin_service import (
     CheckinAlreadyExistsError,
     CheckinNotFoundError,
@@ -94,27 +94,16 @@ async def list_spot_checkins(
 
 @router.get(
     "/users/me/checkins",
-    response_model=list[Checkin],
+    response_model=list[CheckinSummary],
 )
 async def get_my_checkins(
     current_user: Annotated[UserORM, Depends(get_current_user)],
     service: Annotated[CheckinService, Depends(get_checkin_service)],
     limit: int = 50,
-) -> list[Checkin]:
+) -> list[CheckinSummary]:
     """Get the current user's check-in history."""
 
-    history = service.get_user_history(current_user.id, limit)
-    # Convert CheckinSummary back to Checkin for API response
-    return [
-        Checkin(
-            id=h.id,
-            spot_id=h.spot_id,
-            user_id=current_user.id,
-            notes=h.notes,
-            checked_in_at=h.checked_in_at,
-        )
-        for h in history
-    ]
+    return service.get_user_history(current_user.id, limit)
 
 
 @router.delete(

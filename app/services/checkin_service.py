@@ -15,19 +15,19 @@ logger = get_logger(__name__)
 class CheckinAlreadyExistsError(Exception):
     """Raised when a user tries to check in twice on the same day."""
 
-    pass
+    ...
 
 
 class CheckinNotFoundError(Exception):
     """Raised when a check-in is not found."""
 
-    pass
+    ...
 
 
 class SpotNotFoundError(Exception):
     """Raised when a spot is not found."""
 
-    pass
+    ...
 
 
 class CheckinService:
