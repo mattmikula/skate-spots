@@ -20,7 +20,7 @@ from app.services.checkin_service import (
     get_checkin_service,
 )
 
-router = APIRouter(prefix="/api/v1", tags=["checkins"])
+router = APIRouter(tags=["checkins"])
 
 
 class ErrorDetail(BaseModel):

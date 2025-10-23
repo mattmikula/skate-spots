@@ -38,7 +38,7 @@ app.include_router(favorites.router, prefix="/api/v1")
 app.include_router(skate_spots.router, prefix="/api/v1")
 app.include_router(ratings.router, prefix="/api/v1")
 app.include_router(comments.router, prefix="/api/v1")
-app.include_router(checkins.router)
+app.include_router(checkins.router, prefix="/api/v1")
 
 
 @app.on_event("startup")
