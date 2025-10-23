@@ -62,7 +62,9 @@ class CheckinService:
         orm_checkin = self._checkin_repository.create(spot_id_str, user_id, notes)
         self._logger.info("checkin created", spot_id=spot_id_str, user_id=user_id)
 
-        return Checkin.model_validate(orm_checkin)
+        # Re-fetch the check-in with relationships eagerly loaded
+        loaded_checkin = self._checkin_repository.get_by_id(orm_checkin.id, eager=True)
+        return Checkin.model_validate(loaded_checkin)
 
     def get_spot_stats(self, spot_id: UUID, user_id: str | None = None) -> CheckinStats:
         """Get aggregated check-in statistics for a spot."""
