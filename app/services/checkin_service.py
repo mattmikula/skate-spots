@@ -79,10 +79,12 @@ class CheckinService:
         summaries = []
 
         for checkin in orm_checkins:
+            # The spot relationship is eagerly loaded via selectinload in the repository
+            spot_name = checkin.spot.name if checkin.spot else "Unknown Spot"
             summary = CheckinSummary(
                 id=UUID(checkin.id),
                 spot_id=UUID(checkin.spot_id),
-                spot_name=checkin.spot.name,
+                spot_name=spot_name,
                 checked_in_at=checkin.checked_in_at,
                 notes=checkin.notes,
             )
