@@ -11,7 +11,6 @@ from pydantic import BaseModel, Field
 class CheckinCreate(BaseModel):
     """Request model for creating a new check-in."""
 
-    spot_id: UUID
     notes: str | None = Field(None, max_length=500)
 
 

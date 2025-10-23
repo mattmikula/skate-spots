@@ -6,7 +6,7 @@ from collections.abc import Callable
 from datetime import date, datetime, timedelta
 
 from sqlalchemy import and_, delete, func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.db.database import SessionLocal
 from app.db.models import SpotCheckinORM
@@ -67,11 +67,12 @@ class CheckinRepository:
         with self._session_factory() as session:
             stmt = (
                 select(SpotCheckinORM)
+                .options(joinedload(SpotCheckinORM.spot))
                 .where(SpotCheckinORM.user_id == user_id)
                 .order_by(SpotCheckinORM.checked_in_at.desc())
                 .limit(limit)
             )
-            return session.scalars(stmt).all()
+            return session.scalars(stmt).unique().all()
 
     def get_stats_for_spot(self, spot_id: str, user_id: str | None = None) -> dict:
         """Get check-in statistics for a spot."""

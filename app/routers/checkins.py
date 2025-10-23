@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response
 from pydantic import BaseModel
 
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, get_optional_user
 from app.db.models import UserORM  # noqa: TCH001
 from app.models.checkin import Checkin, CheckinCreate, CheckinStats
 from app.services.checkin_service import (
@@ -66,13 +66,10 @@ async def create_checkin(
 )
 async def get_checkin_stats(
     spot_id: UUID,
-    current_user: Annotated[UserORM | None, Depends(lambda: None)] = None,
-    service: Annotated[CheckinService, Depends(get_checkin_service)] = None,
+    current_user: Annotated[UserORM | None, Depends(get_optional_user)],
+    service: Annotated[CheckinService, Depends(get_checkin_service)],
 ) -> CheckinStats:
     """Get check-in statistics for a spot."""
-
-    if service is None:
-        service = get_checkin_service()
 
     user_id = current_user.id if current_user else None
     return service.get_spot_stats(spot_id, user_id)
@@ -87,13 +84,10 @@ async def get_checkin_stats(
 )
 async def list_spot_checkins(
     spot_id: UUID,
+    service: Annotated[CheckinService, Depends(get_checkin_service)],
     limit: int = 20,
-    service: Annotated[CheckinService, Depends(get_checkin_service)] = None,
 ) -> list[Checkin]:
     """Get recent check-ins for a spot."""
-
-    if service is None:
-        service = get_checkin_service()
 
     return service.get_spot_recent_checkins(spot_id, limit)
 
@@ -104,13 +98,10 @@ async def list_spot_checkins(
 )
 async def get_my_checkins(
     current_user: Annotated[UserORM, Depends(get_current_user)],
+    service: Annotated[CheckinService, Depends(get_checkin_service)],
     limit: int = 50,
-    service: Annotated[CheckinService, Depends(get_checkin_service)] = None,
 ) -> list[Checkin]:
     """Get the current user's check-in history."""
-
-    if service is None:
-        service = get_checkin_service()
 
     history = service.get_user_history(current_user.id, limit)
     # Convert CheckinSummary back to Checkin for API response
