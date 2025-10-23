@@ -6,7 +6,7 @@ from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import and_, delete, func, select
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, selectinload
 
 from app.db.database import SessionLocal
 from app.db.models import SpotCheckinORM
@@ -55,12 +55,12 @@ class CheckinRepository:
         with self._session_factory() as session:
             stmt = (
                 select(SpotCheckinORM)
-                .options(joinedload(SpotCheckinORM.user))
+                .options(selectinload(SpotCheckinORM.user))
                 .where(SpotCheckinORM.spot_id == spot_id)
                 .order_by(SpotCheckinORM.checked_in_at.desc())
                 .limit(limit)
             )
-            return session.scalars(stmt).unique().all()
+            return session.scalars(stmt).all()
 
     def list_for_user(self, user_id: str, limit: int = 50) -> list[SpotCheckinORM]:
         """Get user's recent check-ins, ordered newest first."""
@@ -68,12 +68,12 @@ class CheckinRepository:
         with self._session_factory() as session:
             stmt = (
                 select(SpotCheckinORM)
-                .options(joinedload(SpotCheckinORM.spot))
+                .options(selectinload(SpotCheckinORM.spot))
                 .where(SpotCheckinORM.user_id == user_id)
                 .order_by(SpotCheckinORM.checked_in_at.desc())
                 .limit(limit)
             )
-            return session.scalars(stmt).unique().all()
+            return session.scalars(stmt).all()
 
     def get_stats_for_spot(self, spot_id: str, user_id: str | None = None) -> dict:
         """Get check-in statistics for a spot."""

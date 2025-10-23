@@ -11,7 +11,7 @@
                 {% endif %}
                 {% if checkin_stats.total_count == 0 %}
                     <span class="stat-value">Be the first!</span>
-                {% elif checkin_stats.total_count > 0 %}
+                {% else %}
                     <span class="stat-value">{{ checkin_stats.total_count }} total</span>
                 {% endif %}
             </div>

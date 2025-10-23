@@ -2,6 +2,7 @@
 <form
     hx-post="/api/v1/spots/{{ spot_id }}/checkins"
     hx-headers='{"Content-Type": "application/json"}'
+    hx-ext="json-enc"
     hx-target="#checkin-form-{{ spot_id }}"
     hx-swap="outerHTML"
     class="checkin-form">
