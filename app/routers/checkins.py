@@ -30,7 +30,7 @@ class ErrorDetail(BaseModel):
 
 
 @router.post(
-    "/spots/{spot_id}/checkins",
+    "/skate-spots/{spot_id}/checkins",
     response_model=Checkin,
     status_code=status.HTTP_201_CREATED,
     responses={
@@ -58,7 +58,7 @@ async def create_checkin(
 
 
 @router.get(
-    "/spots/{spot_id}/checkins/stats",
+    "/skate-spots/{spot_id}/checkins/stats",
     response_model=CheckinStats,
     responses={
         404: {"model": ErrorDetail, "description": "Spot not found"},
@@ -76,7 +76,7 @@ async def get_checkin_stats(
 
 
 @router.get(
-    "/spots/{spot_id}/checkins",
+    "/skate-spots/{spot_id}/checkins",
     response_model=list[Checkin],
     responses={
         404: {"model": ErrorDetail, "description": "Spot not found"},

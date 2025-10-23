@@ -62,8 +62,11 @@ class CheckinRepository:
             )
             return session.scalars(stmt).all()
 
-    def list_for_user(self, user_id: str, limit: int = 50) -> list[SpotCheckinORM]:
-        """Get user's recent check-ins, ordered newest first."""
+    def list_for_user(self, user_id: str, limit: int = 50) -> list[dict]:
+        """Get user's recent check-ins with spot data, ordered newest first.
+
+        Returns list of dicts with checkin and spot data to avoid DetachedInstanceError.
+        """
 
         with self._session_factory() as session:
             stmt = (
@@ -73,7 +76,20 @@ class CheckinRepository:
                 .order_by(SpotCheckinORM.checked_in_at.desc())
                 .limit(limit)
             )
-            return session.scalars(stmt).all()
+            checkins = session.scalars(stmt).all()
+
+            # Convert to dict while still in session to avoid DetachedInstanceError
+            return [
+                {
+                    "id": checkin.id,
+                    "spot_id": checkin.spot_id,
+                    "user_id": checkin.user_id,
+                    "notes": checkin.notes,
+                    "checked_in_at": checkin.checked_in_at,
+                    "spot_name": checkin.spot.name if checkin.spot else "Unknown Spot",
+                }
+                for checkin in checkins
+            ]
 
     def get_stats_for_spot(self, spot_id: str, user_id: str | None = None) -> dict:
         """Get check-in statistics for a spot."""

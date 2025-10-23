@@ -240,9 +240,9 @@ Database schema changes are managed with [Alembic](https://alembic.sqlalchemy.or
 | `GET` | `/api/v1/skate-spots/{id}/comments/` | List comments for a skate spot |
 | `POST` | `/api/v1/skate-spots/{id}/comments/` | Create a comment on a skate spot |
 | `DELETE` | `/api/v1/skate-spots/{id}/comments/{comment_id}` | Delete a comment (owner or admin only) |
-| `POST` | `/api/v1/spots/{spot_id}/checkins` | Check in to a spot (one per day per user) |
-| `GET` | `/api/v1/spots/{spot_id}/checkins/stats` | Get check-in statistics (today/week/total counts) |
-| `GET` | `/api/v1/spots/{spot_id}/checkins` | List recent check-ins for a spot |
+| `POST` | `/api/v1/skate-spots/{spot_id}/checkins` | Check in to a spot (one per day per user) |
+| `GET` | `/api/v1/skate-spots/{spot_id}/checkins/stats` | Get check-in statistics (today/week/total counts) |
+| `GET` | `/api/v1/skate-spots/{spot_id}/checkins` | List recent check-ins for a spot |
 | `GET` | `/api/v1/users/me/checkins` | Get current user's check-in history |
 | `DELETE` | `/api/v1/checkins/{checkin_id}` | Delete a check-in (owner or admin only) |
 

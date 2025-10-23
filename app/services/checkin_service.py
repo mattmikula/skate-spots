@@ -75,22 +75,18 @@ class CheckinService:
     def get_user_history(self, user_id: str, limit: int = 50) -> list[CheckinSummary]:
         """Get user's check-in history."""
 
-        orm_checkins = self._checkin_repository.list_for_user(user_id, limit)
-        summaries = []
+        checkin_dicts = self._checkin_repository.list_for_user(user_id, limit)
 
-        for checkin in orm_checkins:
-            # The spot relationship is eagerly loaded via selectinload in the repository
-            spot_name = checkin.spot.name if checkin.spot else "Unknown Spot"
-            summary = CheckinSummary(
-                id=UUID(checkin.id),
-                spot_id=UUID(checkin.spot_id),
-                spot_name=spot_name,
-                checked_in_at=checkin.checked_in_at,
-                notes=checkin.notes,
+        return [
+            CheckinSummary(
+                id=UUID(checkin["id"]),
+                spot_id=UUID(checkin["spot_id"]),
+                spot_name=checkin["spot_name"],
+                checked_in_at=checkin["checked_in_at"],
+                notes=checkin["notes"],
             )
-            summaries.append(summary)
-
-        return summaries
+            for checkin in checkin_dicts
+        ]
 
     def get_spot_recent_checkins(self, spot_id: UUID, limit: int = 20) -> list[Checkin]:
         """Get recent check-ins for a spot."""

@@ -1,6 +1,6 @@
 <!-- Form submits to REST API endpoint, Cancel loads frontend partial -->
 <form
-    hx-post="/api/v1/spots/{{ spot_id }}/checkins"
+    hx-post="/api/v1/skate-spots/{{ spot_id }}/checkins"
     hx-headers='{"Content-Type": "application/json"}'
     hx-ext="json-enc"
     hx-target="#checkin-form-{{ spot_id }}"
