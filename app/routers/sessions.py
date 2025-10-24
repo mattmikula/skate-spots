@@ -31,7 +31,7 @@ def _get_session_service_with_activity(
     activity_service: Annotated[ActivityService, Depends(get_activity_service)],
 ) -> SessionService:
     """Provide session service with activity service injected."""
-    session_service._activity = activity_service
+    session_service.set_activity_service(activity_service)
     return session_service
 
 

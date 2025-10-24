@@ -193,7 +193,7 @@ def _get_session_service_with_activity(
     activity_service: Annotated[ActivityService, Depends(get_activity_service)],
 ) -> SessionService:
     """Provide session service with activity service injected."""
-    session_service._activity = activity_service
+    session_service.set_activity_service(activity_service)
     return session_service
 
 
@@ -533,7 +533,7 @@ async def session_detail(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Spot not found") from exc
 
     try:
-        session = session_service._ensure_session(
+        session = session_service.get_session(
             session_id, current_user_id=str(current_user.id) if current_user else None
         )
     except SessionNotFoundError as exc:

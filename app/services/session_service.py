@@ -61,11 +61,43 @@ class SessionService:
         self._activity = activity_service
         self._logger = get_logger(__name__)
 
+    def set_activity_service(self, activity_service: ActivityService) -> None:
+        """Set the activity service for recording session events.
+
+        Args:
+            activity_service: The ActivityService instance to use for recording activities
+        """
+        self._activity = activity_service
+
     def _ensure_spot_exists(self, spot_id: UUID) -> None:
         spot = self._spots.get_by_id(spot_id)
         if spot is None:
             self._logger.warning("session requested for missing spot", spot_id=str(spot_id))
             raise SessionSpotNotFoundError(f"Skate spot with id {spot_id} not found.")
+
+    def get_session(
+        self,
+        session_id: UUID,
+        *,
+        current_user_id: str | None = None,
+    ) -> Session:
+        """Get a session by ID with optional user context for RSVP status.
+
+        Args:
+            session_id: The session ID to retrieve
+            current_user_id: Optional ID of the current user for personalized data
+
+        Returns:
+            The Session object
+
+        Raises:
+            SessionNotFoundError: If the session doesn't exist
+        """
+        session = self._sessions.get_by_id(session_id, current_user_id=current_user_id)
+        if session is None:
+            self._logger.warning("session not found", session_id=str(session_id))
+            raise SessionNotFoundError(f"Session with id {session_id} not found.")
+        return session
 
     def _ensure_session(
         self,
@@ -73,11 +105,8 @@ class SessionService:
         *,
         current_user_id: str | None = None,
     ) -> Session:
-        session = self._sessions.get_by_id(session_id, current_user_id=current_user_id)
-        if session is None:
-            self._logger.warning("session not found", session_id=str(session_id))
-            raise SessionNotFoundError(f"Session with id {session_id} not found.")
-        return session
+        """Internal helper that calls get_session(). Kept for backward compatibility."""
+        return self.get_session(session_id, current_user_id=current_user_id)
 
     @staticmethod
     def _ensure_upcoming(start_time: datetime) -> None:
