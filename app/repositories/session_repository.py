@@ -185,7 +185,6 @@ class SessionRepository:
 
             for field, value in data.items():
                 setattr(orm_session, field, value)
-            orm_session.updated_at = datetime.now(UTC)
 
             db.add(orm_session)
             db.commit()
@@ -202,7 +201,6 @@ class SessionRepository:
                 return None
 
             orm_session.status = status.value
-            orm_session.updated_at = datetime.now(UTC)
             db.add(orm_session)
             db.commit()
             db.refresh(orm_session)
@@ -245,7 +243,6 @@ class SessionRepository:
             else:
                 orm_rsvp.response = payload.response.value
                 orm_rsvp.note = payload.note
-                orm_rsvp.updated_at = datetime.now(UTC)
 
             db.add(orm_rsvp)
             db.commit()
@@ -298,7 +295,6 @@ class SessionRepository:
                 return None
 
             orm_rsvp.response = SessionResponse.GOING.value
-            orm_rsvp.updated_at = datetime.now(UTC)
             db.add(orm_rsvp)
             db.commit()
 
