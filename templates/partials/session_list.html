@@ -1,0 +1,282 @@
+<div id="session-section-{{ spot_id }}" class="spot-sessions" hx-target="this">
+    <h4 class="session-title">Meetup Sessions</h4>
+
+    {% if message %}
+    <div class="session-feedback session-feedback--success">{{ message }}</div>
+    {% endif %}
+
+    {% if error %}
+    <div class="session-feedback session-feedback--error">{{ error }}</div>
+    {% endif %}
+
+    {% if current_user %}
+    <div class="session-create-card">
+        <h5>Plan a meetup</h5>
+        <form
+            class="session-form"
+            hx-post="/skate-spots/{{ spot_id }}/sessions"
+            hx-target="#session-section-{{ spot_id }}"
+            hx-swap="outerHTML"
+        >
+            <div class="session-form-grid">
+                <div class="form-field">
+                    <label for="session-title-{{ spot_id }}">Title</label>
+                    <input
+                        type="text"
+                        id="session-title-{{ spot_id }}"
+                        name="title"
+                        maxlength="120"
+                        required
+                        value="{{ form_data.get('title', '') }}"
+                        placeholder="Morning jam at the ledges"
+                    />
+                    {% if form_errors.get('title') %}
+                    <p class="form-error">{{ form_errors['title'] | join(', ') }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="form-field">
+                    <label for="session-start-{{ spot_id }}">Start time</label>
+                    <input
+                        type="datetime-local"
+                        id="session-start-{{ spot_id }}"
+                        name="start_time"
+                        required
+                        value="{{ form_data.get('start_time', '') }}"
+                    />
+                    {% if form_errors.get('start_time') %}
+                    <p class="form-error">{{ form_errors['start_time'] | join(', ') }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="form-field">
+                    <label for="session-end-{{ spot_id }}">End time</label>
+                    <input
+                        type="datetime-local"
+                        id="session-end-{{ spot_id }}"
+                        name="end_time"
+                        required
+                        value="{{ form_data.get('end_time', '') }}"
+                    />
+                    {% if form_errors.get('end_time') %}
+                    <p class="form-error">{{ form_errors['end_time'] | join(', ') }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="form-field">
+                    <label for="session-location-{{ spot_id }}">Meet location</label>
+                    <input
+                        type="text"
+                        id="session-location-{{ spot_id }}"
+                        name="meet_location"
+                        maxlength="255"
+                        value="{{ form_data.get('meet_location', '') }}"
+                        placeholder="By the north rail"
+                    />
+                    {% if form_errors.get('meet_location') %}
+                    <p class="form-error">{{ form_errors['meet_location'] | join(', ') }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="form-field">
+                    <label for="session-skill-{{ spot_id }}">Skill focus</label>
+                    <input
+                        type="text"
+                        id="session-skill-{{ spot_id }}"
+                        name="skill_level"
+                        maxlength="50"
+                        value="{{ form_data.get('skill_level', '') }}"
+                        placeholder="Beginner friendly"
+                    />
+                    {% if form_errors.get('skill_level') %}
+                    <p class="form-error">{{ form_errors['skill_level'] | join(', ') }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="form-field">
+                    <label for="session-capacity-{{ spot_id }}">Capacity</label>
+                    <input
+                        type="number"
+                        id="session-capacity-{{ spot_id }}"
+                        name="capacity"
+                        min="1"
+                        value="{{ form_data.get('capacity', '') }}"
+                        placeholder="Unlimited"
+                    />
+                    {% if form_errors.get('capacity') %}
+                    <p class="form-error">{{ form_errors['capacity'] | join(', ') }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-field">
+                <label for="session-description-{{ spot_id }}">Description</label>
+                <textarea
+                    id="session-description-{{ spot_id }}"
+                    name="description"
+                    rows="3"
+                    maxlength="2000"
+                    placeholder="Share the plan, tricks to try, or bring-your-own tips"
+                >{{ form_data.get('description', '') }}</textarea>
+                {% if form_errors.get('description') %}
+                <p class="form-error">{{ form_errors['description'] | join(', ') }}</p>
+                {% endif %}
+            </div>
+
+            <div class="session-form-actions">
+                <button type="submit" class="btn btn-primary">Schedule session</button>
+            </div>
+        </form>
+    </div>
+    {% else %}
+    <p class="session-login-hint">
+        <a href="/login">Log in</a> to plan a session or RSVP.
+    </p>
+    {% endif %}
+
+    {% if sessions %}
+    <ul class="session-list">
+        {% for session in sessions %}
+        <li class="session-card session-card--{{ session.status.value }}">
+            <div class="session-card__header">
+                <a href="/skate-spots/{{ spot_id }}/sessions/{{ session.id }}" class="session-title-link">
+                    <h5>{{ session.title }}</h5>
+                </a>
+                <span class="session-status session-status--{{ session.status.value }}">
+                    {{ session.status.value | replace('_', ' ') | title }}
+                </span>
+            </div>
+
+            <div class="session-card__time">
+                <time datetime="{{ session.start_time.isoformat() }}">
+                    {{ session.start_time.strftime('%b %d, %Y %H:%M') }}
+                </time>
+                <span aria-hidden="true">→</span>
+                <time datetime="{{ session.end_time.isoformat() }}">
+                    {{ session.end_time.strftime('%H:%M') }}
+                </time>
+            </div>
+
+            <div class="session-card__meta">
+                {% set organizer_is_current = current_user and (current_user.id | string) == (session.organizer_id | string) %}
+                <span>
+                    👤 Host:
+                    {% if organizer_is_current %}
+                        You
+                    {% elif session.organizer_username %}
+                        {{ session.organizer_username }}
+                    {% else %}
+                        Local skater
+                    {% endif %}
+                </span>
+                {% if session.meet_location %}
+                <span>📍 {{ session.meet_location }}</span>
+                {% endif %}
+                {% if session.skill_level %}
+                <span>🎯 {{ session.skill_level }}</span>
+                {% endif %}
+                <span>✅ Going: {{ session.stats.going }}</span>
+                <span>🤔 Maybe: {{ session.stats.maybe }}</span>
+                <span>📋 Waitlist: {{ session.stats.waitlist }}</span>
+                {% if session.capacity %}
+                <span>👥 Capacity: {{ session.capacity }}</span>
+                {% endif %}
+            </div>
+
+            {% if session.status == SessionStatus.SCHEDULED %}
+            <div class="session-card__cta">
+                {% if current_user %}
+                <div class="session-actions">
+                    <form
+                        hx-post="/skate-spots/{{ spot_id }}/sessions/{{ session.id }}/rsvp"
+                        hx-target="#session-section-{{ spot_id }}"
+                        hx-swap="outerHTML"
+                    >
+                        <input type="hidden" name="response_choice" value="going" />
+                        <button
+                            type="submit"
+                            class="btn btn-secondary {% if session.user_response == SessionResponse.GOING %}btn-active{% endif %}"
+                            {% if session.is_full and session.user_response != SessionResponse.GOING %}disabled{% endif %}
+                        >
+                            Going
+                        </button>
+                    </form>
+                    <form
+                        hx-post="/skate-spots/{{ spot_id }}/sessions/{{ session.id }}/rsvp"
+                        hx-target="#session-section-{{ spot_id }}"
+                        hx-swap="outerHTML"
+                    >
+                        <input type="hidden" name="response_choice" value="maybe" />
+                        <button
+                            type="submit"
+                            class="btn btn-secondary {% if session.user_response == SessionResponse.MAYBE %}btn-active{% endif %}"
+                        >
+                            Maybe
+                        </button>
+                    </form>
+                    <form
+                        hx-post="/skate-spots/{{ spot_id }}/sessions/{{ session.id }}/rsvp"
+                        hx-target="#session-section-{{ spot_id }}"
+                        hx-swap="outerHTML"
+                    >
+                        <input type="hidden" name="response_choice" value="waitlist" />
+                        <button
+                            type="submit"
+                            class="btn btn-secondary {% if session.user_response == SessionResponse.WAITLIST %}btn-active{% endif %}"
+                        >
+                            Join waitlist
+                        </button>
+                    </form>
+                    {% if session.user_response %}
+                    <form
+                        hx-delete="/skate-spots/{{ spot_id }}/sessions/{{ session.id }}/rsvp"
+                        hx-target="#session-section-{{ spot_id }}"
+                        hx-swap="outerHTML"
+                    >
+                        <button type="submit" class="btn btn-link">Withdraw</button>
+                    </form>
+                    {% endif %}
+                </div>
+
+                {% if session.is_full and session.user_response != SessionResponse.GOING %}
+                <p class="session-note">This session is full. Join the waitlist to be next in line.</p>
+                {% elif session.spots_remaining is not none %}
+                <p class="session-note">{{ session.spots_remaining }} spot{{ 's' if session.spots_remaining != 1 else '' }} left.</p>
+                {% endif %}
+                {% else %}
+                <p class="session-login-hint">
+                    <a href="/login">Log in</a> to RSVP.
+                </p>
+                {% endif %}
+            </div>
+            {% else %}
+            <p class="session-note">
+                {% if session.status == SessionStatus.CANCELLED %}
+                    This session has been cancelled.
+                {% else %}
+                    This session has ended.
+                {% endif %}
+            </p>
+            {% endif %}
+
+            {% if current_user and (current_user.is_admin or (current_user.id | string) == (session.organizer_id | string)) %}
+            <div class="session-card__organizer-actions">
+                {% if session.status == SessionStatus.SCHEDULED %}
+                <form
+                    hx-post="/skate-spots/{{ spot_id }}/sessions/{{ session.id }}/cancel"
+                    hx-target="#session-section-{{ spot_id }}"
+                    hx-swap="outerHTML"
+                    hx-confirm="Cancel this session?"
+                >
+                    <button type="submit" class="btn btn-link">Cancel session</button>
+                </form>
+                {% endif %}
+            </div>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="session-empty">No sessions planned yet. Schedule the first one!</p>
+    {% endif %}
+</div>

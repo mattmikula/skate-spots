@@ -30,7 +30,7 @@
                     {% elif activity.activity_type == 'session_rsvp' %}
                         RSVPed to a session
                     {% else %}
-                        did something
+                        <span class="unhandled-activity" title="Unhandled activity type: {{ activity.activity_type }}">❓ did something</span>
                     {% endif %}
                 </span>
             {% else %}
@@ -212,5 +212,10 @@
     .activity-session_rsvp::before {
         content: '✓';
         margin-right: 0.5rem;
+    }
+
+    .unhandled-activity {
+        color: #ff9800;
+        font-weight: 600;
     }
 </style>

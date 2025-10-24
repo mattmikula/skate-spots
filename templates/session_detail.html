@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}{{ session.title }} - Skate Spots{% endblock %}
+
+{% block content %}
+<main class="container">
+    <div class="breadcrumb">
+        <a href="/skate-spots">Spots</a>
+        <span>/</span>
+        <a href="/skate-spots/{{ spot.id }}">{{ spot.name }}</a>
+        <span>/</span>
+        <span>{{ session.title }}</span>
+    </div>
+
+    <div class="session-detail">
+        <div class="session-detail__header">
+            <h1>{{ session.title }}</h1>
+            <span class="session-status session-status--{{ session.status.value }}">
+                {{ session.status.value | replace('_', ' ') | title }}
+            </span>
+        </div>
+
+        <div class="session-detail__meta">
+            <div class="meta-section">
+                <h3>📅 When</h3>
+                <p>
+                    <time datetime="{{ session.start_time.isoformat() }}">
+                        {{ session.start_time.strftime('%A, %B %d, %Y at %H:%M') }}
+                    </time>
+                    to
+                    <time datetime="{{ session.end_time.isoformat() }}">
+                        {{ session.end_time.strftime('%H:%M') }}
+                    </time>
+                </p>
+            </div>
+
+            <div class="meta-section">
+                <h3>👤 Organizer</h3>
+                <p>
+                    {% if current_user and (current_user.id | string) == (session.organizer_id | string) %}
+                        You
+                    {% elif session.organizer_username %}
+                        <a href="/users/{{ session.organizer_username }}">{{ session.organizer_username }}</a>
+                    {% else %}
+                        Local skater
+                    {% endif %}
+                </p>
+            </div>
+
+            {% if session.meet_location %}
+            <div class="meta-section">
+                <h3>📍 Meet Location</h3>
+                <p>{{ session.meet_location }}</p>
+            </div>
+            {% endif %}
+
+            {% if session.skill_level %}
+            <div class="meta-section">
+                <h3>🎯 Skill Level</h3>
+                <p>{{ session.skill_level }}</p>
+            </div>
+            {% endif %}
+
+            {% if session.description %}
+            <div class="meta-section">
+                <h3>📝 Details</h3>
+                <p>{{ session.description }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="session-detail__attendance">
+            <div class="attendance-card">
+                <h3>✅ Going</h3>
+                <p class="attendance-count">{{ session.stats.going }}</p>
+                {% if session.capacity %}
+                <p class="attendance-capacity">/ {{ session.capacity }}</p>
+                {% endif %}
+            </div>
+
+            <div class="attendance-card">
+                <h3>🤔 Maybe</h3>
+                <p class="attendance-count">{{ session.stats.maybe }}</p>
+            </div>
+
+            <div class="attendance-card">
+                <h3>📋 Waitlist</h3>
+                <p class="attendance-count">{{ session.stats.waitlist }}</p>
+            </div>
+
+            {% if session.spots_remaining is not none and session.status == SessionStatus.SCHEDULED %}
+            <div class="attendance-card">
+                <h3>💨 Spots Left</h3>
+                <p class="attendance-count">{{ session.spots_remaining }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if session.status == SessionStatus.SCHEDULED %}
+        <div class="session-detail__actions">
+            {% if current_user %}
+            <div class="rsvp-buttons">
+                <form method="post" action="/skate-spots/{{ spot.id }}/sessions/{{ session.id }}/rsvp" style="display: inline;">
+                    <input type="hidden" name="response_choice" value="going" />
+                    <button
+                        type="submit"
+                        class="btn btn-primary {% if session.user_response == SessionResponse.GOING %}btn-active{% endif %}"
+                        {% if session.is_full and session.user_response != SessionResponse.GOING %}disabled{% endif %}
+                    >
+                        ✅ Going
+                    </button>
+                </form>
+
+                <form method="post" action="/skate-spots/{{ spot.id }}/sessions/{{ session.id }}/rsvp" style="display: inline;">
+                    <input type="hidden" name="response_choice" value="maybe" />
+                    <button
+                        type="submit"
+                        class="btn btn-secondary {% if session.user_response == SessionResponse.MAYBE %}btn-active{% endif %}"
+                    >
+                        🤔 Maybe
+                    </button>
+                </form>
+
+                <form method="post" action="/skate-spots/{{ spot.id }}/sessions/{{ session.id }}/rsvp" style="display: inline;">
+                    <input type="hidden" name="response_choice" value="waitlist" />
+                    <button
+                        type="submit"
+                        class="btn btn-secondary {% if session.user_response == SessionResponse.WAITLIST %}btn-active{% endif %}"
+                    >
+                        📋 Waitlist
+                    </button>
+                </form>
+
+                {% if session.user_response %}
+                <form method="post" action="/skate-spots/{{ spot.id }}/sessions/{{ session.id }}/rsvp" style="display: inline;">
+                    <input type="hidden" name="_method" value="delete" />
+                    <button type="submit" class="btn btn-link">Withdraw RSVP</button>
+                </form>
+                {% endif %}
+            </div>
+            {% else %}
+            <p class="session-login-hint">
+                <a href="/login">Log in</a> to RSVP to this session.
+            </p>
+            {% endif %}
+
+            {% if session.is_full and session.user_response != SessionResponse.GOING %}
+            <p class="session-note">This session is full. Join the waitlist to be next in line.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if current_user and (current_user.is_admin or (current_user.id | string) == (session.organizer_id | string)) %}
+        <div class="session-detail__organizer">
+            {% if session.status == SessionStatus.SCHEDULED %}
+            <form method="post" action="/skate-spots/{{ spot.id }}/sessions/{{ session.id }}/cancel">
+                <button type="submit" class="btn btn-link" onclick="return confirm('Cancel this session?');">
+                    Cancel session
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="session-detail__back">
+            <a href="/skate-spots" class="btn btn-link">← Back to spots</a>
+        </div>
+    </div>
+</main>
+{% endblock %}

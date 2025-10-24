@@ -11,11 +11,14 @@ from sqlalchemy.orm import Session, selectinload
 from app.db.database import SessionLocal
 from app.db.models import (
     RatingORM,
+    SessionORM,
+    SessionRSVPORM,
     SkateSpotORM,
     SpotCommentORM,
     SpotPhotoORM,
     UserORM,
 )
+from app.models.session import SessionResponse
 from app.models.user_profile import (
     UserActivityItem,
     UserActivityType,
@@ -47,6 +50,10 @@ class UserProfileRepository:
                     selectinload(UserORM.comments).selectinload(SpotCommentORM.spot),
                     selectinload(UserORM.ratings).selectinload(RatingORM.spot),
                     selectinload(UserORM.uploaded_photos).selectinload(SpotPhotoORM.spot),
+                    selectinload(UserORM.hosted_sessions).selectinload(SessionORM.spot),
+                    selectinload(UserORM.session_rsvps)
+                    .selectinload(SessionRSVPORM.session)
+                    .selectinload(SessionORM.spot),
                 )
                 .where(UserORM.username == username)
             )
@@ -61,6 +68,10 @@ class UserProfileRepository:
         comments = sorted(user.comments, key=lambda comment: comment.created_at, reverse=True)
         ratings = sorted(user.ratings, key=lambda rating: rating.created_at, reverse=True)
         photos = sorted(user.uploaded_photos, key=lambda photo: photo.created_at, reverse=True)
+        hosted_sessions = sorted(
+            user.hosted_sessions, key=lambda session: session.start_time, reverse=True
+        )
+        session_rsvps = sorted(user.session_rsvps, key=lambda rsvp: rsvp.created_at, reverse=True)
 
         stats = UserProfileStats(
             spots_added=len(spots),
@@ -68,13 +79,24 @@ class UserProfileRepository:
             comments_posted=len(comments),
             ratings_left=len(ratings),
             average_rating_given=self._average_rating_given(ratings),
+            sessions_hosted=len(hosted_sessions),
+            sessions_attended=sum(
+                1 for rsvp in session_rsvps if rsvp.response == SessionResponse.GOING.value
+            ),
         )
 
         spot_summaries = [self._spot_summary(spot) for spot in spots[:12]]
         comment_summaries = [self._comment_summary(comment) for comment in comments[:10]]
         rating_summaries = [self._rating_summary(rating) for rating in ratings[:10]]
 
-        activity = self._activity_feed(spots, comments, ratings, photos)
+        activity = self._activity_feed(
+            spots,
+            comments,
+            ratings,
+            photos,
+            hosted_sessions,
+            session_rsvps,
+        )
 
         return UserProfile(
             id=UUID(user.id),
@@ -146,6 +168,8 @@ class UserProfileRepository:
         comments: list[SpotCommentORM],
         ratings: list[RatingORM],
         photos: list[SpotPhotoORM],
+        sessions: list[SessionORM],
+        rsvps: list[SessionRSVPORM],
     ) -> list[UserActivityItem]:
         entries: list[UserActivityItem] = []
 
@@ -191,6 +215,37 @@ class UserProfileRepository:
                     spot_id=UUID(str(photo.spot_id)),
                     spot_name=spot_name,
                     photo_path=photo.file_path,
+                )
+            )
+
+        for session in sessions:
+            entries.append(
+                UserActivityItem(
+                    type=UserActivityType.SESSION_HOSTED,
+                    created_at=session.created_at,
+                    spot_id=UUID(session.spot_id),
+                    spot_name=session.spot.name if session.spot else None,
+                    session_id=UUID(session.id),
+                    session_title=session.title,
+                    session_status=session.status,
+                    session_start_time=session.start_time,
+                )
+            )
+
+        for rsvp in rsvps:
+            if rsvp.response != SessionResponse.GOING.value:
+                continue
+            session = rsvp.session
+            entries.append(
+                UserActivityItem(
+                    type=UserActivityType.SESSION_ATTENDED,
+                    created_at=rsvp.created_at,
+                    spot_id=UUID(session.spot_id) if session else None,
+                    spot_name=session.spot.name if session and session.spot else None,
+                    session_id=UUID(rsvp.session_id),
+                    session_title=session.title if session else None,
+                    session_status=session.status if session else None,
+                    session_start_time=session.start_time if session else None,
                 )
             )
 
