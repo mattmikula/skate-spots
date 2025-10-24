@@ -734,7 +734,7 @@ async def withdraw_session_rsvp(
     request: Request,
     spot_id: UUID,
     session_id: UUID,
-    session_service: Annotated[SessionService, Depends(get_session_service)],
+    session_service: Annotated[SessionService, Depends(_get_session_service_with_activity)],
     current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
 ) -> HTMLResponse:
     """Withdraw the current user's RSVP."""
@@ -806,7 +806,7 @@ async def cancel_session_partial(
     request: Request,
     spot_id: UUID,
     session_id: UUID,
-    session_service: Annotated[SessionService, Depends(get_session_service)],
+    session_service: Annotated[SessionService, Depends(_get_session_service_with_activity)],
     current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
 ) -> HTMLResponse:
     """Allow organisers or admins to cancel a session."""
