@@ -33,6 +33,26 @@ class GeocodingService:
             user_agent = get_settings().geocoding_user_agent
         self.geolocator = Nominatim(user_agent=user_agent)
 
+    @staticmethod
+    def _extract_city(address_parts: dict) -> str | None:
+        """Extract city name from address components.
+
+        Tries multiple fields in order of preference: city, town, village, municipality, county.
+
+        Args:
+            address_parts: Address dictionary from Nominatim response
+
+        Returns:
+            City name if found, None otherwise
+        """
+        return (
+            address_parts.get("city")
+            or address_parts.get("town")
+            or address_parts.get("village")
+            or address_parts.get("municipality")
+            or address_parts.get("county")
+        )
+
     def reverse_geocode(self, latitude: float, longitude: float) -> GeocodingResult | None:
         """
         Convert coordinates to address information.
@@ -50,16 +70,7 @@ class GeocodingService:
                 return None
 
             address_parts = location.raw.get("address", {})
-
-            # Try to extract city from various possible fields
-            city = (
-                address_parts.get("city")
-                or address_parts.get("town")
-                or address_parts.get("village")
-                or address_parts.get("municipality")
-                or address_parts.get("county")
-            )
-
+            city = self._extract_city(address_parts)
             country = address_parts.get("country")
             display_address = location.address
 
@@ -92,16 +103,7 @@ class GeocodingService:
             results = []
             for location in locations:
                 address_parts = location.raw.get("address", {})
-
-                # Try to extract city from various possible fields
-                city = (
-                    address_parts.get("city")
-                    or address_parts.get("town")
-                    or address_parts.get("village")
-                    or address_parts.get("municipality")
-                    or address_parts.get("county")
-                )
-
+                city = self._extract_city(address_parts)
                 country = address_parts.get("country")
 
                 results.append(

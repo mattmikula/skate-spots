@@ -1,6 +1,6 @@
 """Tests for the geocoding service."""
 
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from geopy.exc import GeopyError
@@ -222,3 +222,113 @@ def test_geocoding_result_optional_fields():
     assert result.address is None
     assert result.city is None
     assert result.country is None
+
+
+def test_extract_city_with_city_field():
+    """Helper method extracts city from 'city' field."""
+    # Arrange
+    address_parts = {"city": "New York", "country": "USA"}
+
+    # Act
+    city = GeocodingService._extract_city(address_parts)
+
+    # Assert
+    assert city == "New York"
+
+
+def test_extract_city_with_town_field():
+    """Helper method extracts city from 'town' field when 'city' not available."""
+    # Arrange
+    address_parts = {"town": "Springfield", "country": "USA"}
+
+    # Act
+    city = GeocodingService._extract_city(address_parts)
+
+    # Assert
+    assert city == "Springfield"
+
+
+def test_extract_city_with_village_field():
+    """Helper method extracts city from 'village' field when city/town not available."""
+    # Arrange
+    address_parts = {"village": "Small Village", "country": "Country"}
+
+    # Act
+    city = GeocodingService._extract_city(address_parts)
+
+    # Assert
+    assert city == "Small Village"
+
+
+def test_extract_city_with_municipality_field():
+    """Helper method extracts city from 'municipality' field."""
+    # Arrange
+    address_parts = {"municipality": "Municipal Area"}
+
+    # Act
+    city = GeocodingService._extract_city(address_parts)
+
+    # Assert
+    assert city == "Municipal Area"
+
+
+def test_extract_city_with_county_field():
+    """Helper method extracts city from 'county' field as last resort."""
+    # Arrange
+    address_parts = {"county": "County Name"}
+
+    # Act
+    city = GeocodingService._extract_city(address_parts)
+
+    # Assert
+    assert city == "County Name"
+
+
+def test_extract_city_prefers_city_over_others():
+    """Helper method prefers 'city' field when multiple fields present."""
+    # Arrange
+    address_parts = {
+        "city": "New York",
+        "town": "Some Town",
+        "village": "Some Village",
+    }
+
+    # Act
+    city = GeocodingService._extract_city(address_parts)
+
+    # Assert
+    assert city == "New York"
+
+
+def test_extract_city_returns_none_when_no_fields():
+    """Helper method returns None when no city-related fields present."""
+    # Arrange
+    address_parts = {"country": "USA", "state": "NY"}
+
+    # Act
+    city = GeocodingService._extract_city(address_parts)
+
+    # Assert
+    assert city is None
+
+
+def test_geocoding_service_uses_default_user_agent():
+    """Service uses default user agent from settings when none provided."""
+    # Arrange & Act
+    with patch("app.services.geocoding_service.get_settings") as mock_settings:
+        mock_settings.return_value.geocoding_user_agent = "test-app-default"
+        with patch("app.services.geocoding_service.Nominatim") as mock_nominatim:
+            GeocodingService()
+
+    # Assert
+    mock_nominatim.assert_called_once_with(user_agent="test-app-default")
+
+
+def test_geocoding_service_uses_custom_user_agent():
+    """Service uses custom user agent when provided."""
+    # Arrange & Act
+    with patch("app.services.geocoding_service.Nominatim") as mock_nominatim:
+        GeocodingService(user_agent="custom-user-agent")
+
+    # Assert
+    mock_nominatim.assert_called_once_with(user_agent="custom-user-agent")

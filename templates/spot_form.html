@@ -207,8 +207,13 @@
     const SEARCH_DEBOUNCE_MS = 300;
 
     // Default center (will be updated based on existing data or user's first click)
-    let defaultLat = {% if spot %}{{ spot.location.latitude }}{% else %}DEFAULT_MAP_CENTER_LAT{% endif %};
-    let defaultLng = {% if spot %}{{ spot.location.longitude }}{% else %}DEFAULT_MAP_CENTER_LNG{% endif %};
+    {% if spot %}
+    let defaultLat = {{ spot.location.latitude }};
+    let defaultLng = {{ spot.location.longitude }};
+    {% else %}
+    let defaultLat = DEFAULT_MAP_CENTER_LAT;
+    let defaultLng = DEFAULT_MAP_CENTER_LNG;
+    {% endif %}
 
     const map = L.map('location-map').setView([defaultLat, defaultLng], 13);
 
