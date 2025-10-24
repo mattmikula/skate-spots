@@ -1,76 +1,44 @@
 <div class="spot-card" id="spot-{{ spot.id }}">
-    <h3>{{ spot.name }}</h3>
-    <p>{{ spot.description }}</p>
+    <a href="/skate-spots/{{ spot.id }}" class="spot-card-link">
+        <div class="spot-card-image">
+            {% if spot.photos %}
+                <img src="{{ spot.photos[0].url }}" alt="Photo of {{ spot.name }}" loading="lazy">
+            {% else %}
+                <div class="spot-card-placeholder">
+                    <span class="placeholder-icon">🛹</span>
+                </div>
+            {% endif %}
+        </div>
 
-    {% if spot.photos %}
-    <div class="spot-photos">
-        {% for photo in spot.photos[:4] %}
-        <img src="{{ photo.url }}" alt="Photo of {{ spot.name }}" loading="lazy">
-        {% endfor %}
-    </div>
-    {% endif %}
+        <div class="spot-card-content">
+            <h3 class="spot-card-title">{{ spot.name }}</h3>
 
-    <div class="spot-meta">
-        <span class="badge badge-type">{{ spot.spot_type }}</span>
-        <span class="badge badge-difficulty {{ spot.difficulty }}">{{ spot.difficulty }}</span>
-    </div>
+            <div class="spot-card-location">
+                📍 {{ spot.location.city }}, {{ spot.location.country }}
+            </div>
 
-    <div style="margin: 0.5rem 0; font-size: 0.9rem; color: #666;">
-        <div>📍 {{ spot.location.city }}, {{ spot.location.country }}</div>
-        {% if spot.location.address %}
-        <div>{{ spot.location.address }}</div>
-        {% endif %}
-    </div>
+            <div class="spot-card-meta">
+                <span class="badge badge-type">{{ spot.spot_type|format_spot_type }}</span>
+                <span class="badge badge-difficulty {{ spot.difficulty }}">{{ spot.difficulty|format_difficulty }}</span>
+            </div>
 
-    <div style="font-size: 0.85rem; color: #777; margin-top: 0.5rem;">
-        {% if spot.is_public %}✅ Public{% else %}🔒 Private{% endif %}
-        {% if spot.requires_permission %} • ⚠️ Permission required{% endif %}
-    </div>
+            {% if spot.average_rating %}
+            <div class="spot-card-rating">
+                <span class="rating-stars">
+                    {% for i in range(5) %}
+                        {% if i < spot.average_rating|round|int %}★{% else %}☆{% endif %}
+                    {% endfor %}
+                </span>
+                <span class="rating-count">({{ spot.ratings_count }})</span>
+            </div>
+            {% endif %}
+        </div>
+    </a>
 
-    {% set is_favorite = spot.id in favorite_spot_ids %}
-    {% with spot_id=spot.id, is_favorite=is_favorite, current_user=current_user %}
-        {% include "partials/favorite_button.html" %}
-    {% endwith %}
-
-    <div
-        class="spot-sessions-container"
-        hx-get="/skate-spots/{{ spot.id }}/sessions-section"
-        hx-trigger="load"
-        hx-target="this"
-        hx-swap="outerHTML"
-    >
-        <div class="session-loading">Loading sessions...</div>
-    </div>
-
-    <div
-        class="spot-rating-container"
-        hx-get="/skate-spots/{{ spot.id }}/rating-section"
-        hx-trigger="load"
-        hx-target="this"
-        hx-swap="outerHTML"
-    >
-        <div class="rating-summary">Loading rating details...</div>
-    </div>
-
-    <div
-        class="spot-comments-container"
-        hx-get="/skate-spots/{{ spot.id }}/comments-section"
-        hx-trigger="load"
-        hx-target="this"
-        hx-swap="outerHTML"
-    >
-        <div class="comment-loading">Loading comments...</div>
-    </div>
-
-    <div class="spot-actions">
-        <a href="/skate-spots/{{ spot.id }}/edit" class="btn btn-edit">Edit</a>
-        <button
-            hx-delete="/api/v1/skate-spots/{{ spot.id }}"
-            hx-confirm="Are you sure you want to delete this spot?"
-            hx-target="#spot-{{ spot.id }}"
-            hx-swap="outerHTML swap:0.5s"
-            class="btn btn-delete">
-            Delete
-        </button>
+    <div class="spot-card-favorite">
+        {% set is_favorite = spot.id in favorite_spot_ids %}
+        {% with spot_id=spot.id, is_favorite=is_favorite, current_user=current_user %}
+            {% include "partials/favorite_button.html" %}
+        {% endwith %}
     </div>
 </div>

@@ -73,6 +73,25 @@ from spots.filters import build_skate_spot_filters
 router = APIRouter(tags=["frontend"])
 templates = Jinja2Templates(directory="templates")
 
+
+def format_spot_type(value: str | SpotType) -> str:
+    """Format spot type enum to human-readable label."""
+    if isinstance(value, SpotType):
+        value = value.value
+    return value.replace("_", " ").title()
+
+
+def format_difficulty(value: str | Difficulty) -> str:
+    """Format difficulty enum to human-readable label."""
+    if isinstance(value, Difficulty):
+        value = value.value
+    return value.capitalize()
+
+
+# Add custom filters to Jinja2 environment
+templates.env.filters["format_spot_type"] = format_spot_type
+templates.env.filters["format_difficulty"] = format_difficulty
+
 _FILTER_FIELDS = (
     "search",
     "spot_type",
@@ -467,6 +486,48 @@ async def new_spot_page(
     return templates.TemplateResponse(
         "spot_form.html",
         {"request": request, "spot": None, "current_user": current_user},
+    )
+
+
+@router.get("/skate-spots/{spot_id}", response_class=HTMLResponse)
+async def spot_detail_page(
+    request: Request,
+    spot_id: UUID,
+    service: Annotated[SkateSpotService, Depends(get_skate_spot_service)],
+    favorite_service: Annotated[FavoriteService, Depends(get_favorite_service)],
+    current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
+) -> HTMLResponse:
+    """Display detailed view of a single skate spot."""
+    spot = service.get_spot(spot_id)
+    if not spot:
+        return templates.TemplateResponse(
+            "error.html",
+            {
+                "request": request,
+                "title": "Spot not found",
+                "message": "The requested skate spot could not be found.",
+                "current_user": current_user,
+            },
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+
+    favorite_spot_ids = (
+        favorite_service.favorite_ids_for_user(current_user.id) if current_user else set()
+    )
+
+    is_owner = False
+    if current_user:
+        is_owner = service.is_owner(spot_id, current_user.id)
+
+    return templates.TemplateResponse(
+        "spot_detail.html",
+        {
+            "request": request,
+            "spot": spot,
+            "current_user": current_user,
+            "favorite_spot_ids": favorite_spot_ids,
+            "is_owner": is_owner,
+        },
     )
 
 
