@@ -6,6 +6,7 @@
 </div>
 
 <form
+    id="spot-form"
     {% if spot %}
         hx-put="/api/v1/skate-spots/{{ spot.id }}"
     {% else %}
@@ -61,38 +62,54 @@
         <fieldset style="border: 1px solid #ddd; padding: 1rem; border-radius: 4px; margin-bottom: 1.5rem;">
             <legend style="padding: 0 0.5rem; font-weight: 600;">Location</legend>
 
-            <div class="location-fields">
-                <div class="form-group">
-                    <label for="latitude">Latitude *</label>
-                    <input type="number" id="latitude" name="latitude" step="any" required
-                           value="{% if spot %}{{ spot.location.latitude }}{% endif %}"
-                           min="-90" max="90">
-                </div>
+            <div class="form-group">
+                <label for="address-search">Search for a location</label>
+                <input type="text" id="address-search" placeholder="Search for an address or place...">
+                <div id="search-results" class="search-results"></div>
+            </div>
 
-                <div class="form-group">
-                    <label for="longitude">Longitude *</label>
-                    <input type="number" id="longitude" name="longitude" step="any" required
-                           value="{% if spot %}{{ spot.location.longitude }}{% endif %}"
-                           min="-180" max="180">
+            <div class="form-group">
+                <label>Click on the map to select location *</label>
+                <div id="location-map" style="height: 400px; width: 100%; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 0.5rem;"></div>
+                <small class="form-help">Click on the map to place a marker, or drag the marker to adjust the location.</small>
+            </div>
+
+            <div class="location-coords">
+                <div class="form-group" style="flex: 1;">
+                    <label for="latitude-display">Latitude</label>
+                    <input type="text" id="latitude-display" readonly style="background: #f5f5f5;">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label for="longitude-display">Longitude</label>
+                    <input type="text" id="longitude-display" readonly style="background: #f5f5f5;">
                 </div>
             </div>
+
+            <!-- Hidden inputs for form submission -->
+            <input type="hidden" id="latitude" name="latitude" required
+                   value="{% if spot %}{{ spot.location.latitude }}{% endif %}">
+            <input type="hidden" id="longitude" name="longitude" required
+                   value="{% if spot %}{{ spot.location.longitude }}{% endif %}">
 
             <div class="form-group">
                 <label for="city">City *</label>
                 <input type="text" id="city" name="city" required
-                       value="{% if spot %}{{ spot.location.city }}{% endif %}">
+                       value="{% if spot %}{{ spot.location.city }}{% endif %}"
+                       placeholder="Auto-filled from map, or enter manually">
             </div>
 
             <div class="form-group">
                 <label for="country">Country *</label>
                 <input type="text" id="country" name="country" required
-                       value="{% if spot %}{{ spot.location.country }}{% endif %}">
+                       value="{% if spot %}{{ spot.location.country }}{% endif %}"
+                       placeholder="Auto-filled from map, or enter manually">
             </div>
 
             <div class="form-group">
                 <label for="address">Address (optional)</label>
                 <input type="text" id="address" name="address"
-                       value="{% if spot and spot.location.address %}{{ spot.location.address }}{% endif %}">
+                       value="{% if spot and spot.location.address %}{{ spot.location.address }}{% endif %}"
+                       placeholder="Auto-filled from map, or enter manually">
             </div>
         </fieldset>
 
@@ -150,7 +167,209 @@
     </div>
 </form>
 
+<style>
+.location-coords {
+    display: flex;
+    gap: 1rem;
+}
+.search-results {
+    position: relative;
+    max-height: 300px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-top: 0.5rem;
+    display: none;
+}
+.search-results.visible {
+    display: block;
+}
+.search-result-item {
+    padding: 0.75rem;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+}
+.search-result-item:hover {
+    background: #f5f5f5;
+}
+.search-result-item:last-child {
+    border-bottom: none;
+}
+</style>
+
 <script>
+// Initialize location map
+(function() {
+    // Constants
+    const DEFAULT_MAP_CENTER_LAT = 40.7128;  // New York City
+    const DEFAULT_MAP_CENTER_LNG = -74.0060;
+    const SEARCH_DEBOUNCE_MS = 300;
+
+    // Default center (will be updated based on existing data or user's first click)
+    {% if spot %}
+    let defaultLat = {{ spot.location.latitude }};
+    let defaultLng = {{ spot.location.longitude }};
+    {% else %}
+    let defaultLat = DEFAULT_MAP_CENTER_LAT;
+    let defaultLng = DEFAULT_MAP_CENTER_LNG;
+    {% endif %}
+
+    const map = L.map('location-map').setView([defaultLat, defaultLng], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19
+    }).addTo(map);
+
+    // Custom marker
+    let marker = null;
+
+    // Initialize marker if editing existing spot
+    {% if spot %}
+    marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
+    updateLocationFields(defaultLat, defaultLng);
+    marker.on('dragend', function(e) {
+        const pos = e.target.getLatLng();
+        updateLocationFields(pos.lat, pos.lng);
+        reverseGeocode(pos.lat, pos.lng);
+    });
+    {% endif %}
+
+    // Handle map clicks
+    map.on('click', function(e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+
+        if (marker) {
+            marker.setLatLng([lat, lng]);
+        } else {
+            marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+            marker.on('dragend', function(e) {
+                const pos = e.target.getLatLng();
+                updateLocationFields(pos.lat, pos.lng);
+                reverseGeocode(pos.lat, pos.lng);
+            });
+        }
+
+        updateLocationFields(lat, lng);
+        reverseGeocode(lat, lng);
+    });
+
+    // Update form fields with coordinates
+    function updateLocationFields(lat, lng) {
+        document.getElementById('latitude').value = lat.toFixed(6);
+        document.getElementById('longitude').value = lng.toFixed(6);
+        document.getElementById('latitude-display').value = lat.toFixed(6);
+        document.getElementById('longitude-display').value = lng.toFixed(6);
+    }
+
+    // Reverse geocode to get address info
+    function reverseGeocode(lat, lng) {
+        fetch(`/api/v1/geocoding/reverse?latitude=${lat}&longitude=${lng}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.city) {
+                    document.getElementById('city').value = data.city;
+                }
+                if (data.country) {
+                    document.getElementById('country').value = data.country;
+                }
+                if (data.address) {
+                    document.getElementById('address').value = data.address;
+                }
+            })
+            .catch(error => {
+                console.error('Geocoding error:', error);
+            });
+    }
+
+    // Address search functionality
+    const searchInput = document.getElementById('address-search');
+    const searchResults = document.getElementById('search-results');
+    let searchTimeout;
+
+    searchInput.addEventListener('input', function(e) {
+        const query = e.target.value.trim();
+
+        clearTimeout(searchTimeout);
+
+        if (query.length < 3) {
+            searchResults.classList.remove('visible');
+            searchResults.innerHTML = '';
+            return;
+        }
+
+        searchTimeout = setTimeout(() => {
+            fetch(`/api/v1/geocoding/search?q=${encodeURIComponent(query)}&limit=5`)
+                .then(response => response.json())
+                .then(results => {
+                    if (results.length === 0) {
+                        searchResults.innerHTML = '<div class="search-result-item">No results found</div>';
+                        searchResults.classList.add('visible');
+                        return;
+                    }
+
+                    searchResults.innerHTML = results.map(result => `
+                        <div class="search-result-item" data-lat="${result.latitude}" data-lng="${result.longitude}"
+                             data-city="${result.city || ''}" data-country="${result.country || ''}"
+                             data-address="${result.address || ''}">
+                            <strong>${result.address || 'Unknown location'}</strong>
+                        </div>
+                    `).join('');
+                    searchResults.classList.add('visible');
+
+                    // Add click handlers to results
+                    document.querySelectorAll('.search-result-item').forEach(item => {
+                        item.addEventListener('click', function() {
+                            const lat = parseFloat(this.dataset.lat);
+                            const lng = parseFloat(this.dataset.lng);
+                            const city = this.dataset.city;
+                            const country = this.dataset.country;
+                            const address = this.dataset.address;
+
+                            // Update map
+                            if (marker) {
+                                marker.setLatLng([lat, lng]);
+                            } else {
+                                marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+                                marker.on('dragend', function(e) {
+                                    const pos = e.target.getLatLng();
+                                    updateLocationFields(pos.lat, pos.lng);
+                                    reverseGeocode(pos.lat, pos.lng);
+                                });
+                            }
+                            map.setView([lat, lng], 15);
+
+                            // Update fields
+                            updateLocationFields(lat, lng);
+                            if (city) document.getElementById('city').value = city;
+                            if (country) document.getElementById('country').value = country;
+                            if (address) document.getElementById('address').value = address;
+
+                            // Clear search
+                            searchInput.value = '';
+                            searchResults.classList.remove('visible');
+                            searchResults.innerHTML = '';
+                        });
+                    });
+                })
+                .catch(error => {
+                    console.error('Search error:', error);
+                    searchResults.innerHTML = '<div class="search-result-item">Error searching. Please try again.</div>';
+                    searchResults.classList.add('visible');
+                });
+        }, SEARCH_DEBOUNCE_MS);
+    });
+
+    // Close search results when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+            searchResults.classList.remove('visible');
+        }
+    });
+})();
+
 document.body.addEventListener('htmx:afterRequest', function(evt) {
     if (evt.detail.successful) {
         window.location.href = '/skate-spots';

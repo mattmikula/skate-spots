@@ -10,6 +10,8 @@ A modern FastAPI application for sharing and discovering skateboarding spots aro
 
 - **Interactive Web Frontend** built with HTMX for dynamic user interactions
 - **REST API** for managing skate spots with full CRUD operations and rich filtering
+- **Interactive Map Location Picker** with click-to-place markers, address search, and automatic geocoding for intuitive spot creation
+- **Geocoding API** for converting between addresses and coordinates using OpenStreetMap Nominatim
 - **User Profiles** with customizable bio, avatar, and location, plus activity statistics dashboard
 - **User Ratings** so skaters can rate spots with 1-5 scores, manage their own feedback, and see community sentiment
 - **Community Comments** that let skaters share detailed feedback and discuss spots in real time via HTMX snippets and JSON APIs
@@ -183,6 +185,7 @@ Key configuration values:
 - `SKATE_SPOTS_DATABASE_URL` – Database connection string.
 - `SKATE_SPOTS_SECRET_KEY` – Secret used to sign JWT access tokens (change this in production).
 - `SKATE_SPOTS_ACCESS_TOKEN_EXPIRE_MINUTES` – Lifetime of authentication tokens (default 30 minutes).
+- `SKATE_SPOTS_GEOCODING_USER_AGENT` – User agent string for Nominatim geocoding requests (default: "skate-spots-app").
 
 ## 🚦 Rate Limiting
 
@@ -254,6 +257,21 @@ Database schema changes are managed with [Alembic](https://alembic.sqlalchemy.or
 | `GET` | `/api/v1/feed` | Get personalized activity feed from followed users (authenticated) |
 | `GET` | `/api/v1/feed/public` | Get public activity feed (all recent user activities) |
 | `GET` | `/api/v1/feed/users/{username}` | Get activity history for a specific user |
+
+### Geocoding Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/geocoding/reverse` | Convert coordinates to address information (reverse geocoding) |
+| `GET` | `/api/v1/geocoding/search` | Search for locations by address or place name (forward geocoding) |
+
+**Reverse Geocoding Parameters:**
+- `latitude` (required): Latitude coordinate (-90 to 90)
+- `longitude` (required): Longitude coordinate (-180 to 180)
+
+**Search Parameters:**
+- `q` (required): Search query (minimum 1 character)
+- `limit` (optional): Maximum results to return (1-10, default: 5)
 
 **Note**: The API endpoints accept both JSON payloads and HTML form data, making them compatible with both traditional API clients and HTMX-powered forms.
 
@@ -339,6 +357,38 @@ curl -X PUT "http://localhost:8000/api/v1/skate-spots/<spot-id>/ratings/me" \
 curl "http://localhost:8000/api/v1/skate-spots/<spot-id>/ratings/summary" -b cookies.txt
 ```
 
+**Reverse Geocode Coordinates:**
+```bash
+curl "http://localhost:8000/api/v1/geocoding/reverse?latitude=40.7128&longitude=-74.0060"
+```
+
+**Search for a Location:**
+```bash
+curl "http://localhost:8000/api/v1/geocoding/search?q=Brooklyn%20Skatepark&limit=3"
+```
+
+### Interactive Location Picker
+
+Creating and editing skate spots features an intuitive map-based location picker instead of manual coordinate entry:
+
+**Features:**
+- **Interactive Map**: Click anywhere on the map to place a marker at the exact spot location
+- **Draggable Marker**: Fine-tune the position by dragging the marker to the precise location
+- **Address Search**: Type an address or place name to search and automatically jump to that location
+- **Automatic Geocoding**: City, country, and address fields are automatically populated based on the selected coordinates
+- **Manual Override**: All auto-filled fields can be manually edited if needed
+- **Visual Feedback**: Read-only coordinate displays show the exact latitude/longitude selected
+
+**How it Works:**
+1. Open the spot creation/edit form at `/skate-spots/new` or `/skate-spots/{id}/edit`
+2. Use the search box to find a general area, or click directly on the map
+3. Drag the marker to fine-tune the exact location
+4. City, country, and address are automatically filled via reverse geocoding
+5. Adjust any fields manually if needed
+6. Submit the form with precise coordinates
+
+The location picker uses the Leaflet.js library for maps and the OpenStreetMap Nominatim service for geocoding (free, no API key required).
+
 ## 🏗️ Architecture
 
 This project follows **Clean Architecture** principles with clear separation of concerns:
@@ -379,11 +429,13 @@ skate-spots/
 │   │   ├── auth.py              # Authentication API
 │   │   ├── follows.py           # User follow/follower API routes
 │   │   ├── frontend.py          # HTML/HTMX routes
+│   │   ├── geocoding.py         # Geocoding API routes
 │   │   ├── ratings.py           # Rating API routes
 │   │   └── skate_spots.py       # REST API routes
 │   └── services/         # Business logic layer
 │       ├── activity_service.py
 │       ├── follow_service.py
+│       ├── geocoding_service.py
 │       ├── rating_service.py
 │       └── skate_spot_service.py
 ├── static/               # Static assets
@@ -455,6 +507,7 @@ skate-spots/
 6. **API Layer** (`app/routers/`)
    - **Authentication** (`auth.py`): Registration, login, logout, and user info
    - **REST API** (`skate_spots.py`): JSON endpoints with form data support
+   - **Geocoding API** (`geocoding.py`): Address search and coordinate conversion
    - **Frontend** (`frontend.py`): HTML pages with Jinja2 templates
    - HTTP request/response handling
 
@@ -524,6 +577,8 @@ Tests are organized into packages that mirror the app structure:
 - **Small & Focused**: Each test validates a single piece of functionality
 - **No CRUD Workflows**: Create, read, update, delete tested separately
 - **Clear Separation**: View operations separated from update operations
+- **Dependency Injection**: External services mocked using FastAPI's dependency override system
+- **No External Calls**: Geocoding tests use mocked services - no actual API calls during testing
 - **Pytest Functions**: Simple function-based tests, no test classes
 - **Package-Level Testing**: Run tests by architectural layer
 
@@ -539,6 +594,7 @@ Tests are organized into packages that mirror the app structure:
 **Service Tests (`tests/test_services/`)**
 - Skate spot repository and service flows (`test_skate_spot_service.py`)
 - Rating lifecycle, summaries, and error handling (`test_rating_service.py`)
+- Geocoding service with mocked geopy library (`test_geocoding_service.py`)
 - Follow user validation, error handling, and pagination (`test_follow_service.py`)
 - Activity recording helpers and feed enrichment (`test_activity_service.py`)
 
@@ -552,6 +608,7 @@ Tests are organized into packages that mirror the app structure:
 - REST API: HTTP request/response cycles with JSON
 - REST API: Form data submission handling
 - Rating endpoints: create/update/delete and summary queries (`test_ratings.py`)
+- Geocoding endpoints: reverse geocoding and address search with mocked service (`test_geocoding.py`)
 - Authentication: Cookie-based login, logout, and access control
 - Frontend: HTML page rendering
 - Frontend: Template integration
@@ -721,6 +778,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Powered by [Pydantic](https://pydantic.dev/)
 - Database with [SQLAlchemy](https://www.sqlalchemy.org/)
 - Dynamic UI with [HTMX](https://htmx.org/)
+- Maps with [Leaflet](https://leafletjs.com/)
+- Geocoding with [GeoPy](https://geopy.readthedocs.io/) and [OpenStreetMap Nominatim](https://nominatim.org/)
 - Templates with [Jinja2](https://jinja.palletsprojects.com/)
 - Code quality by [Ruff](https://github.com/astral-sh/ruff)
 - Package management by [uv](https://github.com/astral-sh/uv)
