@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import NamedTuple
 
-from geopy.geocoders import Nominatim
 from geopy.exc import GeopyError
+from geopy.geocoders import Nominatim
 
 
 class GeocodingResult(NamedTuple):

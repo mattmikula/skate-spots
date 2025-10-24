@@ -51,7 +51,7 @@ async def _parse_location_from_form(form) -> Location:
         latitude = float(lat_str)
         longitude = float(lng_str)
     except (ValueError, TypeError):
-        raise ValueError("Invalid coordinates. Please select a valid location on the map.")
+        raise ValueError("Invalid coordinates. Please select a valid location on the map.") from None
 
     return Location(
         latitude=latitude,

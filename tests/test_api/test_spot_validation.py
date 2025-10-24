@@ -1,6 +1,5 @@
 """Tests for skate spot location validation."""
 
-import pytest
 
 
 def test_create_spot_with_empty_coordinates(client, auth_token):
