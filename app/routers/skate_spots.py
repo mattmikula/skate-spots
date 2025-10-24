@@ -55,7 +55,7 @@ async def _parse_location_from_form(form) -> Location:
 
     # Validate coordinates are provided
     if not lat_str or not lng_str:
-        raise ValueError("Location coordinates are required. Please select a location on the map.")
+        raise ValueError("Location coordinates are required.")
 
     try:
         latitude = float(lat_str)

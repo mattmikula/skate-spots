@@ -26,7 +26,7 @@ def test_create_spot_with_empty_coordinates(client, auth_token):
     # Assert
     assert response.status_code == 422
     detail = response.json()["detail"]
-    assert "Location coordinates are required" in str(detail) or "required" in str(detail).lower()
+    assert "Location coordinates are required" in str(detail)
 
 
 def test_create_spot_with_invalid_coordinates(client, auth_token):

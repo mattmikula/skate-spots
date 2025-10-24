@@ -370,18 +370,6 @@
     });
 })();
 
-// Form validation before submission
-document.getElementById('spot-form').addEventListener('submit', function(evt) {
-    const latitude = document.getElementById('latitude').value;
-    const longitude = document.getElementById('longitude').value;
-
-    if (!latitude || !longitude) {
-        evt.preventDefault();
-        alert('Please select a location on the map before submitting.');
-        return false;
-    }
-});
-
 document.body.addEventListener('htmx:afterRequest', function(evt) {
     if (evt.detail.successful) {
         window.location.href = '/skate-spots';
