@@ -511,6 +511,47 @@ async def session_section(
     return templates.TemplateResponse("partials/session_list.html", context)
 
 
+@router.get(
+    "/skate-spots/{spot_id}/sessions/{session_id}",
+    response_class=HTMLResponse,
+)
+async def session_detail(
+    request: Request,
+    spot_id: UUID,
+    session_id: UUID,
+    skate_spot_service: Annotated[SkateSpotService, Depends(get_skate_spot_service)],
+    session_service: Annotated[SessionService, Depends(_get_session_service_with_activity)],
+    current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
+) -> HTMLResponse:
+    """Display a single session detail page."""
+
+    try:
+        spot = skate_spot_service.get_spot(spot_id)
+        if spot is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Spot not found")
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Spot not found") from exc
+
+    try:
+        session = session_service._ensure_session(
+            session_id, current_user_id=str(current_user.id) if current_user else None
+        )
+    except SessionNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+
+    return templates.TemplateResponse(
+        "session_detail.html",
+        {
+            "request": request,
+            "spot": spot,
+            "session": session,
+            "current_user": current_user,
+            "SessionResponse": SessionResponse,
+            "SessionStatus": SessionStatus,
+        },
+    )
+
+
 @router.post(
     "/skate-spots/{spot_id}/sessions",
     response_class=HTMLResponse,

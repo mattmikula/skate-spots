@@ -139,7 +139,9 @@
         {% for session in sessions %}
         <li class="session-card session-card--{{ session.status.value }}">
             <div class="session-card__header">
-                <h5>{{ session.title }}</h5>
+                <a href="/skate-spots/{{ spot_id }}/sessions/{{ session.id }}" class="session-title-link">
+                    <h5>{{ session.title }}</h5>
+                </a>
                 <span class="session-status session-status--{{ session.status.value }}">
                     {{ session.status.value | replace('_', ' ') | title }}
                 </span>
