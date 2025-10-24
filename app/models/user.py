@@ -32,7 +32,7 @@ class UserUpdate(BaseModel):
     """Model for updating user profile."""
 
     bio: str | None = Field(None, max_length=500)
-    avatar_url: str | None = Field(None, max_length=500)
+    profile_photo_url: str | None = Field(None, max_length=512)
     location: str | None = Field(None, max_length=100)
 
 
@@ -48,9 +48,6 @@ class User(UserBase):
     profile_photo_url: str | None = None
     is_active: bool
     is_admin: bool
-    bio: str | None = None
-    avatar_url: str | None = None
-    location: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -66,7 +63,7 @@ class UserPublicProfile(BaseModel):
     id: UUID
     username: str
     bio: str | None = None
-    avatar_url: str | None = None
+    profile_photo_url: str | None = None
     location: str | None = None
     created_at: datetime
 
