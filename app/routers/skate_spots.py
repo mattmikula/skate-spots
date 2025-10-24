@@ -40,9 +40,22 @@ _TRUE_VALUES = {"true", "on", "1"}
 
 async def _parse_location_from_form(form) -> Location:
     """Parse Location object from form data."""
+    lat_str = form.get("latitude")
+    lng_str = form.get("longitude")
+
+    # Validate coordinates are provided
+    if not lat_str or not lng_str:
+        raise ValueError("Location coordinates are required. Please select a location on the map.")
+
+    try:
+        latitude = float(lat_str)
+        longitude = float(lng_str)
+    except (ValueError, TypeError):
+        raise ValueError("Invalid coordinates. Please select a valid location on the map.")
+
     return Location(
-        latitude=float(form.get("latitude")),
-        longitude=float(form.get("longitude")),
+        latitude=latitude,
+        longitude=longitude,
         city=str(form.get("city")),
         country=str(form.get("country")),
         address=form.get("address") or None,
@@ -107,7 +120,15 @@ async def _parse_form_for_create(
     """Parse a multipart form submission when creating a skate spot."""
 
     form = await request.form()
-    location = await _parse_location_from_form(form)
+
+    try:
+        location = await _parse_location_from_form(form)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
     uploads = _extract_uploads(form, "photo_files")
     photo_payloads, stored_paths = await _store_uploads(uploads)
 
@@ -144,7 +165,15 @@ async def _parse_form_for_update(
     """Parse a multipart form submission when updating a skate spot."""
 
     form = await request.form()
-    location = await _parse_location_from_form(form)
+
+    try:
+        location = await _parse_location_from_form(form)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
     uploads = _extract_uploads(form, "photo_files")
     new_photo_payloads, stored_paths = await _store_uploads(uploads)
 
