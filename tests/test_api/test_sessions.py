@@ -52,9 +52,7 @@ def session_other_token(session_factory):
 
 
 def test_session_rsvp_flow(client, auth_token, session_other_token, session_spot_id):
-    start_time = (
-        (datetime.now(UTC) + timedelta(hours=2)).replace(microsecond=0).isoformat()
-    )
+    start_time = (datetime.now(UTC) + timedelta(hours=2)).replace(microsecond=0).isoformat()
     end_time = (datetime.now(UTC) + timedelta(hours=3)).replace(microsecond=0).isoformat()
 
     create_response = client.post(

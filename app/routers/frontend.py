@@ -537,7 +537,9 @@ async def session_detail(
             session_id, current_user_id=str(current_user.id) if current_user else None
         )
     except SessionNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found") from exc
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+        ) from exc
 
     return templates.TemplateResponse(
         "session_detail.html",
