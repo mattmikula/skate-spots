@@ -210,7 +210,7 @@ class RatingORM(Base):
 
 
 class FavoriteSpotORM(Base):
-    """Association table linking users to their favourite skate spots."""
+    """Association table linking users to their favorite skate spots."""
 
     __tablename__ = "favorite_spots"
     __table_args__ = (UniqueConstraint("user_id", "spot_id", name="uq_favorite_user_spot"),)

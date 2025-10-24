@@ -1,4 +1,4 @@
-"""Repository layer for user favourite skate spots."""
+"""Repository layer for user favorite skate spots."""
 
 from __future__ import annotations
 
@@ -15,13 +15,13 @@ SessionFactory = Callable[[], Session]
 
 
 class FavoriteRepository:
-    """Persistence routines for mapping users to their favourite skate spots."""
+    """Persistence routines for mapping users to their favorite skate spots."""
 
     def __init__(self, session_factory: SessionFactory | None = None) -> None:
         self._session_factory = session_factory or SessionLocal
 
     def add(self, user_id: str, spot_id: UUID) -> None:
-        """Persist a favourite relationship."""
+        """Persist a favorite relationship."""
 
         with self._session_factory() as session:
             if self._exists(session, user_id, spot_id):
@@ -31,7 +31,7 @@ class FavoriteRepository:
             session.commit()
 
     def remove(self, user_id: str, spot_id: UUID) -> bool:
-        """Remove a favourite relationship."""
+        """Remove a favorite relationship."""
 
         with self._session_factory() as session:
             stmt = (
@@ -47,13 +47,13 @@ class FavoriteRepository:
             return result.rowcount is not None and result.rowcount > 0
 
     def exists(self, user_id: str, spot_id: UUID) -> bool:
-        """Return ``True`` if the user has favourited the given spot."""
+        """Return ``True`` if the user has favorited the given spot."""
 
         with self._session_factory() as session:
             return self._exists(session, user_id, spot_id)
 
     def list_spot_ids_for_user(self, user_id: str) -> list[UUID]:
-        """Return the identifiers for a user's favourite spots ordered by recency."""
+        """Return the identifiers for a user's favorite spots ordered by recency."""
 
         with self._session_factory() as session:
             stmt = (
