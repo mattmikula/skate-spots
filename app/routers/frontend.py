@@ -188,6 +188,15 @@ def _comment_context(
     }
 
 
+def _get_session_service_with_activity(
+    session_service: Annotated[SessionService, Depends(get_session_service)],
+    activity_service: Annotated[ActivityService, Depends(get_activity_service)],
+) -> SessionService:
+    """Provide session service with activity service injected."""
+    session_service._activity = activity_service
+    return session_service
+
+
 def _session_context(
     request: Request,
     spot_id: UUID,
@@ -493,7 +502,7 @@ async def edit_spot_page(
 async def session_section(
     request: Request,
     spot_id: UUID,
-    session_service: Annotated[SessionService, Depends(get_session_service)],
+    session_service: Annotated[SessionService, Depends(_get_session_service_with_activity)],
     current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
 ) -> HTMLResponse:
     """Render the session list and form snippet for a skate spot."""
@@ -509,7 +518,7 @@ async def session_section(
 async def create_session_partial(
     request: Request,
     spot_id: UUID,
-    session_service: Annotated[SessionService, Depends(get_session_service)],
+    session_service: Annotated[SessionService, Depends(_get_session_service_with_activity)],
     current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
 ) -> HTMLResponse:
     """Handle creation of a new session via HTMX."""
@@ -615,7 +624,7 @@ async def submit_session_rsvp(
     request: Request,
     spot_id: UUID,
     session_id: UUID,
-    session_service: Annotated[SessionService, Depends(get_session_service)],
+    session_service: Annotated[SessionService, Depends(_get_session_service_with_activity)],
     response_choice: Annotated[str, Form()],
     note: Annotated[str | None, Form()] = None,
     current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
