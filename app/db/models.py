@@ -344,9 +344,7 @@ class SessionORM(Base):
     skill_level: Mapped[str | None] = mapped_column(String(50), nullable=True)
     capacity: Mapped[int | None] = mapped_column(Integer, nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="scheduled")
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
@@ -390,9 +388,7 @@ class SessionRSVPORM(Base):
     )
     response: Mapped[str] = mapped_column(String(20), nullable=False, default="going")
     note: Mapped[str | None] = mapped_column(String(300), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
