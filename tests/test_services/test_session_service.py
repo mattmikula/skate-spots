@@ -8,6 +8,7 @@ from app.models.user import UserCreate
 from app.repositories.session_repository import SessionRepository
 from app.repositories.skate_spot_repository import SkateSpotRepository
 from app.repositories.user_repository import UserRepository
+from app.services.activity_service import ActivityService
 from app.services.session_service import SessionCapacityError, SessionService
 
 
@@ -42,10 +43,11 @@ def _create_spot(session_factory, owner_id: str):
     )
 
 
-def _service(session_factory) -> SessionService:
+def _service(session_factory, activity_service=None) -> SessionService:
     return SessionService(
         SessionRepository(session_factory=session_factory),
         SkateSpotRepository(session_factory=session_factory),
+        activity_service=activity_service,
     )
 
 
@@ -100,3 +102,78 @@ def test_waitlist_promotion_after_withdraw(session_factory):
     refreshed = service.list_upcoming_sessions(spot.id, current_user_id=str(attendee.id))[0]
     assert refreshed.stats.going == 1
     assert refreshed.user_response == SessionResponse.GOING
+
+
+def test_session_creation_records_activity(session_factory):
+    service = _service(session_factory)
+    organizer = _create_user(session_factory, "organizer@example.com", "organizer")
+    spot = _create_spot(session_factory, organizer.id)
+
+    # Create activity service
+    db = session_factory()
+    try:
+        activity_service = ActivityService(db)
+        service_with_activity = SessionService(
+            SessionRepository(session_factory=session_factory),
+            SkateSpotRepository(session_factory=session_factory),
+            activity_service=activity_service,
+        )
+
+        payload = SessionCreate(
+            title="Sunrise Flow",
+            description="Warm-up laps",
+            start_time=datetime.now(timezone.utc) + timedelta(hours=2),
+            end_time=datetime.now(timezone.utc) + timedelta(hours=3),
+            capacity=6,
+        )
+
+        session = service_with_activity.create_session(spot.id, organizer, payload)
+        assert session.title == "Sunrise Flow"
+
+        # Verify activity was recorded
+        activities, _ = activity_service.activity_repository.get_user_activity(
+            organizer.id, limit=1
+        )
+        assert len(activities) > 0
+        assert activities[0].activity_type == "session_created"
+    finally:
+        db.close()
+
+
+def test_session_rsvp_records_activity(session_factory):
+    service = _service(session_factory)
+    organizer = _create_user(session_factory, "organizer@example.com", "organizer")
+    attendee = _create_user(session_factory, "attendee@example.com", "attendee")
+    spot = _create_spot(session_factory, organizer.id)
+
+    payload = SessionCreate(
+        title="Capacity Test",
+        description="",
+        start_time=datetime.now(timezone.utc) + timedelta(hours=1),
+        end_time=datetime.now(timezone.utc) + timedelta(hours=2),
+        capacity=10,
+    )
+    session = service.create_session(spot.id, organizer, payload)
+
+    # Create activity service and update service
+    db = session_factory()
+    try:
+        activity_service = ActivityService(db)
+        service_with_activity = SessionService(
+            SessionRepository(session_factory=session_factory),
+            SkateSpotRepository(session_factory=session_factory),
+            activity_service=activity_service,
+        )
+
+        service_with_activity.rsvp_session(
+            session.id, attendee, SessionRSVPCreate(response=SessionResponse.GOING)
+        )
+
+        # Verify activity was recorded
+        activities, _ = activity_service.activity_repository.get_user_activity(
+            attendee.id, limit=1
+        )
+        assert len(activities) > 0
+        assert activities[0].activity_type == "session_rsvp"
+    finally:
+        db.close()

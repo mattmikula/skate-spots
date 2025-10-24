@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 from typing import Annotated
-from uuid import UUID  # noqa: TCH003
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
+from uuid import UUID  # noqa: TCH003
 
-from app.core.dependencies import get_current_user, get_optional_user
+from app.core.dependencies import get_current_user, get_optional_user, get_db
 from app.core.rate_limiter import SKATE_SPOT_WRITE_LIMIT, rate_limited
 from app.db.models import UserORM  # noqa: TCH001
 from app.models.session import Session, SessionCreate, SessionRSVPCreate, SessionUpdate
+from app.services.activity_service import ActivityService, get_activity_service
 from app.services.session_service import (
     SessionCapacityError,
     SessionInactiveError,
@@ -23,6 +24,15 @@ from app.services.session_service import (
 )
 
 router = APIRouter(tags=["sessions"])
+
+
+def _get_session_service_with_activity(
+    session_service: Annotated[SessionService, Depends(get_session_service)],
+    activity_service: Annotated[ActivityService, Depends(get_activity_service)],
+) -> SessionService:
+    """Provide session service with activity service injected."""
+    session_service._activity = activity_service
+    return session_service
 
 
 def _map_service_error(error: Exception) -> HTTPException:
@@ -66,7 +76,7 @@ async def list_spot_sessions(
 async def create_spot_session(
     spot_id: UUID,
     payload: SessionCreate,
-    service: Annotated[SessionService, Depends(get_session_service)],
+    service: Annotated[SessionService, Depends(_get_session_service_with_activity)],
     current_user: Annotated[UserORM, Depends(get_current_user)],
 ) -> Session:
     """Create a session for a spot."""
@@ -112,7 +122,7 @@ async def delete_session(
 async def rsvp_session(
     session_id: UUID,
     payload: SessionRSVPCreate,
-    service: Annotated[SessionService, Depends(get_session_service)],
+    service: Annotated[SessionService, Depends(_get_session_service_with_activity)],
     current_user: Annotated[UserORM, Depends(get_current_user)],
 ) -> Session:
     """Create or update the current user's RSVP."""

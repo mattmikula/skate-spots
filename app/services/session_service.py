@@ -20,6 +20,7 @@ from app.repositories.skate_spot_repository import SkateSpotRepository
 
 if TYPE_CHECKING:  # pragma: no cover - only for type checking
     from app.db.models import UserORM
+    from app.services.activity_service import ActivityService
 
 
 class SessionSpotNotFoundError(Exception):
@@ -53,9 +54,11 @@ class SessionService:
         self,
         session_repository: SessionRepository,
         skate_spot_repository: SkateSpotRepository,
+        activity_service: ActivityService | None = None,
     ) -> None:
         self._sessions = session_repository
         self._spots = skate_spot_repository
+        self._activity = activity_service
         self._logger = get_logger(__name__)
 
     def _ensure_spot_exists(self, spot_id: UUID) -> None:
@@ -120,6 +123,15 @@ class SessionService:
             spot_id=str(spot_id),
             organizer_id=organizer.id,
         )
+
+        # Record activity for session creation
+        if self._activity:
+            self._activity.record_session_created(
+                user_id=organizer.id,
+                session_id=str(session.id),
+                session_title=session.title,
+            )
+
         return session
 
     def update_session(
@@ -230,13 +242,23 @@ class SessionService:
         ):
             raise SessionCapacityError("This session has reached capacity.")
 
-        updated_session, _ = self._sessions.upsert_rsvp(session_id, user.id, payload)
+        updated_session, rsvp = self._sessions.upsert_rsvp(session_id, user.id, payload)
         self._logger.info(
             "session RSVP recorded",
             session_id=str(session_id),
             user_id=user.id,
             response=payload.response.value,
         )
+
+        # Record activity for RSVP
+        if self._activity:
+            self._activity.record_session_rsvp(
+                user_id=user.id,
+                session_id=str(session_id),
+                rsvp_id=str(rsvp.id),
+                response=payload.response.value,
+            )
+
         self._maybe_promote_waitlist(updated_session)
         return self._sessions.get_by_id(session_id, current_user_id=str(user.id))
 
