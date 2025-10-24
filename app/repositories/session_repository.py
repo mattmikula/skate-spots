@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import asc, select
@@ -140,7 +140,7 @@ class SessionRepository:
     ) -> list[Session]:
         """Return upcoming sessions for a spot."""
 
-        now = now or datetime.now(timezone.utc)
+        now = now or datetime.now(UTC)
         with self._session_factory() as db:
             stmt = self._spot_sessions_select(spot_id, now=now)
             sessions = db.scalars(stmt).unique().all()
@@ -185,7 +185,7 @@ class SessionRepository:
 
             for field, value in data.items():
                 setattr(orm_session, field, value)
-            orm_session.updated_at = datetime.now(timezone.utc)
+            orm_session.updated_at = datetime.now(UTC)
 
             db.add(orm_session)
             db.commit()
@@ -202,7 +202,7 @@ class SessionRepository:
                 return None
 
             orm_session.status = status.value
-            orm_session.updated_at = datetime.now(timezone.utc)
+            orm_session.updated_at = datetime.now(UTC)
             db.add(orm_session)
             db.commit()
             db.refresh(orm_session)
@@ -245,7 +245,7 @@ class SessionRepository:
             else:
                 orm_rsvp.response = payload.response.value
                 orm_rsvp.note = payload.note
-                orm_rsvp.updated_at = datetime.now(timezone.utc)
+                orm_rsvp.updated_at = datetime.now(UTC)
 
             db.add(orm_rsvp)
             db.commit()
@@ -298,7 +298,7 @@ class SessionRepository:
                 return None
 
             orm_rsvp.response = SessionResponse.GOING.value
-            orm_rsvp.updated_at = datetime.now(timezone.utc)
+            orm_rsvp.updated_at = datetime.now(UTC)
             db.add(orm_rsvp)
             db.commit()
 

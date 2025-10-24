@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 from uuid import UUID  # noqa: TCH003
 
@@ -81,7 +81,7 @@ class SessionService:
 
     @staticmethod
     def _ensure_upcoming(start_time: datetime) -> None:
-        if start_time < datetime.now(timezone.utc) - timedelta(minutes=5):
+        if start_time < datetime.now(UTC) - timedelta(minutes=5):
             raise ValueError("Sessions must start in the future.")
 
     @staticmethod
@@ -228,8 +228,8 @@ class SessionService:
         # Ensure timezone awareness for comparison
         end_time = session.end_time
         if end_time.tzinfo is None:
-            end_time = end_time.replace(tzinfo=timezone.utc)
-        if end_time <= datetime.now(timezone.utc):
+            end_time = end_time.replace(tzinfo=UTC)
+        if end_time <= datetime.now(UTC):
             raise SessionInactiveError("This session has already finished.")
 
         existing_response = session.user_response

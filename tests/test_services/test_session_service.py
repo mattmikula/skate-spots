@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -59,8 +59,8 @@ def test_create_and_list_session(session_factory):
     payload = SessionCreate(
         title="Sunrise Flow",
         description="Warm-up laps",
-        start_time=datetime.now(timezone.utc) + timedelta(hours=2),
-        end_time=datetime.now(timezone.utc) + timedelta(hours=3),
+        start_time=datetime.now(UTC) + timedelta(hours=2),
+        end_time=datetime.now(UTC) + timedelta(hours=3),
         meet_location="Main gate",
         skill_level="Beginner",
         capacity=6,
@@ -83,8 +83,8 @@ def test_waitlist_promotion_after_withdraw(session_factory):
     payload = SessionCreate(
         title="Capacity Test",
         description="",
-        start_time=datetime.now(timezone.utc) + timedelta(hours=1),
-        end_time=datetime.now(timezone.utc) + timedelta(hours=2),
+        start_time=datetime.now(UTC) + timedelta(hours=1),
+        end_time=datetime.now(UTC) + timedelta(hours=2),
         capacity=1,
     )
     session = service.create_session(spot.id, organizer, payload)
@@ -105,7 +105,6 @@ def test_waitlist_promotion_after_withdraw(session_factory):
 
 
 def test_session_creation_records_activity(session_factory):
-    service = _service(session_factory)
     organizer = _create_user(session_factory, "organizer@example.com", "organizer")
     spot = _create_spot(session_factory, organizer.id)
 
@@ -122,8 +121,8 @@ def test_session_creation_records_activity(session_factory):
         payload = SessionCreate(
             title="Sunrise Flow",
             description="Warm-up laps",
-            start_time=datetime.now(timezone.utc) + timedelta(hours=2),
-            end_time=datetime.now(timezone.utc) + timedelta(hours=3),
+            start_time=datetime.now(UTC) + timedelta(hours=2),
+            end_time=datetime.now(UTC) + timedelta(hours=3),
             capacity=6,
         )
 
@@ -149,8 +148,8 @@ def test_session_rsvp_records_activity(session_factory):
     payload = SessionCreate(
         title="Capacity Test",
         description="",
-        start_time=datetime.now(timezone.utc) + timedelta(hours=1),
-        end_time=datetime.now(timezone.utc) + timedelta(hours=2),
+        start_time=datetime.now(UTC) + timedelta(hours=1),
+        end_time=datetime.now(UTC) + timedelta(hours=2),
         capacity=10,
     )
     session = service.create_session(spot.id, organizer, payload)
@@ -170,9 +169,7 @@ def test_session_rsvp_records_activity(session_factory):
         )
 
         # Verify activity was recorded
-        activities, _ = activity_service.activity_repository.get_user_activity(
-            attendee.id, limit=1
-        )
+        activities, _ = activity_service.activity_repository.get_user_activity(attendee.id, limit=1)
         assert len(activities) > 0
         assert activities[0].activity_type == "session_rsvp"
     finally:
