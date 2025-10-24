@@ -107,6 +107,6 @@ def get_skate_spot_service(db: Annotated[Any, Depends(get_db)]) -> SkateSpotServ
     """
     from app.services.activity_service import get_activity_service
 
-    repository = SkateSpotRepository(db)
+    repository = SkateSpotRepository()
     activity_service = get_activity_service(db)
     return SkateSpotService(repository, activity_service)
