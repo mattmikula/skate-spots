@@ -7,8 +7,8 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = "0009_add_spot_sessions"
-down_revision = "0008_add_user_profile_fields"
+revision = "0011_add_spot_sessions"
+down_revision = "0010_add_activity_feed"
 branch_labels = None
 depends_on = None
 

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -57,8 +57,8 @@ def test_create_and_list_session(session_factory):
     payload = SessionCreate(
         title="Sunrise Flow",
         description="Warm-up laps",
-        start_time=datetime.utcnow() + timedelta(hours=2),
-        end_time=datetime.utcnow() + timedelta(hours=3),
+        start_time=datetime.now(timezone.utc) + timedelta(hours=2),
+        end_time=datetime.now(timezone.utc) + timedelta(hours=3),
         meet_location="Main gate",
         skill_level="Beginner",
         capacity=6,
@@ -81,8 +81,8 @@ def test_waitlist_promotion_after_withdraw(session_factory):
     payload = SessionCreate(
         title="Capacity Test",
         description="",
-        start_time=datetime.utcnow() + timedelta(hours=1),
-        end_time=datetime.utcnow() + timedelta(hours=2),
+        start_time=datetime.now(timezone.utc) + timedelta(hours=1),
+        end_time=datetime.now(timezone.utc) + timedelta(hours=2),
         capacity=1,
     )
     session = service.create_session(spot.id, organizer, payload)
