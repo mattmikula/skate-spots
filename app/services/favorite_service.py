@@ -1,4 +1,4 @@
-"""Service layer for managing user favourite skate spots."""
+"""Service layer for managing user favorite skate spots."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 class FavoriteService:
-    """Business logic for favourite skate spots."""
+    """Business logic for favorite skate spots."""
 
     def __init__(
         self,
@@ -33,7 +33,7 @@ class FavoriteService:
         self._logger = get_logger(__name__)
 
     def add_favorite(self, spot_id: UUID, user_id: str) -> FavoriteStatus:
-        """Ensure the spot is marked as a favourite for the user."""
+        """Ensure the spot is marked as a favorite for the user."""
 
         self._ensure_spot_exists(spot_id)
         if not self._favorite_repository.exists(user_id, spot_id):
@@ -51,7 +51,7 @@ class FavoriteService:
         return FavoriteStatus(spot_id=spot_id, is_favorite=True)
 
     def remove_favorite(self, spot_id: UUID, user_id: str) -> FavoriteStatus:
-        """Remove the spot from the user's favourites."""
+        """Remove the spot from the user's favorites."""
 
         self._ensure_spot_exists(spot_id)
         removed = self._favorite_repository.remove(user_id, spot_id)
@@ -66,7 +66,7 @@ class FavoriteService:
         return FavoriteStatus(spot_id=spot_id, is_favorite=False)
 
     def toggle_favorite(self, spot_id: UUID, user_id: str) -> FavoriteStatus:
-        """Toggle favourite status for the given user and skate spot."""
+        """Toggle favorite status for the given user and skate spot."""
 
         self._ensure_spot_exists(spot_id)
         if self._favorite_repository.exists(user_id, spot_id):
@@ -74,7 +74,7 @@ class FavoriteService:
         return self.add_favorite(spot_id, user_id)
 
     def list_user_favorites(self, user_id: str) -> list[SkateSpot]:
-        """Return the favourite skate spots for the specified user."""
+        """Return the favorite skate spots for the specified user."""
 
         spot_ids = self._favorite_repository.list_spot_ids_for_user(user_id)
         if not spot_ids:
@@ -88,7 +88,7 @@ class FavoriteService:
         return spots
 
     def favorite_ids_for_user(self, user_id: str) -> set[UUID]:
-        """Return a set of spot identifiers favourited by the user."""
+        """Return a set of spot identifiers favorited by the user."""
 
         return set(self._favorite_repository.list_spot_ids_for_user(user_id))
 

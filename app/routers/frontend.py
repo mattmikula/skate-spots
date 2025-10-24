@@ -375,7 +375,7 @@ async def profile_page(
     favorite_service: Annotated[FavoriteService, Depends(get_favorite_service)],
     current_user: Annotated[UserORM, Depends(get_current_user)],
 ) -> HTMLResponse:
-    """Display the current user's profile with their favourite spots and statistics."""
+    """Display the current user's profile with their favorite spots and statistics."""
 
     message = None
     if request.query_params.get("updated") == "1":
@@ -1014,7 +1014,7 @@ async def toggle_favorite_button(
     favorite_service: Annotated[FavoriteService, Depends(get_favorite_service)],
     current_user: Annotated[UserORM | None, Depends(get_optional_user)],
 ) -> HTMLResponse:
-    """Toggle the favourite state for the current user and return the button snippet."""
+    """Toggle the favorite state for the current user and return the button snippet."""
 
     if current_user is None:
         return templates.TemplateResponse(
@@ -1051,9 +1051,9 @@ async def toggle_favorite_button(
             "spot_id": spot_id,
             "is_favorite": favorite_status.is_favorite,
             "current_user": current_user,
-            "message": "Added to your favourites."
+            "message": "Added to your favorites."
             if favorite_status.is_favorite
-            else "Removed from favourites.",
+            else "Removed from favorites.",
         },
     )
 

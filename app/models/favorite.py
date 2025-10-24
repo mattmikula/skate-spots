@@ -1,4 +1,4 @@
-"""Pydantic models for user favourite skate spots."""
+"""Pydantic models for user favorite skate spots."""
 
 from __future__ import annotations
 
@@ -9,18 +9,18 @@ from pydantic import BaseModel, Field
 
 
 class Favorite(BaseModel):
-    """A favourite relationship between a user and a skate spot."""
+    """A favorite relationship between a user and a skate spot."""
 
-    user_id: UUID = Field(..., description="Identifier of the user who favourited the spot.")
-    spot_id: UUID = Field(..., description="Identifier of the favourited skate spot.")
+    user_id: UUID = Field(..., description="Identifier of the user who favorited the spot.")
+    spot_id: UUID = Field(..., description="Identifier of the favorited skate spot.")
     created_at: datetime = Field(
         default_factory=datetime.utcnow,
-        description="Timestamp when the favourite was created.",
+        description="Timestamp when the favorite was created.",
     )
 
 
 class FavoriteStatus(BaseModel):
-    """Response payload indicating whether a spot is favourited by the user."""
+    """Response payload indicating whether a spot is favorited by the user."""
 
     spot_id: UUID = Field(..., description="Identifier of the skate spot.")
-    is_favorite: bool = Field(..., description="Whether the spot is currently favourited.")
+    is_favorite: bool = Field(..., description="Whether the spot is currently favorited.")

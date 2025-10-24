@@ -1,4 +1,4 @@
-"""API endpoints for managing user favourite skate spots."""
+"""API endpoints for managing user favorite skate spots."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ async def list_my_favorites(
     service: Annotated[FavoriteService, Depends(get_favorite_service)],
     current_user: Annotated[UserORM, Depends(get_current_user)],
 ) -> list[SkateSpot]:
-    """Return the authenticated user's favourite skate spots."""
+    """Return the authenticated user's favorite skate spots."""
 
     return service.list_user_favorites(current_user.id)
 
@@ -44,7 +44,7 @@ async def add_favorite(
     service: Annotated[FavoriteService, Depends(get_favorite_service)],
     current_user: Annotated[UserORM, Depends(get_current_user)],
 ) -> FavoriteStatus:
-    """Mark the given skate spot as a favourite for the authenticated user."""
+    """Mark the given skate spot as a favorite for the authenticated user."""
 
     try:
         return service.add_favorite(spot_id, current_user.id)
@@ -62,7 +62,7 @@ async def remove_favorite(
     service: Annotated[FavoriteService, Depends(get_favorite_service)],
     current_user: Annotated[UserORM, Depends(get_current_user)],
 ) -> FavoriteStatus:
-    """Remove the given skate spot from the authenticated user's favourites."""
+    """Remove the given skate spot from the authenticated user's favorites."""
 
     try:
         return service.remove_favorite(spot_id, current_user.id)
@@ -80,7 +80,7 @@ async def toggle_favorite(
     service: Annotated[FavoriteService, Depends(get_favorite_service)],
     current_user: Annotated[UserORM, Depends(get_current_user)],
 ) -> FavoriteStatus:
-    """Toggle favourite status for the authenticated user."""
+    """Toggle favorite status for the authenticated user."""
 
     try:
         return service.toggle_favorite(spot_id, current_user.id)

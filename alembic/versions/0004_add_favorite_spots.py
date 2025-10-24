@@ -1,4 +1,4 @@
-"""Add favourite skate spots association table."""
+"""Add favorite skate spots association table."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ depends_on = None
 
 
 def upgrade() -> None:
-    """Create the favourite_spots association table."""
+    """Create the favorite_spots association table."""
 
     op.create_table(
         "favorite_spots",
@@ -43,7 +43,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Drop the favourite_spots association table."""
+    """Drop the favorite_spots association table."""
 
     op.drop_index(op.f("ix_favorite_spots_spot_id"), table_name="favorite_spots")
     op.drop_index(op.f("ix_favorite_spots_user_id"), table_name="favorite_spots")
