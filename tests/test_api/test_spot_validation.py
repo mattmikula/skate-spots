@@ -54,7 +54,9 @@ def test_create_spot_with_invalid_coordinates(client, auth_token):
     # Assert
     assert response.status_code == 422
     detail = response.json()["detail"]
-    assert "Invalid coordinates" in str(detail) or "coordinates" in str(detail).lower()
+    assert (
+        "Coordinates must be valid numbers" in str(detail) or "valid numbers" in str(detail).lower()
+    )
 
 
 def test_create_spot_with_valid_coordinates(client, auth_token):

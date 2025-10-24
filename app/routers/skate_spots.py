@@ -39,7 +39,17 @@ _TRUE_VALUES = {"true", "on", "1"}
 
 
 async def _parse_location_from_form(form) -> Location:
-    """Parse Location object from form data."""
+    """Parse Location object from form data.
+
+    Args:
+        form: Form data containing latitude, longitude, city, country, and optional address
+
+    Returns:
+        Location object with parsed coordinates and address information
+
+    Raises:
+        ValueError: If coordinates are missing or cannot be parsed as valid numbers
+    """
     lat_str = form.get("latitude")
     lng_str = form.get("longitude")
 
@@ -51,9 +61,7 @@ async def _parse_location_from_form(form) -> Location:
         latitude = float(lat_str)
         longitude = float(lng_str)
     except (ValueError, TypeError):
-        raise ValueError(
-            "Invalid coordinates. Please select a valid location on the map."
-        ) from None
+        raise ValueError("Coordinates must be valid numbers.") from None
 
     return Location(
         latitude=latitude,
