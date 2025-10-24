@@ -207,7 +207,7 @@ class SessionService:
         session_id: UUID,
         user: UserORM,
         status: SessionStatus,
-    ) -> Session:
+    ) -> Session | None:
         """Explicitly set the session status."""
 
         session = self._ensure_session(session_id)

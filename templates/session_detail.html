@@ -7,7 +7,7 @@
     <div class="breadcrumb">
         <a href="/skate-spots">Spots</a>
         <span>/</span>
-        <a href="/skate-spots">{{ spot.name }}</a>
+        <a href="/skate-spots/{{ spot.id }}">{{ spot.name }}</a>
         <span>/</span>
         <span>{{ session.title }}</span>
     </div>
@@ -132,7 +132,8 @@
                 </form>
 
                 {% if session.user_response %}
-                <form method="delete" action="/skate-spots/{{ spot.id }}/sessions/{{ session.id }}/rsvp" style="display: inline;">
+                <form method="post" action="/skate-spots/{{ spot.id }}/sessions/{{ session.id }}/rsvp" style="display: inline;">
+                    <input type="hidden" name="_method" value="delete" />
                     <button type="submit" class="btn btn-link">Withdraw RSVP</button>
                 </form>
                 {% endif %}
