@@ -1,7 +1,6 @@
 """Tests for skate spot location validation."""
 
 
-
 def test_create_spot_with_empty_coordinates(client, auth_token):
     """API rejects spot creation when coordinates are not provided."""
     # Arrange

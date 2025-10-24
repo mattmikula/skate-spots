@@ -185,6 +185,7 @@ Key configuration values:
 - `SKATE_SPOTS_DATABASE_URL` – Database connection string.
 - `SKATE_SPOTS_SECRET_KEY` – Secret used to sign JWT access tokens (change this in production).
 - `SKATE_SPOTS_ACCESS_TOKEN_EXPIRE_MINUTES` – Lifetime of authentication tokens (default 30 minutes).
+- `SKATE_SPOTS_GEOCODING_USER_AGENT` – User agent string for Nominatim geocoding requests (default: "skate-spots-app").
 
 ## 🚦 Rate Limiting
 

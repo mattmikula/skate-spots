@@ -36,6 +36,11 @@ class Settings(BaseSettings):
         alias="MEDIA_DIRECTORY",
     )
     media_url_path: str = Field(default="/media", alias="MEDIA_URL_PATH")
+    geocoding_user_agent: str = Field(
+        default="skate-spots-app",
+        alias="GEOCODING_USER_AGENT",
+        description="User agent string for geocoding API requests (Nominatim)",
+    )
 
     model_config = {
         "env_prefix": "SKATE_SPOTS_",

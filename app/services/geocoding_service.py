@@ -7,6 +7,8 @@ from typing import NamedTuple
 from geopy.exc import GeopyError
 from geopy.geocoders import Nominatim
 
+from app.core.config import get_settings
+
 
 class GeocodingResult(NamedTuple):
     """Result from a geocoding operation."""
@@ -21,9 +23,15 @@ class GeocodingResult(NamedTuple):
 class GeocodingService:
     """Service for geocoding operations using Nominatim (OpenStreetMap)."""
 
-    def __init__(self):
-        """Initialize the geocoding service."""
-        self.geolocator = Nominatim(user_agent="skate-spots-app")
+    def __init__(self, user_agent: str | None = None):
+        """Initialize the geocoding service.
+
+        Args:
+            user_agent: User agent string for API requests. If None, uses value from settings.
+        """
+        if user_agent is None:
+            user_agent = get_settings().geocoding_user_agent
+        self.geolocator = Nominatim(user_agent=user_agent)
 
     def reverse_geocode(self, latitude: float, longitude: float) -> GeocodingResult | None:
         """

@@ -201,9 +201,14 @@
 <script>
 // Initialize location map
 (function() {
+    // Constants
+    const DEFAULT_MAP_CENTER_LAT = 40.7128;  // New York City
+    const DEFAULT_MAP_CENTER_LNG = -74.0060;
+    const SEARCH_DEBOUNCE_MS = 300;
+
     // Default center (will be updated based on existing data or user's first click)
-    let defaultLat = {% if spot %}{{ spot.location.latitude }}{% else %}40.7128{% endif %};
-    let defaultLng = {% if spot %}{{ spot.location.longitude }}{% else %}-74.0060{% endif %};
+    let defaultLat = {% if spot %}{{ spot.location.latitude }}{% else %}DEFAULT_MAP_CENTER_LAT{% endif %};
+    let defaultLng = {% if spot %}{{ spot.location.longitude }}{% else %}DEFAULT_MAP_CENTER_LNG{% endif %};
 
     const map = L.map('location-map').setView([defaultLat, defaultLng], 13);
 
@@ -349,7 +354,7 @@
                     searchResults.innerHTML = '<div class="search-result-item">Error searching. Please try again.</div>';
                     searchResults.classList.add('visible');
                 });
-        }, 300);
+        }, SEARCH_DEBOUNCE_MS);
     });
 
     // Close search results when clicking outside
