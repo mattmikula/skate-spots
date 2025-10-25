@@ -217,9 +217,7 @@ class FollowRepository:
         result = self.session.execute(stmt)
         return result.scalars().all()
 
-    def iter_follower_ids_batched(
-        self, user_id: str, *, batch_size: int = 100
-    ) -> list[list[str]]:
+    def iter_follower_ids_batched(self, user_id: str, *, batch_size: int = 100) -> list[list[str]]:
         """Return follower user IDs for ``user_id`` in batches.
 
         This method is more memory-efficient for users with large numbers of followers.
@@ -232,9 +230,12 @@ class FollowRepository:
             List of batches, where each batch is a list of follower user IDs
         """
         # Get total count to calculate number of batches needed
-        total_count = self.session.execute(
-            select(func.count(UserFollowORM.id)).where(UserFollowORM.following_id == user_id)
-        ).scalar() or 0
+        total_count = (
+            self.session.execute(
+                select(func.count(UserFollowORM.id)).where(UserFollowORM.following_id == user_id)
+            ).scalar()
+            or 0
+        )
 
         if total_count == 0:
             return []
