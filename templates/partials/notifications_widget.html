@@ -30,7 +30,7 @@
                 <li class="notification-item {% if not notification.is_read %}notification-item--unread{% endif %}">
                     <div class="notification-item__content">
                         <div class="notification-message">
-                            {{ notification.message or notification.notification_type.value.replace("_", " ")|title }}
+                            {{ notification.message }}
                         </div>
                         <div class="notification-meta">
                             {% if notification.actor %}

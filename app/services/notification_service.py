@@ -269,13 +269,17 @@ class NotificationService:
         notification_type: str,
         actor: ActivityActor | None,
         metadata: dict | None,
-    ) -> str | None:
-        """Generate a short human-readable message."""
+    ) -> str:
+        """Generate a short human-readable message.
 
+        This method always returns a valid message string. If the notification
+        type is unrecognized, it returns a generic message.
+        """
         try:
             notification_enum = NotificationType(notification_type)
         except ValueError:  # pragma: no cover - defensive
-            return None
+            # Fallback for unrecognized notification types
+            return "New activity"
 
         name = self._actor_name(actor)
         source = (metadata or {}).get("source")
@@ -338,7 +342,8 @@ class NotificationService:
                 return f'{name} responded to your session "{session_title}"'
             return f"{name} updated an RSVP"
 
-        return None
+        # Defensive fallback for any unhandled notification types
+        return f"{name} has new activity"
 
 
 def get_notification_service(

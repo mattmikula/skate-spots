@@ -28,7 +28,7 @@ class Notification(BaseModel):
     id: UUID
     notification_type: NotificationType
     activity_id: UUID | None = Field(default=None, description="Related activity feed entry.")
-    message: str | None = Field(default=None, description="Human-friendly summary.")
+    message: str = Field(description="Human-friendly summary.")
     metadata: dict | None = Field(default=None, description="Additional context metadata.")
     is_read: bool = Field(default=False, description="Has the recipient read the notification?")
     created_at: datetime
