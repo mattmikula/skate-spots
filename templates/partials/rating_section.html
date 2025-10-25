@@ -1,5 +1,5 @@
 <div id="rating-section-{{ spot_id }}" class="spot-rating" hx-target="this">
-    <div class="rating-summary">
+    <div class="rating-summary" data-rating-count="{{ summary.ratings_count if summary and summary.ratings_count else 0 }}">
         {% if error %}
         <div class="rating-error">{{ error }}</div>
         {% elif message %}

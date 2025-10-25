@@ -13,6 +13,7 @@ A modern FastAPI application for sharing and discovering skateboarding spots aro
 - **Interactive Map Location Picker** with click-to-place markers, address search, and automatic geocoding for intuitive spot creation
 - **Geocoding API** for converting between addresses and coordinates using OpenStreetMap Nominatim
 - **User Profiles** with customizable bio, avatar, and location, plus activity statistics dashboard
+- **Tabbed Spot Detail Pages** with clean interface for Comments, Ratings, and Sessions, featuring badge indicators, deep linking, and smart tab memory
 - **User Ratings** so skaters can rate spots with 1-5 scores, manage their own feedback, and see community sentiment
 - **Community Comments** that let skaters share detailed feedback and discuss spots in real time via HTMX snippets and JSON APIs
 - **Inline Ratings UI** with HTMX-driven snippets that let logged-in users rate spots directly from the listings with instant feedback
