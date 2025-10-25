@@ -14,6 +14,7 @@ from fastapi import (
 )
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, ValidationError
+from starlette.datastructures import UploadFile as StarletteUploadFile
 
 from app.core.dependencies import get_current_user
 from app.core.rate_limiter import SKATE_SPOT_WRITE_LIMIT, rate_limited
@@ -88,7 +89,7 @@ def _extract_uploads(form, field_name: str) -> list[UploadFile]:
 
     uploads = []
     for value in form.getlist(field_name):
-        if isinstance(value, UploadFile):
+        if isinstance(value, UploadFile | StarletteUploadFile):
             uploads.append(value)
     return uploads
 
