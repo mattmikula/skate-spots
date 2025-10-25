@@ -30,12 +30,12 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.text("0"),
         ),
-        sa.Column("read_at", sa.DateTime(), nullable=True),
+        sa.Column("read_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column(
             "created_at",
-            sa.DateTime(),
+            sa.DateTime(timezone=True),
             nullable=False,
-            server_default=sa.func.now(),
+            server_default=sa.text("CURRENT_TIMESTAMP"),
         ),
         sa.ForeignKeyConstraint(
             ["user_id"],

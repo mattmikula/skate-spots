@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import delete, func, select, update
@@ -119,7 +119,7 @@ class NotificationRepository:
 
         if not notification.is_read:
             notification.is_read = True
-            notification.read_at = datetime.utcnow()
+            notification.read_at = datetime.now(UTC)
             self.session.commit()
             self.session.refresh(notification)
 
@@ -128,7 +128,7 @@ class NotificationRepository:
     def mark_all_as_read(self, user_id: str) -> int:
         """Mark all unread notifications for the user as read."""
 
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         result = self.session.execute(
             update(NotificationORM)
             .where(
