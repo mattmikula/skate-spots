@@ -89,7 +89,7 @@ def _extract_uploads(form, field_name: str) -> list[UploadFile]:
 
     uploads = []
     for value in form.getlist(field_name):
-        if isinstance(value, (UploadFile, StarletteUploadFile)):
+        if isinstance(value, UploadFile | StarletteUploadFile):
             uploads.append(value)
     return uploads
 
