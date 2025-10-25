@@ -236,26 +236,20 @@
     
     // Function to update badge counts
     function updateBadges() {
-        // Use setTimeout to wait for HTMX content to load
-        setTimeout(() => {
-            // Comments badge
-            const comments = document.querySelectorAll('#comment-section-{{ spot.id }} .comment-item');
-            updateBadge('comments-badge', comments.length);
-            
-            // Ratings badge
-            const ratingSummary = document.querySelector('#rating-section-{{ spot.id }} .rating-summary');
-            if (ratingSummary) {
-                const ratingText = ratingSummary.textContent;
-                const match = ratingText.match(/(\d+)\s+rating/);
-                if (match) {
-                    updateBadge('ratings-badge', parseInt(match[1]));
-                }
-            }
-            
-            // Sessions badge
-            const sessions = document.querySelectorAll('#session-section-{{ spot.id }} .session-card');
-            updateBadge('sessions-badge', sessions.length);
-        }, 500);
+        // Comments badge
+        const comments = document.querySelectorAll('#comment-section-{{ spot.id }} .comment-item');
+        updateBadge('comments-badge', comments.length);
+        
+        // Ratings badge - use data attribute instead of regex
+        const ratingSummary = document.querySelector('#rating-section-{{ spot.id }} .rating-summary');
+        if (ratingSummary) {
+            const ratingCount = parseInt(ratingSummary.getAttribute('data-rating-count')) || 0;
+            updateBadge('ratings-badge', ratingCount);
+        }
+        
+        // Sessions badge
+        const sessions = document.querySelectorAll('#session-section-{{ spot.id }} .session-card');
+        updateBadge('sessions-badge', sessions.length);
     }
     
     function updateBadge(badgeId, count) {
@@ -266,9 +260,16 @@
         }
     }
     
-    // Listen for HTMX events to update badges when content loads
-    document.addEventListener('htmx:afterSwap', function() {
-        updateBadges();
+    // Listen for HTMX events to update badges when spot tab content loads
+    document.addEventListener('htmx:afterSettle', function(event) {
+        const tabContentIds = [
+            'comment-section-{{ spot.id }}',
+            'rating-section-{{ spot.id }}',
+            'session-section-{{ spot.id }}'
+        ];
+        if (event.target && tabContentIds.includes(event.target.id)) {
+            updateBadges();
+        }
     });
     
     // Initialize when DOM is ready
