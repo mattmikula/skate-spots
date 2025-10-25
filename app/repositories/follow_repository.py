@@ -217,33 +217,23 @@ class FollowRepository:
         result = self.session.execute(stmt)
         return result.scalars().all()
 
-    def iter_follower_ids_batched(self, user_id: str, *, batch_size: int = 100) -> list[list[str]]:
-        """Return follower user IDs for ``user_id`` in batches.
+    def iter_follower_ids_batched(self, user_id: str, *, batch_size: int = 100):
+        """Yield follower user IDs for ``user_id`` in batches.
 
-        This method is more memory-efficient for users with large numbers of followers.
+        This generator method is memory-efficient for users with large numbers
+        of followers, as it yields batches one at a time without loading all
+        follower IDs into memory at once.
 
         Args:
             user_id: ID of the user whose followers to retrieve
-            batch_size: Number of follower IDs to return per batch
+            batch_size: Number of follower IDs to yield per batch
 
-        Returns:
-            List of batches, where each batch is a list of follower user IDs
+        Yields:
+            List of follower user IDs for each batch
         """
-        # Get total count to calculate number of batches needed
-        total_count = (
-            self.session.execute(
-                select(func.count(UserFollowORM.id)).where(UserFollowORM.following_id == user_id)
-            ).scalar()
-            or 0
-        )
-
-        if total_count == 0:
-            return []
-
-        batches = []
         offset = 0
 
-        while offset < total_count:
+        while True:
             result = self.session.execute(
                 select(UserFollowORM.follower_id)
                 .where(UserFollowORM.following_id == user_id)
@@ -251,8 +241,7 @@ class FollowRepository:
                 .offset(offset)
             )
             batch = result.scalars().all()
-            if batch:
-                batches.append(batch)
+            if not batch:
+                break
+            yield batch
             offset += batch_size
-
-        return batches
