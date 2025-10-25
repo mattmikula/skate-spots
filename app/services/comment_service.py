@@ -61,7 +61,7 @@ class CommentService:
     def add_comment(self, spot_id: uuid.UUID, user: UserORM, data: CommentCreate) -> list[Comment]:
         """Add a new comment to the skate spot and return the refreshed list."""
 
-        self._ensure_spot_exists(spot_id)
+        spot = self._ensure_spot_exists(spot_id)
         comment = self._comment_repository.create(spot_id, user.id, data)
         self._logger.info(
             "comment created",
@@ -74,7 +74,10 @@ class CommentService:
         if self._activity_service:
             try:
                 self._activity_service.record_spot_commented(
-                    str(user.id), str(spot_id), str(comment.id)
+                    str(user.id),
+                    str(spot_id),
+                    str(comment.id),
+                    spot_name=spot.name if spot else None,
                 )
             except Exception as e:
                 self._logger.warning("failed to record comment activity", error=str(e))

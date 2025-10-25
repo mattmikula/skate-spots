@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
+from uuid import uuid4
 
 import pytest
 
-from app.db.models import UserFollowORM, UserORM
+from app.db.models import SessionORM, SkateSpotORM, UserFollowORM, UserORM
+from app.models.notification import NotificationType
 from app.services.activity_service import ActivityService
+from app.services.notification_service import NotificationService
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -248,3 +252,137 @@ class TestActivityService:
         assert activity.actor is not None
         assert activity.actor.username == user1.username
         assert str(activity.actor.id) == user1.id
+
+    def test_followers_receive_notifications(
+        self,
+        activity_service: ActivityService,
+        db: Session,
+        users: tuple[UserORM, UserORM, UserORM],
+    ):
+        """Followers should receive notifications when followed users create content."""
+        follower, followed, _ = users
+        db.add(UserFollowORM(follower_id=follower.id, following_id=followed.id))
+        db.commit()
+
+        activity_service.record_spot_created(followed.id, "spot123", "Downtown Ledge")
+
+        notification_service = NotificationService(db)
+        response = notification_service.list_notifications(
+            str(follower.id),
+            include_read=True,
+            limit=10,
+            offset=0,
+        )
+        assert response.total == 1
+        notification = response.notifications[0]
+        assert notification.notification_type is NotificationType.SPOT_CREATED
+        assert notification.actor is not None and notification.actor.username == followed.username
+        assert (
+            notification.metadata is not None and notification.metadata.get("source") == "followers"
+        )
+
+    def test_spot_owner_notified_on_comment(
+        self,
+        activity_service: ActivityService,
+        db: Session,
+        users: tuple[UserORM, UserORM, UserORM],
+    ):
+        """Spot owners should be notified when others comment."""
+        owner, commenter, _ = users
+        spot = SkateSpotORM(
+            id=str(uuid4()),
+            name="Rail Yard",
+            description="Long handrail by the station",
+            spot_type="street",
+            difficulty="intermediate",
+            latitude=41.0,
+            longitude=-71.0,
+            city="Boston",
+            country="USA",
+            user_id=owner.id,
+        )
+        db.add(spot)
+        db.commit()
+
+        activity_service.record_spot_commented(
+            commenter.id,
+            spot.id,
+            str(uuid4()),
+            spot_name=spot.name,
+        )
+
+        notification_service = NotificationService(db)
+        response = notification_service.list_notifications(
+            str(owner.id),
+            include_read=True,
+            limit=10,
+            offset=0,
+        )
+        assert response.total == 1
+        notification = response.notifications[0]
+        assert notification.notification_type is NotificationType.SPOT_COMMENTED
+        assert notification.actor is not None and notification.actor.username == commenter.username
+        assert (
+            notification.metadata is not None
+            and notification.metadata.get("source") == "spot_owner"
+        )
+
+    def test_session_organizer_notified_on_rsvp(
+        self,
+        activity_service: ActivityService,
+        db: Session,
+        users: tuple[UserORM, UserORM, UserORM],
+    ):
+        """Session organizers should receive notifications when skaters RSVP."""
+        organizer, attendee, _ = users
+        spot = SkateSpotORM(
+            id=str(uuid4()),
+            name="City Plaza",
+            description="Open plaza with banks",
+            spot_type="plaza",
+            difficulty="beginner",
+            latitude=37.0,
+            longitude=-122.0,
+            city="San Francisco",
+            country="USA",
+            user_id=organizer.id,
+        )
+        db.add(spot)
+        start_time = datetime.utcnow() + timedelta(days=1)
+        end_time = start_time + timedelta(hours=2)
+        session = SessionORM(
+            id=str(uuid4()),
+            spot_id=spot.id,
+            organizer_id=organizer.id,
+            title="Morning Push",
+            description="Easy roll around before work",
+            start_time=start_time,
+            end_time=end_time,
+            status="scheduled",
+        )
+        db.add(session)
+        db.commit()
+
+        activity_service.record_session_rsvp(
+            attendee.id,
+            session.id,
+            str(uuid4()),
+            response="going",
+            session_title=session.title,
+        )
+
+        notification_service = NotificationService(db)
+        response = notification_service.list_notifications(
+            str(organizer.id),
+            include_read=True,
+            limit=10,
+            offset=0,
+        )
+        assert response.total == 1
+        notification = response.notifications[0]
+        assert notification.notification_type is NotificationType.SESSION_RSVP
+        assert notification.actor is not None and notification.actor.username == attendee.username
+        assert (
+            notification.metadata is not None
+            and notification.metadata.get("source") == "session_host"
+        )

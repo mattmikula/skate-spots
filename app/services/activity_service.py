@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Annotated, Any
 from fastapi import Depends
 
 from app.core.dependencies import get_db
+from app.core.logging import get_logger
 from app.models.activity import (
     Activity,
     ActivityActor,
@@ -17,6 +18,7 @@ from app.models.activity import (
 )
 from app.repositories.activity_repository import ActivityRepository
 from app.repositories.user_repository import UserRepository
+from app.services.notification_service import NotificationService
 
 if TYPE_CHECKING:
     from app.db.models import ActivityFeedORM
@@ -30,6 +32,8 @@ class ActivityService:
         self.db = db
         self.activity_repository = ActivityRepository(db)
         self.user_repository = UserRepository(db)
+        self.notification_service = NotificationService(db)
+        self.logger = get_logger(__name__)
 
     def record_spot_created(
         self, user_id: str, spot_id: str, spot_name: str | None = None
@@ -45,16 +49,23 @@ class ActivityService:
             Created ActivityFeedORM
         """
         metadata = {"spot_name": spot_name} if spot_name else None
-        return self.activity_repository.create_activity(
+        activity = self.activity_repository.create_activity(
             user_id=user_id,
             activity_type=ActivityType.SPOT_CREATED.value,
             target_type=TargetType.SPOT.value,
             target_id=spot_id,
             metadata=metadata,
         )
+        self.notification_service.notify_followers_of_activity(activity, metadata=metadata)
+        return activity
 
     def record_spot_rated(
-        self, user_id: str, spot_id: str, rating_id: str, score: int | None = None
+        self,
+        user_id: str,
+        spot_id: str,
+        rating_id: str,
+        score: int | None = None,
+        spot_name: str | None = None,
     ) -> ActivityFeedORM:
         """Record that a user rated a spot.
 
@@ -63,41 +74,87 @@ class ActivityService:
             spot_id: ID of the rated spot
             rating_id: ID of the rating
             score: Optional rating score
+            spot_name: Optional display name of the spot
 
         Returns:
             Created ActivityFeedORM
         """
-        metadata = {"spot_id": spot_id, "score": score} if score else {"spot_id": spot_id}
-        return self.activity_repository.create_activity(
+        metadata: dict[str, object] = {"spot_id": spot_id}
+        if score is not None:
+            metadata["score"] = score
+        if spot_name:
+            metadata["spot_name"] = spot_name
+
+        activity = self.activity_repository.create_activity(
             user_id=user_id,
             activity_type=ActivityType.SPOT_RATED.value,
             target_type=TargetType.RATING.value,
             target_id=rating_id,
             metadata=metadata,
         )
+        owner_id = self.notification_service.notify_spot_owner(
+            spot_id,
+            activity,
+            metadata=metadata,
+            actor_id=user_id,
+        )
+        exclude = {owner_id} if owner_id else None
+        self.notification_service.notify_followers_of_activity(
+            activity,
+            metadata=metadata,
+            exclude_user_ids=exclude,
+        )
+        return activity
 
-    def record_spot_commented(self, user_id: str, spot_id: str, comment_id: str) -> ActivityFeedORM:
+    def record_spot_commented(
+        self,
+        user_id: str,
+        spot_id: str,
+        comment_id: str,
+        spot_name: str | None = None,
+    ) -> ActivityFeedORM:
         """Record that a user commented on a spot.
 
         Args:
             user_id: ID of the user
             spot_id: ID of the spot
             comment_id: ID of the comment
+            spot_name: Optional display name of the spot
 
         Returns:
             Created ActivityFeedORM
         """
-        metadata = {"spot_id": spot_id}
-        return self.activity_repository.create_activity(
+        metadata: dict[str, object] = {"spot_id": spot_id}
+        if spot_name:
+            metadata["spot_name"] = spot_name
+
+        activity = self.activity_repository.create_activity(
             user_id=user_id,
             activity_type=ActivityType.SPOT_COMMENTED.value,
             target_type=TargetType.COMMENT.value,
             target_id=comment_id,
             metadata=metadata,
         )
+        owner_id = self.notification_service.notify_spot_owner(
+            spot_id,
+            activity,
+            metadata=metadata,
+            actor_id=user_id,
+        )
+        exclude = {owner_id} if owner_id else None
+        self.notification_service.notify_followers_of_activity(
+            activity,
+            metadata=metadata,
+            exclude_user_ids=exclude,
+        )
+        return activity
 
     def record_spot_favorited(
-        self, user_id: str, spot_id: str, favorite_id: str | None = None
+        self,
+        user_id: str,
+        spot_id: str,
+        favorite_id: str | None = None,
+        spot_name: str | None = None,
     ) -> ActivityFeedORM:
         """Record that a user favorited a spot.
 
@@ -105,19 +162,36 @@ class ActivityService:
             user_id: ID of the user
             spot_id: ID of the favorited spot
             favorite_id: Optional ID of the favorite record
+            spot_name: Optional display name of the spot
 
         Returns:
             Created ActivityFeedORM
         """
-        metadata = {"spot_id": spot_id}
+        metadata: dict[str, object] = {"spot_id": spot_id}
+        if spot_name:
+            metadata["spot_name"] = spot_name
+
         target_id = favorite_id or spot_id  # Use favorite_id if available, otherwise spot_id
-        return self.activity_repository.create_activity(
+        activity = self.activity_repository.create_activity(
             user_id=user_id,
             activity_type=ActivityType.SPOT_FAVORITED.value,
             target_type=TargetType.FAVORITE.value,
             target_id=target_id,
             metadata=metadata,
         )
+        owner_id = self.notification_service.notify_spot_owner(
+            spot_id,
+            activity,
+            metadata=metadata,
+            actor_id=user_id,
+        )
+        exclude = {owner_id} if owner_id else None
+        self.notification_service.notify_followers_of_activity(
+            activity,
+            metadata=metadata,
+            exclude_user_ids=exclude,
+        )
+        return activity
 
     def record_session_created(
         self, user_id: str, session_id: str, session_title: str | None = None
@@ -133,13 +207,15 @@ class ActivityService:
             Created ActivityFeedORM
         """
         metadata = {"session_title": session_title} if session_title else None
-        return self.activity_repository.create_activity(
+        activity = self.activity_repository.create_activity(
             user_id=user_id,
             activity_type=ActivityType.SESSION_CREATED.value,
             target_type=TargetType.SESSION.value,
             target_id=session_id,
             metadata=metadata,
         )
+        self.notification_service.notify_followers_of_activity(activity, metadata=metadata)
+        return activity
 
     def record_session_rsvp(
         self,
@@ -147,6 +223,7 @@ class ActivityService:
         session_id: str,
         rsvp_id: str,
         response: str | None = None,
+        session_title: str | None = None,
     ) -> ActivityFeedORM:
         """Record that a user RSVPed to a session.
 
@@ -155,6 +232,7 @@ class ActivityService:
             session_id: ID of the session
             rsvp_id: ID of the RSVP record
             response: Optional RSVP response (going, maybe, waitlist)
+            session_title: Optional session title
 
         Returns:
             Created ActivityFeedORM
@@ -164,13 +242,29 @@ class ActivityService:
             if response
             else {"session_id": session_id}
         )
-        return self.activity_repository.create_activity(
+        if session_title:
+            metadata["session_title"] = session_title
+
+        activity = self.activity_repository.create_activity(
             user_id=user_id,
             activity_type=ActivityType.SESSION_RSVP.value,
             target_type=TargetType.RSVP.value,
             target_id=rsvp_id,
             metadata=metadata,
         )
+        organizer_id = self.notification_service.notify_session_organizer(
+            session_id,
+            activity,
+            metadata=metadata,
+            actor_id=user_id,
+        )
+        exclude = {organizer_id} if organizer_id else None
+        self.notification_service.notify_followers_of_activity(
+            activity,
+            metadata=metadata,
+            exclude_user_ids=exclude,
+        )
+        return activity
 
     def get_personalized_feed(
         self, user_id: str, limit: int = 20, offset: int = 0
@@ -257,7 +351,11 @@ class ActivityService:
         Returns:
             Number of activities deleted
         """
-        return self.activity_repository.delete_activity_by_target(target_type, target_id)
+        activities = self.activity_repository.get_activities_for_target(target_type, target_id)
+        deleted = self.activity_repository.delete_activity_by_target(target_type, target_id)
+        for activity in activities:
+            self.notification_service.delete_for_activity(activity.id)
+        return deleted
 
     def _enrich_activities(self, orm_activities: list[ActivityFeedORM]) -> list[Activity]:
         """Convert ORM activities to Pydantic models with enriched actor info.

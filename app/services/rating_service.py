@@ -52,7 +52,7 @@ class RatingService:
     ) -> RatingSummaryResponse:
         """Create or update a user's rating for a given spot."""
 
-        self._ensure_spot_exists(spot_id)
+        spot = self._ensure_spot_exists(spot_id)
         rating = self._rating_repository.upsert(spot_id, user_id, rating_data)
         summary = self._rating_repository.get_summary(spot_id)
         self._logger.info(
@@ -66,7 +66,11 @@ class RatingService:
         if self._activity_service:
             try:
                 self._activity_service.record_spot_rated(
-                    user_id, str(spot_id), str(rating.id), rating.score
+                    user_id,
+                    str(spot_id),
+                    str(rating.id),
+                    rating.score,
+                    spot_name=spot.name if spot else None,
                 )
             except Exception as e:
                 self._logger.warning("failed to record rating activity", error=str(e))

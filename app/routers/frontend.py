@@ -44,6 +44,10 @@ from app.services.favorite_service import (
 from app.services.favorite_service import (
     SpotNotFoundError as FavoriteSpotNotFoundError,
 )
+from app.services.notification_service import (
+    NotificationService,
+    get_notification_service,
+)
 from app.services.rating_service import (
     RatingNotFoundError,
     RatingService,
@@ -186,6 +190,39 @@ def _is_htmx(request: Request) -> bool:
     return request.headers.get("HX-Request", "").lower() == "true"
 
 
+def _notification_context(
+    request: Request,
+    user: UserORM,
+    notification_service: NotificationService,
+) -> dict[str, object]:
+    """Build template context for the notification widget."""
+
+    data = notification_service.list_notifications(
+        str(user.id),
+        include_read=True,
+        limit=10,
+        offset=0,
+    )
+    return {
+        "request": request,
+        "current_user": user,
+        "notifications": data.notifications,
+        "unread_count": data.unread_count,
+        "has_more": data.has_more,
+        "total": data.total,
+        "limit": data.limit,
+    }
+
+
+def _render_notification_widget(
+    request: Request,
+    user: UserORM,
+    notification_service: NotificationService,
+):
+    context = _notification_context(request, user, notification_service)
+    return templates.TemplateResponse("partials/notifications_widget.html", context)
+
+
 def _comment_context(
     request: Request,
     spot_id: UUID,
@@ -278,6 +315,45 @@ def _session_form_payload(form) -> tuple[dict[str, object], dict[str, str]]:
     if not form_data["capacity"]:
         payload["capacity"] = None
     return payload, form_data
+
+
+@router.get("/notifications/widget", response_class=HTMLResponse)
+async def notifications_widget(
+    request: Request,
+    current_user: Annotated[UserORM | None, Depends(get_optional_user)],
+    notification_service: Annotated[NotificationService, Depends(get_notification_service)],
+) -> HTMLResponse:
+    """Return the notification widget for the navigation bar."""
+
+    if current_user is None:
+        return HTMLResponse('<div id="notification-widget"></div>')
+
+    return _render_notification_widget(request, current_user, notification_service)
+
+
+@router.post("/notifications/mark-all", response_class=HTMLResponse)
+async def notifications_mark_all(
+    request: Request,
+    current_user: Annotated[UserORM, Depends(get_current_user)],
+    notification_service: Annotated[NotificationService, Depends(get_notification_service)],
+) -> HTMLResponse:
+    """Handle mark-all-read actions from the widget."""
+
+    notification_service.mark_all_as_read(str(current_user.id))
+    return _render_notification_widget(request, current_user, notification_service)
+
+
+@router.post("/notifications/{notification_id}/read", response_class=HTMLResponse)
+async def notifications_mark_read(
+    request: Request,
+    notification_id: UUID,
+    current_user: Annotated[UserORM, Depends(get_current_user)],
+    notification_service: Annotated[NotificationService, Depends(get_notification_service)],
+) -> HTMLResponse:
+    """Mark a single notification as read and refresh the widget."""
+
+    notification_service.mark_as_read(str(notification_id), str(current_user.id))
+    return _render_notification_widget(request, current_user, notification_service)
 
 
 def _format_validation_errors(error: ValidationError) -> dict[str, list[str]]:

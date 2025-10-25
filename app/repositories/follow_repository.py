@@ -196,3 +196,52 @@ class FollowRepository:
             followers_count=followers_count,
             following_count=following_count,
         )
+
+    def list_follower_ids(self, user_id: str, *, limit: int | None = None) -> list[str]:
+        """Return follower user IDs for ``user_id``.
+
+        Args:
+            user_id: ID of the user whose followers to retrieve
+            limit: Optional maximum number of follower IDs to return.
+                   If None, returns all followers (use with caution for users
+                   with many followers).
+
+        Returns:
+            List of user IDs for users following the specified user
+        """
+        stmt = select(UserFollowORM.follower_id).where(UserFollowORM.following_id == user_id)
+
+        if limit is not None:
+            stmt = stmt.limit(limit)
+
+        result = self.session.execute(stmt)
+        return result.scalars().all()
+
+    def iter_follower_ids_batched(self, user_id: str, *, batch_size: int = 100):
+        """Yield follower user IDs for ``user_id`` in batches.
+
+        This generator method is memory-efficient for users with large numbers
+        of followers, as it yields batches one at a time without loading all
+        follower IDs into memory at once.
+
+        Args:
+            user_id: ID of the user whose followers to retrieve
+            batch_size: Number of follower IDs to yield per batch
+
+        Yields:
+            List of follower user IDs for each batch
+        """
+        offset = 0
+
+        while True:
+            result = self.session.execute(
+                select(UserFollowORM.follower_id)
+                .where(UserFollowORM.following_id == user_id)
+                .limit(batch_size)
+                .offset(offset)
+            )
+            batch = result.scalars().all()
+            if not batch:
+                break
+            yield batch
+            offset += batch_size

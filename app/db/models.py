@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import (
@@ -94,6 +94,12 @@ class UserORM(Base):
     activities: Mapped[list[ActivityFeedORM]] = relationship(
         "ActivityFeedORM",
         back_populates="actor",
+        cascade="all, delete-orphan",
+    )
+    notifications: Mapped[list[NotificationORM]] = relationship(
+        "NotificationORM",
+        back_populates="user",
+        foreign_keys="NotificationORM.user_id",
         cascade="all, delete-orphan",
     )
 
@@ -306,6 +312,46 @@ class ActivityFeedORM(Base):
     )
 
     actor: Mapped[UserORM] = relationship("UserORM", back_populates="activities")
+
+
+class NotificationORM(Base):
+    """Database model representing a user notification."""
+
+    __tablename__ = "notifications"
+    __table_args__ = (
+        CheckConstraint(
+            "notification_type IN ('spot_created', 'spot_rated', 'spot_commented', 'spot_favorited', 'session_created', 'session_rsvp')",
+            name="ck_notifications_type",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    actor_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    activity_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("activity_feed.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    notification_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    notification_metadata: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+        server_default=func.now(),
+        index=True,
+    )
+
+    user: Mapped[UserORM] = relationship(
+        "UserORM", foreign_keys=[user_id], back_populates="notifications"
+    )
+    actor: Mapped[UserORM | None] = relationship("UserORM", foreign_keys=[actor_id])
+    activity: Mapped[ActivityFeedORM | None] = relationship("ActivityFeedORM")
 
 
 class SessionORM(Base):
