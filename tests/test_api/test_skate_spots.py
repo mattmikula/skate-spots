@@ -137,7 +137,7 @@ def test_create_spot_with_photo_upload(client, auth_token):
     assert photo["original_filename"] == "spot.jpg"
     assert photo["path"].endswith(".jpg")
 
-    # Cleanup stored media artefact to avoid bleeding into other tests.
+    # Cleanup stored media artifact to avoid bleeding into other tests.
     delete_photo(photo["path"])
 
 
