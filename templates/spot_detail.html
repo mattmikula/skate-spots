@@ -77,47 +77,206 @@
             {% endif %}
         </div>
 
-        <!-- Sessions Section -->
-        <div class="spot-detail-section">
-            <h2>Sessions</h2>
-            <div
-                class="spot-sessions-container"
-                hx-get="/skate-spots/{{ spot.id }}/sessions-section"
-                hx-trigger="load"
-                hx-target="this"
-                hx-swap="outerHTML"
-            >
-                <div class="section-loading">Loading sessions...</div>
+        <!-- Interactive Sections with Tabs -->
+        <div class="spot-detail-tabs">
+            <div class="tab-buttons">
+                <button class="tab-button active" data-tab="comments">
+                    <span class="tab-icon">💬</span>
+                    <span class="tab-label">Comments</span>
+                    <span class="tab-badge" id="comments-badge"></span>
+                </button>
+                <button class="tab-button" data-tab="ratings">
+                    <span class="tab-icon">⭐</span>
+                    <span class="tab-label">Ratings</span>
+                    <span class="tab-badge" id="ratings-badge"></span>
+                </button>
+                <button class="tab-button" data-tab="sessions">
+                    <span class="tab-icon">📅</span>
+                    <span class="tab-label">Sessions</span>
+                    <span class="tab-badge" id="sessions-badge"></span>
+                </button>
             </div>
-        </div>
 
-        <!-- Ratings Section -->
-        <div class="spot-detail-section">
-            <h2>Ratings</h2>
-            <div
-                class="spot-rating-container"
-                hx-get="/skate-spots/{{ spot.id }}/rating-section"
-                hx-trigger="load"
-                hx-target="this"
-                hx-swap="outerHTML"
-            >
-                <div class="section-loading">Loading ratings...</div>
+            <!-- Comments Section -->
+            <div class="tab-content active" data-tab-content="comments">
+                <div
+                    class="spot-comments-container"
+                    hx-get="/skate-spots/{{ spot.id }}/comments-section"
+                    hx-trigger="load"
+                    hx-target="this"
+                    hx-swap="outerHTML"
+                >
+                    <div class="section-loading">Loading comments...</div>
+                </div>
             </div>
-        </div>
 
-        <!-- Comments Section -->
-        <div class="spot-detail-section">
-            <h2>Comments</h2>
-            <div
-                class="spot-comments-container"
-                hx-get="/skate-spots/{{ spot.id }}/comments-section"
-                hx-trigger="load"
-                hx-target="this"
-                hx-swap="outerHTML"
-            >
-                <div class="section-loading">Loading comments...</div>
+            <!-- Ratings Section -->
+            <div class="tab-content" data-tab-content="ratings">
+                <div
+                    class="spot-rating-container"
+                    hx-get="/skate-spots/{{ spot.id }}/rating-section"
+                    hx-trigger="revealed"
+                    hx-target="this"
+                    hx-swap="outerHTML"
+                >
+                    <div class="section-loading">Loading ratings...</div>
+                </div>
+            </div>
+
+            <!-- Sessions Section -->
+            <div class="tab-content" data-tab-content="sessions">
+                <div
+                    class="spot-sessions-container"
+                    hx-get="/skate-spots/{{ spot.id }}/sessions-section"
+                    hx-trigger="revealed"
+                    hx-target="this"
+                    hx-swap="outerHTML"
+                >
+                    <div class="section-loading">Loading sessions...</div>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+// Enhanced Tab switching functionality with deep linking and badges
+(function() {
+    const SPOT_ID = '{{ spot.id }}';
+    const STORAGE_KEY = `spot-${SPOT_ID}-last-tab`;
+    
+    // Initialize tab system
+    function initTabs() {
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        // Function to switch to a specific tab
+        function switchToTab(targetTab, updateHistory = true) {
+            // Remove active class from all buttons and contents
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+            
+            // Add active class to target button and content
+            const targetButton = document.querySelector(`[data-tab="${targetTab}"]`);
+            const targetContent = document.querySelector(`[data-tab-content="${targetTab}"]`);
+            
+            if (targetButton && targetContent) {
+                targetButton.classList.add('active');
+                targetContent.classList.add('active');
+                
+                // Update URL hash without scrolling
+                if (updateHistory) {
+                    history.replaceState(null, null, `#${targetTab}`);
+                }
+                
+                // Save to localStorage
+                try {
+                    localStorage.setItem(STORAGE_KEY, targetTab);
+                } catch (e) {
+                    // localStorage might not be available
+                }
+                
+                // Trigger HTMX load for tabs that use 'revealed' trigger
+                const htmxElement = targetContent.querySelector('[hx-trigger="revealed"]');
+                if (htmxElement && !htmxElement.classList.contains('htmx-loaded')) {
+                    htmx.trigger(htmxElement, 'revealed');
+                    htmxElement.classList.add('htmx-loaded');
+                }
+            }
+        }
+        
+        // Click handlers for tab buttons
+        tabButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const targetTab = this.getAttribute('data-tab');
+                switchToTab(targetTab);
+            });
+        });
+        
+        // Deep linking: Check URL hash on load
+        function initializeActiveTab() {
+            const hash = window.location.hash.slice(1); // Remove the #
+            const validTabs = ['comments', 'ratings', 'sessions'];
+            
+            if (hash && validTabs.includes(hash)) {
+                // URL hash takes precedence
+                switchToTab(hash, false);
+            } else {
+                // Try localStorage
+                try {
+                    const lastTab = localStorage.getItem(STORAGE_KEY);
+                    if (lastTab && validTabs.includes(lastTab)) {
+                        switchToTab(lastTab, false);
+                        return;
+                    }
+                } catch (e) {
+                    // localStorage not available
+                }
+                
+                // Default to comments and update hash
+                switchToTab('comments', false);
+            }
+        }
+        
+        // Handle browser back/forward with hash changes
+        window.addEventListener('hashchange', function() {
+            const hash = window.location.hash.slice(1);
+            const validTabs = ['comments', 'ratings', 'sessions'];
+            if (hash && validTabs.includes(hash)) {
+                switchToTab(hash, false);
+            }
+        });
+        
+        // Initialize the active tab
+        initializeActiveTab();
+        
+        // Update badges after HTMX loads content
+        updateBadges();
+    }
+    
+    // Function to update badge counts
+    function updateBadges() {
+        // Use setTimeout to wait for HTMX content to load
+        setTimeout(() => {
+            // Comments badge
+            const comments = document.querySelectorAll('#comment-section-{{ spot.id }} .comment-item');
+            updateBadge('comments-badge', comments.length);
+            
+            // Ratings badge
+            const ratingSummary = document.querySelector('#rating-section-{{ spot.id }} .rating-summary');
+            if (ratingSummary) {
+                const ratingText = ratingSummary.textContent;
+                const match = ratingText.match(/(\d+)\s+rating/);
+                if (match) {
+                    updateBadge('ratings-badge', parseInt(match[1]));
+                }
+            }
+            
+            // Sessions badge
+            const sessions = document.querySelectorAll('#session-section-{{ spot.id }} .session-card');
+            updateBadge('sessions-badge', sessions.length);
+        }, 500);
+    }
+    
+    function updateBadge(badgeId, count) {
+        const badge = document.getElementById(badgeId);
+        if (badge && count > 0) {
+            badge.textContent = count;
+            badge.classList.add('visible');
+        }
+    }
+    
+    // Listen for HTMX events to update badges when content loads
+    document.addEventListener('htmx:afterSwap', function() {
+        updateBadges();
+    });
+    
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initTabs);
+    } else {
+        initTabs();
+    }
+})();
+</script>
 {% endblock %}
