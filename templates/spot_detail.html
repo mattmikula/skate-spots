@@ -173,7 +173,7 @@
                 try {
                     localStorage.setItem(STORAGE_KEY, targetTab);
                 } catch (e) {
-                    // localStorage might not be available
+                    // localStorage might not be available in private browsing mode or when cookies are disabled
                 }
                 
                 // Trigger HTMX load for tabs that use 'revealed' trigger
@@ -210,7 +210,7 @@
                         return;
                     }
                 } catch (e) {
-                    // localStorage not available
+                    // localStorage may not be available in private browsing mode or when cookies/storage are disabled
                 }
                 
                 // Default to comments and update hash

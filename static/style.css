@@ -1316,10 +1316,6 @@ footer {
     display: inline-block;
 }
 
-.tab-button.active .tab-badge {
-    background: var(--color-primary);
-}
-
 .tab-button:hover {
     color: var(--color-primary);
     background: var(--color-gray-50);
