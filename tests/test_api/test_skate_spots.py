@@ -1,10 +1,12 @@
 """Tests for skate spots API endpoints."""
 
+from io import BytesIO
 from uuid import uuid4
 
 import pytest
 
 from app.models.skate_spot import Difficulty, SpotType
+from app.services.photo_storage import delete_photo
 
 
 @pytest.fixture
@@ -98,6 +100,45 @@ def test_create_spot(client, sample_spot_payload, auth_token):
     assert location["latitude"] == 40.7128
     assert location["longitude"] == -74.0060
     assert location["city"] == "New York"
+
+
+def test_create_spot_with_photo_upload(client, auth_token):
+    """Multipart form submissions should persist uploaded photos."""
+
+    data = {
+        "name": "Photo Spot",
+        "description": "Includes a photo upload",
+        "spot_type": SpotType.PARK.value,
+        "difficulty": Difficulty.BEGINNER.value,
+        "latitude": "34.0522",
+        "longitude": "-118.2437",
+        "city": "Los Angeles",
+        "country": "USA",
+        "is_public": "on",
+    }
+    files = [
+        (
+            "photo_files",
+            ("spot.jpg", BytesIO(b"fakejpegdata"), "image/jpeg"),
+        )
+    ]
+
+    response = client.post(
+        "/api/v1/skate-spots/",
+        data=data,
+        files=files,
+        cookies={"access_token": auth_token},
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert len(payload["photos"]) == 1
+    photo = payload["photos"][0]
+    assert photo["original_filename"] == "spot.jpg"
+    assert photo["path"].endswith(".jpg")
+
+    # Cleanup stored media artefact to avoid bleeding into other tests.
+    delete_photo(photo["path"])
 
 
 def test_create_spot_invalid_data(client, auth_token):
