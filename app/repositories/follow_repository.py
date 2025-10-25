@@ -197,10 +197,61 @@ class FollowRepository:
             following_count=following_count,
         )
 
-    def list_follower_ids(self, user_id: str) -> list[str]:
-        """Return follower user IDs for ``user_id``."""
+    def list_follower_ids(self, user_id: str, *, limit: int | None = None) -> list[str]:
+        """Return follower user IDs for ``user_id``.
 
-        result = self.session.execute(
-            select(UserFollowORM.follower_id).where(UserFollowORM.following_id == user_id)
-        )
+        Args:
+            user_id: ID of the user whose followers to retrieve
+            limit: Optional maximum number of follower IDs to return.
+                   If None, returns all followers (use with caution for users
+                   with many followers).
+
+        Returns:
+            List of user IDs for users following the specified user
+        """
+        stmt = select(UserFollowORM.follower_id).where(UserFollowORM.following_id == user_id)
+
+        if limit is not None:
+            stmt = stmt.limit(limit)
+
+        result = self.session.execute(stmt)
         return result.scalars().all()
+
+    def iter_follower_ids_batched(
+        self, user_id: str, *, batch_size: int = 100
+    ) -> list[list[str]]:
+        """Return follower user IDs for ``user_id`` in batches.
+
+        This method is more memory-efficient for users with large numbers of followers.
+
+        Args:
+            user_id: ID of the user whose followers to retrieve
+            batch_size: Number of follower IDs to return per batch
+
+        Returns:
+            List of batches, where each batch is a list of follower user IDs
+        """
+        # Get total count to calculate number of batches needed
+        total_count = self.session.execute(
+            select(func.count(UserFollowORM.id)).where(UserFollowORM.following_id == user_id)
+        ).scalar() or 0
+
+        if total_count == 0:
+            return []
+
+        batches = []
+        offset = 0
+
+        while offset < total_count:
+            result = self.session.execute(
+                select(UserFollowORM.follower_id)
+                .where(UserFollowORM.following_id == user_id)
+                .limit(batch_size)
+                .offset(offset)
+            )
+            batch = result.scalars().all()
+            if batch:
+                batches.append(batch)
+            offset += batch_size
+
+        return batches

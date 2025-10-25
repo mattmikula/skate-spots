@@ -98,28 +98,39 @@ class NotificationService:
         metadata: dict | None = None,
         exclude_user_ids: set[str] | None = None,
     ) -> None:
-        """Send a notification to followers of the acting user."""
+        """Send a notification to followers of the acting user.
 
-        follower_ids = self._follows.list_follower_ids(activity.user_id)
+        This method uses batched processing to efficiently handle users with
+        large numbers of followers without loading all follower IDs into memory
+        at once.
+        """
         excluded = exclude_user_ids or set()
-        payloads = [
-            NotificationCreateData(
-                user_id=follower_id,
-                actor_id=activity.user_id,
-                activity_id=activity.id,
-                notification_type=activity.activity_type,
-                metadata=self._augment_metadata(metadata, source="followers"),
-            )
-            for follower_id in follower_ids
-            if follower_id not in excluded and follower_id != activity.user_id
-        ]
-        if not payloads:
-            return
 
-        try:
-            self._notifications.bulk_create(payloads)
-        except Exception as exc:  # pragma: no cover - defensive logging
-            self._logger.warning("failed to create follower notifications", error=str(exc))
+        # Process followers in batches for memory efficiency
+        batches = self._follows.iter_follower_ids_batched(activity.user_id, batch_size=100)
+
+        for follower_batch in batches:
+            payloads = [
+                NotificationCreateData(
+                    user_id=follower_id,
+                    actor_id=activity.user_id,
+                    activity_id=activity.id,
+                    notification_type=activity.activity_type,
+                    metadata=self._augment_metadata(metadata, source="followers"),
+                )
+                for follower_id in follower_batch
+                if follower_id not in excluded and follower_id != activity.user_id
+            ]
+
+            if not payloads:
+                continue
+
+            try:
+                self._notifications.bulk_create(payloads)
+            except Exception as exc:  # pragma: no cover - defensive logging
+                self._logger.warning(
+                    "failed to create follower notifications for batch", error=str(exc)
+                )
 
     def notify_spot_owner(
         self,
