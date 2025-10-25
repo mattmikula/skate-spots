@@ -286,6 +286,7 @@ class SessionService:
                 session_id=str(session_id),
                 rsvp_id=str(rsvp.id),
                 response=payload.response.value,
+                session_title=updated_session.title if updated_session else None,
             )
 
         self._maybe_promote_waitlist(updated_session)

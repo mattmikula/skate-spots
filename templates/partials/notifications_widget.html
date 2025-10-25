@@ -1,0 +1,68 @@
+<div id="notification-widget" class="notification-widget">
+    <details class="notification-menu">
+        <summary class="notification-summary">
+            <span class="notification-icon" aria-hidden="true">🔔</span>
+            {% if unread_count > 0 %}
+            <span class="notification-badge" aria-label="{{ unread_count }} unread notifications">
+                {{ unread_count }}
+            </span>
+            {% endif %}
+        </summary>
+        <div class="notification-panel">
+            <header class="notification-header">
+                <span>Notifications</span>
+                <button
+                    class="notification-action"
+                    type="button"
+                    hx-post="/notifications/mark-all"
+                    hx-target="#notification-widget"
+                    hx-swap="outerHTML"
+                    hx-indicator=".notification-indicator"
+                    {% if unread_count == 0 %}disabled{% endif %}
+                >
+                    Mark all read
+                </button>
+            </header>
+            <div class="notification-indicator" aria-hidden="true"></div>
+            {% if notifications %}
+            <ul class="notification-list">
+                {% for notification in notifications %}
+                <li class="notification-item {% if not notification.is_read %}notification-item--unread{% endif %}">
+                    <div class="notification-item__content">
+                        <div class="notification-message">
+                            {{ notification.message or notification.notification_type.value.replace("_", " ")|title }}
+                        </div>
+                        <div class="notification-meta">
+                            {% if notification.actor %}
+                                <span class="notification-actor">@{{ notification.actor.username }}</span>
+                            {% endif %}
+                            <time datetime="{{ notification.created_at.isoformat() }}">
+                                {{ notification.created_at.strftime("%b %d, %I:%M %p") }}
+                            </time>
+                        </div>
+                    </div>
+                    {% if not notification.is_read %}
+                    <button
+                        class="notification-mark-read"
+                        type="button"
+                        hx-post="/notifications/{{ notification.id }}/read"
+                        hx-target="#notification-widget"
+                        hx-swap="outerHTML"
+                    >
+                        Mark read
+                    </button>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% if has_more %}
+            <p class="notification-footer">
+                Showing latest {{ notifications|length }} of {{ total }}.
+            </p>
+            {% endif %}
+            {% else %}
+            <p class="notification-empty">You're all caught up.</p>
+            {% endif %}
+        </div>
+    </details>
+</div>

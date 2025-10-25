@@ -15,6 +15,7 @@ from app.routers import (
     favorites,
     frontend,
     geocoding,
+    notifications,
     ratings,
     sessions,
     skate_spots,
@@ -49,6 +50,7 @@ app.include_router(ratings.router, prefix="/api/v1")
 app.include_router(comments.router, prefix="/api/v1")
 app.include_router(sessions.router, prefix="/api/v1")
 app.include_router(geocoding.router, prefix="/api/v1")
+app.include_router(notifications.router, prefix="/api/v1")
 
 
 @app.on_event("startup")

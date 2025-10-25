@@ -35,7 +35,7 @@ class FavoriteService:
     def add_favorite(self, spot_id: UUID, user_id: str) -> FavoriteStatus:
         """Ensure the spot is marked as a favorite for the user."""
 
-        self._ensure_spot_exists(spot_id)
+        spot = self._ensure_spot_exists(spot_id)
         if not self._favorite_repository.exists(user_id, spot_id):
             self._favorite_repository.add(user_id, spot_id)
             self._logger.info("favorite added", spot_id=str(spot_id), user_id=user_id)
@@ -43,7 +43,11 @@ class FavoriteService:
             # Record activity
             if self._activity_service:
                 try:
-                    self._activity_service.record_spot_favorited(user_id, str(spot_id))
+                    self._activity_service.record_spot_favorited(
+                        user_id,
+                        str(spot_id),
+                        spot_name=spot.name,
+                    )
                 except Exception as e:
                     self._logger.warning("failed to record favorite activity", error=str(e))
         else:

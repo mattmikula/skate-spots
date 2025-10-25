@@ -1,10 +1,16 @@
 """Tests for frontend HTML endpoints."""
 
 import copy
+from uuid import uuid4
 
 import pytest
 
+from app.db.models import UserORM
 from app.models.skate_spot import Difficulty, SpotType
+from app.repositories.notification_repository import (
+    NotificationCreateData,
+    NotificationRepository,
+)
 from app.repositories.user_repository import UserRepository
 
 
@@ -197,6 +203,50 @@ def test_rating_section_anonymous(client, created_spot_id):  # noqa: ARG001
     body = response.content.decode()
     assert "No ratings yet." in body
     assert "Log in" in body
+
+
+def test_notification_widget_anonymous(client):
+    """Anonymous users receive an empty widget placeholder."""
+
+    response = client.get("/notifications/widget")
+    assert response.status_code == 200
+    assert '<div id="notification-widget"></div>' in response.text
+
+
+def test_notification_widget_with_data(client, auth_token, test_user, session_factory):
+    """Logged-in users see the notification dropdown with data."""
+
+    session = session_factory()
+    try:
+        actor = UserORM(
+            email="actor@example.com",
+            username="actor",
+            hashed_password="hashed",
+        )
+        session.add(actor)
+        session.commit()
+
+        repo = NotificationRepository(session)
+        repo.create(
+            NotificationCreateData(
+                user_id=str(test_user.id),
+                actor_id=actor.id,
+                activity_id=str(uuid4()),
+                notification_type="spot_created",
+                metadata={"spot_name": "DIY Plaza"},
+            )
+        )
+    finally:
+        session.close()
+
+    response = client.get(
+        "/notifications/widget",
+        cookies={"access_token": auth_token},
+    )
+    assert response.status_code == 200
+    body = response.text
+    assert "DIY Plaza" in body
+    assert "notification-badge" in body
 
 
 def test_rating_section_authenticated(client, created_spot_id, auth_token):

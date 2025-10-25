@@ -196,3 +196,11 @@ class FollowRepository:
             followers_count=followers_count,
             following_count=following_count,
         )
+
+    def list_follower_ids(self, user_id: str) -> list[str]:
+        """Return identifiers for every user following ``user_id``."""
+
+        result = self.session.execute(
+            select(UserFollowORM.follower_id).where(UserFollowORM.following_id == user_id)
+        )
+        return result.scalars().all()
