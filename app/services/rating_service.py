@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import uuid  # noqa: TC003
 from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import Depends
@@ -14,6 +13,8 @@ from app.repositories.rating_repository import RatingRepository
 from app.repositories.skate_spot_repository import SkateSpotRepository
 
 if TYPE_CHECKING:
+    import uuid
+
     from app.models.skate_spot import SkateSpot
     from app.services.activity_service import ActivityService
 
@@ -72,8 +73,8 @@ class RatingService:
                     rating.score,
                     spot_name=spot.name if spot else None,
                 )
-            except Exception as e:
-                self._logger.warning("failed to record rating activity", error=str(e))
+            except Exception as exc:
+                self._logger.warning("failed to record rating activity", error=str(exc))
 
         return RatingSummaryResponse(**summary.model_dump(), user_rating=rating)
 

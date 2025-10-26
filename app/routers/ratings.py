@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-import uuid  # noqa: TC003
 from typing import Annotated
+from uuid import UUID  # noqa: TC003
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core.dependencies import get_current_user, get_optional_user
 from app.core.rate_limiter import SKATE_SPOT_WRITE_LIMIT, rate_limited
 from app.db.models import UserORM  # noqa: TC001
-from app.models.rating import Rating, RatingCreate, RatingSummaryResponse
+from app.models.rating import Rating, RatingCreate, RatingSummaryResponse  # noqa: TC001
 from app.services.rating_service import (
     RatingNotFoundError,
     RatingService,
@@ -29,7 +29,7 @@ def _handle_spot_not_found(exc: SpotNotFoundError) -> HTTPException:
 
 @router.get("/summary", response_model=RatingSummaryResponse)
 async def get_ratings_summary(
-    spot_id: uuid.UUID,
+    spot_id: UUID,
     service: Annotated[RatingService, Depends(get_rating_service)],
     current_user: Annotated[UserORM | None, Depends(get_optional_user)],
 ) -> RatingSummaryResponse:
@@ -44,7 +44,7 @@ async def get_ratings_summary(
 
 @router.get("/me", response_model=Rating)
 async def get_my_rating(
-    spot_id: uuid.UUID,
+    spot_id: UUID,
     service: Annotated[RatingService, Depends(get_rating_service)],
     current_user: Annotated[UserORM, Depends(get_current_user)],
 ) -> Rating:
@@ -65,7 +65,7 @@ async def get_my_rating(
     dependencies=[rate_limited(SKATE_SPOT_WRITE_LIMIT)],
 )
 async def upsert_my_rating(
-    spot_id: uuid.UUID,
+    spot_id: UUID,
     rating: RatingCreate,
     service: Annotated[RatingService, Depends(get_rating_service)],
     current_user: Annotated[UserORM, Depends(get_current_user)],
@@ -84,7 +84,7 @@ async def upsert_my_rating(
     dependencies=[rate_limited(SKATE_SPOT_WRITE_LIMIT)],
 )
 async def delete_my_rating(
-    spot_id: uuid.UUID,
+    spot_id: UUID,
     service: Annotated[RatingService, Depends(get_rating_service)],
     current_user: Annotated[UserORM, Depends(get_current_user)],
 ) -> RatingSummaryResponse:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -248,7 +248,7 @@ class SkateSpotRepository:
                 else:
                     setattr(orm_spot, field, _enum_to_value(value))
 
-            orm_spot.updated_at = datetime.utcnow()
+            orm_spot.updated_at = datetime.now(UTC)
             session.add(orm_spot)
             session.commit()
             session.refresh(orm_spot)

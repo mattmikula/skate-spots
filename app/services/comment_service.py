@@ -2,19 +2,20 @@
 
 from __future__ import annotations
 
-import uuid  # noqa: TC003
 from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import Depends
 
 from app.core.dependencies import get_db
 from app.core.logging import get_logger
-from app.models.comment import Comment, CommentCreate  # noqa: TC001
 from app.repositories.comment_repository import CommentRepository
 from app.repositories.skate_spot_repository import SkateSpotRepository
 
 if TYPE_CHECKING:  # pragma: no cover - for type checking only
+    import uuid
+
     from app.db.models import UserORM
+    from app.models.comment import Comment, CommentCreate
     from app.models.skate_spot import SkateSpot
     from app.services.activity_service import ActivityService
 
@@ -79,8 +80,8 @@ class CommentService:
                     str(comment.id),
                     spot_name=spot.name if spot else None,
                 )
-            except Exception as e:
-                self._logger.warning("failed to record comment activity", error=str(e))
+            except Exception as exc:
+                self._logger.warning("failed to record comment activity", error=str(exc))
 
         return self._comment_repository.list_for_spot(spot_id)
 

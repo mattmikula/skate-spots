@@ -63,7 +63,14 @@ async def list_spot_sessions(
         return service.list_upcoming_sessions(
             spot_id, current_user_id=str(current_user.id) if current_user else None
         )
-    except Exception as exc:  # noqa: BLE001
+    except (
+        SessionSpotNotFoundError,
+        SessionNotFoundError,
+        SessionPermissionError,
+        SessionCapacityError,
+        SessionInactiveError,
+        SessionRSVPNotFoundError,
+    ) as exc:
         raise _map_service_error(exc) from exc
 
 
@@ -83,7 +90,14 @@ async def create_spot_session(
 
     try:
         return service.create_session(spot_id, current_user, payload)
-    except Exception as exc:  # noqa: BLE001
+    except (
+        SessionSpotNotFoundError,
+        SessionNotFoundError,
+        SessionPermissionError,
+        SessionCapacityError,
+        SessionInactiveError,
+        SessionRSVPNotFoundError,
+    ) as exc:
         raise _map_service_error(exc) from exc
 
 
@@ -98,7 +112,14 @@ async def update_session(
 
     try:
         return service.update_session(session_id, current_user, payload)
-    except Exception as exc:  # noqa: BLE001
+    except (
+        SessionSpotNotFoundError,
+        SessionNotFoundError,
+        SessionPermissionError,
+        SessionCapacityError,
+        SessionInactiveError,
+        SessionRSVPNotFoundError,
+    ) as exc:
         raise _map_service_error(exc) from exc
 
 
@@ -112,7 +133,14 @@ async def delete_session(
 
     try:
         service.delete_session(session_id, current_user)
-    except Exception as exc:  # noqa: BLE001
+    except (
+        SessionSpotNotFoundError,
+        SessionNotFoundError,
+        SessionPermissionError,
+        SessionCapacityError,
+        SessionInactiveError,
+        SessionRSVPNotFoundError,
+    ) as exc:
         raise _map_service_error(exc) from exc
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -129,7 +157,14 @@ async def rsvp_session(
 
     try:
         return service.rsvp_session(session_id, current_user, payload)
-    except Exception as exc:  # noqa: BLE001
+    except (
+        SessionSpotNotFoundError,
+        SessionNotFoundError,
+        SessionPermissionError,
+        SessionCapacityError,
+        SessionInactiveError,
+        SessionRSVPNotFoundError,
+    ) as exc:
         raise _map_service_error(exc) from exc
 
 
@@ -143,5 +178,12 @@ async def withdraw_rsvp(
 
     try:
         return service.withdraw_rsvp(session_id, current_user)
-    except Exception as exc:  # noqa: BLE001
+    except (
+        SessionSpotNotFoundError,
+        SessionNotFoundError,
+        SessionPermissionError,
+        SessionCapacityError,
+        SessionInactiveError,
+        SessionRSVPNotFoundError,
+    ) as exc:
         raise _map_service_error(exc) from exc

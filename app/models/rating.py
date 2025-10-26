@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
@@ -53,10 +53,12 @@ class Rating(RatingBase):
     user_id: UUID = Field(..., description="Identifier of the user who created the rating.")
     spot_id: UUID = Field(..., description="Identifier of the skate spot being rated.")
     created_at: datetime = Field(
-        default_factory=datetime.utcnow, description="Timestamp when the rating was created."
+        default_factory=lambda: datetime.now(UTC),
+        description="Timestamp when the rating was created.",
     )
     updated_at: datetime = Field(
-        default_factory=datetime.utcnow, description="Timestamp when the rating was last updated."
+        default_factory=lambda: datetime.now(UTC),
+        description="Timestamp when the rating was last updated.",
     )
 
     model_config = {

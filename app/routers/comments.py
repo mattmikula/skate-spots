@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-import uuid  # noqa: TC003
 from typing import Annotated
+from uuid import UUID  # noqa: TC003
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from app.core.dependencies import get_current_user, get_optional_user
 from app.core.rate_limiter import SKATE_SPOT_WRITE_LIMIT, rate_limited
 from app.db.models import UserORM  # noqa: TC001
-from app.models.comment import Comment, CommentCreate
+from app.models.comment import Comment, CommentCreate  # noqa: TC001
 from app.services.comment_service import (
     CommentNotFoundError,
     CommentPermissionError,
@@ -28,13 +28,14 @@ def _handle_spot_missing(exc: SpotNotFoundError) -> HTTPException:
 
 @router.get("/", response_model=list[Comment])
 async def list_comments(
-    spot_id: uuid.UUID,
+    spot_id: UUID,
     service: Annotated[CommentService, Depends(get_comment_service)],
-    current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
+    current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,  # noqa: ARG001
 ) -> list[Comment]:
-    """Return comments for a skate spot."""
+    """Return comments for a skate spot.
 
-    del current_user  # unused but retained for parity with authenticated routes
+    Note: current_user is unused but retained for parity with authenticated routes.
+    """
     try:
         return service.list_comments(spot_id)
     except SpotNotFoundError as exc:  # pragma: no cover - defensive
@@ -48,7 +49,7 @@ async def list_comments(
     dependencies=[rate_limited(SKATE_SPOT_WRITE_LIMIT)],
 )
 async def create_comment(
-    spot_id: uuid.UUID,
+    spot_id: UUID,
     payload: CommentCreate,
     service: Annotated[CommentService, Depends(get_comment_service)],
     current_user: Annotated[UserORM, Depends(get_current_user)],
@@ -67,8 +68,8 @@ async def create_comment(
     dependencies=[rate_limited(SKATE_SPOT_WRITE_LIMIT)],
 )
 async def delete_comment(
-    spot_id: uuid.UUID,
-    comment_id: uuid.UUID,
+    spot_id: UUID,
+    comment_id: UUID,
     service: Annotated[CommentService, Depends(get_comment_service)],
     current_user: Annotated[UserORM, Depends(get_current_user)],
 ) -> Response:

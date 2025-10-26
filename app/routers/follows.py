@@ -64,21 +64,21 @@ async def follow_user(
                 "current_user": current_user,
             },
         )
-    except UserNotFoundError as e:  # noqa: B904
+    except UserNotFoundError as exc:  # noqa: B904
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User '{username}' not found",
-        ) from e
-    except SelfFollowError as e:  # noqa: B904
+        ) from exc
+    except SelfFollowError as exc:  # noqa: B904
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="You cannot follow yourself",
-        ) from e
-    except AlreadyFollowingError as e:  # noqa: B904
+        ) from exc
+    except AlreadyFollowingError as exc:  # noqa: B904
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"You are already following {username}",
-        ) from e
+        ) from exc
 
 
 @router.delete(
@@ -119,16 +119,16 @@ async def unfollow_user(
                 "current_user": current_user,
             },
         )
-    except UserNotFoundError as e:  # noqa: B904
+    except UserNotFoundError as exc:  # noqa: B904
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User '{username}' not found",
-        ) from e
-    except NotFollowingError as e:  # noqa: B904
+        ) from exc
+    except NotFollowingError as exc:  # noqa: B904
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"You are not following {username}",
-        ) from e
+        ) from exc
 
 
 @router.get(
@@ -154,11 +154,11 @@ async def is_following(
     try:
         is_following_bool = follow_service.is_following(current_user.id, username)
         return IsFollowingResponse(is_following=is_following_bool)
-    except UserNotFoundError as e:  # noqa: B904
+    except UserNotFoundError as exc:  # noqa: B904
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User '{username}' not found",
-        ) from e
+        ) from exc
 
 
 @router.get(

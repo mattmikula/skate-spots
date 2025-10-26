@@ -41,7 +41,11 @@ async def list_spot_check_ins(
 
     try:
         return service.list_active(spot_id)
-    except Exception as exc:  # noqa: BLE001
+    except (
+        SpotCheckInSpotNotFoundError,
+        SpotCheckInNotFoundError,
+        SpotCheckInPermissionError,
+    ) as exc:
         raise _map_check_in_error(exc) from exc
 
 
@@ -60,7 +64,11 @@ async def create_spot_check_in(
 
     try:
         return service.check_in(spot_id, current_user, payload)
-    except Exception as exc:  # noqa: BLE001
+    except (
+        SpotCheckInSpotNotFoundError,
+        SpotCheckInNotFoundError,
+        SpotCheckInPermissionError,
+    ) as exc:
         raise _map_check_in_error(exc) from exc
 
 
@@ -75,5 +83,9 @@ async def checkout_spot_check_in(
 
     try:
         return service.check_out(check_in_id, current_user, payload)
-    except Exception as exc:  # noqa: BLE001
+    except (
+        SpotCheckInSpotNotFoundError,
+        SpotCheckInNotFoundError,
+        SpotCheckInPermissionError,
+    ) as exc:
         raise _map_check_in_error(exc) from exc

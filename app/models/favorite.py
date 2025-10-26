@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -14,7 +14,7 @@ class Favorite(BaseModel):
     user_id: UUID = Field(..., description="Identifier of the user who favorited the spot.")
     spot_id: UUID = Field(..., description="Identifier of the favorited skate spot.")
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(UTC),
         description="Timestamp when the favorite was created.",
     )
 

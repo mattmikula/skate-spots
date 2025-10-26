@@ -48,8 +48,8 @@ class FavoriteService:
                         str(spot_id),
                         spot_name=spot.name,
                     )
-                except Exception as e:
-                    self._logger.warning("failed to record favorite activity", error=str(e))
+                except Exception as exc:
+                    self._logger.warning("failed to record favorite activity", error=str(exc))
         else:
             self._logger.debug("favorite already exists", spot_id=str(spot_id), user_id=user_id)
         return FavoriteStatus(spot_id=spot_id, is_favorite=True)

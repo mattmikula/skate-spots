@@ -293,9 +293,9 @@ async def create_skate_spot(
 
     try:
         spot_data = await _parse_request_payload(request, SkateSpotCreate)
-    except ValidationError as e:
+    except ValidationError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=e.errors()
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.errors()
         ) from None
 
     return service.create_spot(spot_data, current_user.id)
@@ -427,9 +427,9 @@ async def update_skate_spot(
 
     try:
         update_data = await _parse_request_payload(request, SkateSpotUpdate)
-    except ValidationError as e:
+    except ValidationError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=e.errors()
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.errors()
         ) from None
 
     updated_spot = service.update_spot(spot_id, update_data)
