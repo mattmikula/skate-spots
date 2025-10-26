@@ -137,8 +137,8 @@ def _haversine_distance(center_lat: float, center_lng: float) -> tuple[Any, Any]
     Returns:
         Tuple of (distance_expression, distance_column) for use in SQLAlchemy queries
     """
-    # Haversine formula: d = 2 * R * asin(sqrt(sin²(Δlat/2) + cos(lat1)*cos(lat2)*sin²(Δlng/2)))
-    # Simplified version: d = R * acos(cos(Δlat) * cos(Δlng) + sin(lat1) * sin(lat2))
+    # Spherical law of cosines formula for great-circle distance:
+    # d = R * acos(cos(lat1) * cos(lat2) * cos(lng2 - lng1) + sin(lat1) * sin(lat2))
     # Earth's radius in kilometers
     earth_radius_km = 6371
 
@@ -264,7 +264,7 @@ class SkateSpotRepository:
 
             # Extract ORM objects and distances
             orm_spots = [row[0] for row in results]
-            distances = {orm.id: row[1] for row in results for orm in [row[0]]}
+            distances = {row[0].id: row[1] for row in results}
 
             # Get rating summaries
             enriched = self._with_rating_summaries(session, orm_spots)
