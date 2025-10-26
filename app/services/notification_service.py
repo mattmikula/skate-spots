@@ -373,8 +373,8 @@ class NotificationService:
     def _session_rsvp_message(self, name: str, metadata: dict, _source: str | None) -> str:
         session_title = metadata.get("session_title")
         response = metadata.get("response")
-        has_session_title = session_title is not None
-        has_response = response is not None
+        has_session_title = bool(session_title)
+        has_response = bool(response)
         return self._select_message(
             (
                 has_session_title and has_response,
