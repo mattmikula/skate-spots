@@ -193,6 +193,45 @@ class ActivityService:
         )
         return activity
 
+    def record_spot_check_in(
+        self,
+        user_id: str,
+        spot_id: str,
+        check_in_id: str,
+        *,
+        status: str,
+        spot_name: str | None = None,
+    ) -> ActivityFeedORM:
+        """Record that a user checked in at a spot."""
+
+        metadata: dict[str, object] = {
+            "spot_id": spot_id,
+            "status": status,
+        }
+        if spot_name:
+            metadata["spot_name"] = spot_name
+
+        activity = self.activity_repository.create_activity(
+            user_id=user_id,
+            activity_type=ActivityType.SPOT_CHECKED_IN.value,
+            target_type=TargetType.CHECK_IN.value,
+            target_id=check_in_id,
+            metadata=metadata,
+        )
+        owner_id = self.notification_service.notify_spot_owner(
+            spot_id,
+            activity,
+            metadata=metadata,
+            actor_id=user_id,
+        )
+        exclude = {owner_id} if owner_id else None
+        self.notification_service.notify_followers_of_activity(
+            activity,
+            metadata=metadata,
+            exclude_user_ids=exclude,
+        )
+        return activity
+
     def record_session_created(
         self, user_id: str, session_id: str, session_title: str | None = None
     ) -> ActivityFeedORM:

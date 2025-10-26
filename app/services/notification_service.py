@@ -327,6 +327,26 @@ class NotificationService:
                 return f'{name} favorited "{spot_name}"'
             return f"{name} favorited a spot"
 
+        if notification_enum is NotificationType.SPOT_CHECKED_IN:
+            spot_name = (metadata or {}).get("spot_name")
+            status = (metadata or {}).get("status")
+            heading = status == "heading"
+            if source == "spot_owner":
+                if spot_name:
+                    if heading:
+                        return f'{name} is heading to your spot "{spot_name}"'
+                    return f'{name} is at your spot "{spot_name}"'
+                if heading:
+                    return f"{name} is heading to your spot"
+                return f"{name} is at your spot"
+            if spot_name:
+                if heading:
+                    return f'{name} is heading to "{spot_name}"'
+                return f'{name} checked in at "{spot_name}"'
+            if heading:
+                return f"{name} is heading to a spot"
+            return f"{name} checked in at a spot"
+
         if notification_enum is NotificationType.SESSION_CREATED:
             session_title = (metadata or {}).get("session_title")
             if session_title:

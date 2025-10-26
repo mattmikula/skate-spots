@@ -1,3 +1,4 @@
+from .check_in_service import CheckInService
 from .comment_service import CommentService
 from .favorite_service import FavoriteService
 from .rating_service import RatingService
@@ -9,5 +10,6 @@ __all__ = [
     "RatingService",
     "FavoriteService",
     "CommentService",
+    "CheckInService",
     "UserProfileService",
 ]

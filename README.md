@@ -26,6 +26,7 @@ A modern FastAPI application for sharing and discovering skateboarding spots aro
 - **Secure Authentication** with registration, login, and cookie-based JWT tokens
 - **Session Scheduling** that lets crews organise meetups, manage RSVPs, and automatically promote waitlisted skaters when spots open up
 - **Notifications** to alert you when followed skaters create spots, interact with your content, or RSVP to your sessions, with unread tracking
+- **Spot Check-ins** so skaters can announce when they're heading to or already at a spot, see who else is around, and trigger follower/owner alerts in real time
 - **Rich Data Model** with locations, difficulty levels, and spot types
 - **Comprehensive Validation** using Pydantic models
 - **Clean Architecture** with separation of concerns
@@ -105,6 +106,16 @@ curl \
 ```
 
 The same parameters can be used with the GeoJSON endpoint to power filtered map views without downloading unnecessary data.
+
+### Spot Check-ins
+
+Real-time check-ins let the community know who is sessioning each spot:
+
+- `GET /api/v1/skate-spots/{spot_id}/check-ins` — list active check-ins for a spot.
+- `POST /api/v1/skate-spots/{spot_id}/check-ins` — create or refresh the current user's check-in by sending JSON such as `{"status": "arrived", "message": "Session is on!"}`. Accepted statuses are `heading` and `arrived`; the check-in expires automatically after two hours unless refreshed.
+- `POST /api/v1/check-ins/{check_in_id}/checkout` — end an active check-in, optionally including a wrap-up message.
+
+The spot detail page ships an HTMX-powered widget that displays active check-ins, allows logged-in skaters to share their status or check out, and refreshes automatically every minute. Each check-in generates activity feed entries and notifications for followers and spot owners so crews stay in sync.
 
 ### Authentication Workflow
 
