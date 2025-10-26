@@ -388,15 +388,18 @@ class NotificationService:
     def _select_message(*candidates: tuple[bool, str]) -> str:
         """Return the first candidate whose condition is truthy.
 
-        If no condition is met, the final candidate's message is returned.
-        Raises ValueError if no candidates are provided.
+        The final candidate is expected to be an unconditional fallback (condition is True).
+        Raises ValueError if no candidates are provided or the fallback is missing.
         """
         if not candidates:
             raise ValueError("_select_message requires at least one candidate")
         for condition, message in candidates:
             if condition:
                 return message
-        return candidates[-1][1]
+        last_condition, last_message = candidates[-1]
+        if not last_condition:
+            raise ValueError("_select_message requires a fallback candidate with a true condition")
+        return last_message
 
 
 def get_notification_service(
