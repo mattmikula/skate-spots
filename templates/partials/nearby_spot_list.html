@@ -1,0 +1,21 @@
+{% if spots %}
+<div class="nearby-spot-list">
+    {% for spot in spots %}
+    <div class="nearby-spot-card">
+        {% set distance = spot.distance_km %}
+        <div class="spot-distance-badge">
+            {% if distance is not none %}
+                {{ distance | round(1) }} km away
+            {% endif %}
+        </div>
+        {% include "spot_card.html" %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No skate spots found within {{ radius_km }} km.</p>
+    <p class="empty-state-hint">Try increasing the radius or adjusting your filters.</p>
+    <a href="/skate-spots/new" class="btn btn-primary" style="margin-top: 1rem;">+ Add New Spot</a>
+</div>
+{% endif %}

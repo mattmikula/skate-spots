@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block title %}Find Nearby Spots - Skate Spots{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Find Nearby Spots</h2>
+    <a href="/skate-spots/new" class="btn btn-primary">+ Add New Spot</a>
+</div>
+
+<div class="nearby-container">
+    <!-- Location Input Section -->
+    <div class="location-input-section">
+        <div class="location-card">
+            <h3>Search Location</h3>
+
+            <div class="location-buttons">
+                <button id="use-my-location" class="btn btn-primary btn-large">
+                    <span aria-hidden="true">📍</span> Use My Location
+                </button>
+                <span id="location-status" class="location-status"></span>
+            </div>
+
+            <div class="location-divider">or</div>
+
+            <form id="location-form" class="location-form">
+                <div id="form-error" class="location-status error" style="display: none;" role="alert" aria-live="polite"></div>
+
+                <div class="form-group">
+                    <label for="manual-latitude">Latitude</label>
+                    <input
+                        type="number"
+                        id="manual-latitude"
+                        name="latitude"
+                        placeholder="-90 to 90"
+                        min="-90"
+                        max="90"
+                        step="0.0001"
+                        aria-required="true"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="manual-longitude">Longitude</label>
+                    <input
+                        type="number"
+                        id="manual-longitude"
+                        name="longitude"
+                        placeholder="-180 to 180"
+                        min="-180"
+                        max="180"
+                        step="0.0001"
+                        aria-required="true"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="radius-slider">Search Radius: <span id="radius-display">5</span> km</label>
+                    <input
+                        type="range"
+                        id="radius-slider"
+                        name="radius_km"
+                        min="1"
+                        max="50"
+                        value="5"
+                        class="radius-slider"
+                    >
+                    <div class="radius-info">1 km - 50 km</div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Search Nearby Spots</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Section (shown only when location is provided) -->
+    {% if latitude is not None %}
+    <div class="nearby-results">
+        <div class="results-header">
+            <h3>Spots within {{ radius_km }} km</h3>
+            <p class="location-coordinates">📍 {{ latitude | round(4) }}, {{ longitude | round(4) }}</p>
+        </div>
+
+        <!-- Filters Form -->
+        <form
+            id="nearby-filter-form"
+            class="filter-form"
+            hx-get="/nearby"
+            hx-target="#nearby-spot-results"
+            hx-push-url="true"
+            hx-trigger="submit, change delay:300ms from:select, keyup changed delay:500ms from:input"
+            hx-indicator="#nearby-filter-indicator"
+        >
+            <!-- Hidden location fields -->
+            <input type="hidden" name="latitude" value="{{ latitude }}">
+            <input type="hidden" name="longitude" value="{{ longitude }}">
+            <input type="hidden" name="radius_km" value="{{ radius_km }}">
+
+            <div class="filter-grid">
+                <div class="filter-field">
+                    <label for="filter-search">Search</label>
+                    <input
+                        type="search"
+                        id="filter-search"
+                        name="search"
+                        value="{{ filter_values.get('search', '') }}"
+                        placeholder="Search by name or description"
+                    >
+                </div>
+
+                <div class="filter-field">
+                    <label for="filter-spot-type">Spot type</label>
+                    <select id="filter-spot-type" name="spot_type">
+                        <option value="">Any type</option>
+                        {% for option in spot_types %}
+                        <option
+                            value="{{ option.value }}"
+                            {% if filter_values.get('spot_type') == option.value %}selected{% endif %}
+                        >{{ option.value | replace('_', ' ') | title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="filter-field">
+                    <label for="filter-difficulty">Difficulty</label>
+                    <select id="filter-difficulty" name="difficulty">
+                        <option value="">Any level</option>
+                        {% for option in difficulties %}
+                        <option
+                            value="{{ option.value }}"
+                            {% if filter_values.get('difficulty') == option.value %}selected{% endif %}
+                        >{{ option.value | title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="filter-field">
+                    <label for="filter-city">City</label>
+                    <input
+                        type="text"
+                        id="filter-city"
+                        name="city"
+                        value="{{ filter_values.get('city', '') }}"
+                        placeholder="e.g. Barcelona"
+                    >
+                </div>
+            </div>
+
+            <div class="filter-actions">
+                <button type="submit" class="btn btn-primary">Apply filters</button>
+                {% if has_active_filters %}
+                <a href="/nearby?latitude={{ latitude }}&longitude={{ longitude }}&radius_km={{ radius_km }}" class="btn btn-secondary">Clear filters</a>
+                {% endif %}
+                <span id="nearby-filter-indicator" class="htmx-indicator" role="status" aria-live="polite">
+                    Updating spots…
+                </span>
+            </div>
+        </form>
+
+        <!-- Results List -->
+        <div id="nearby-spot-results">
+            {% include "partials/nearby_spot_list.html" %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    // Handle "Use My Location" button
+    document.getElementById('use-my-location').addEventListener('click', function() {
+        const btn = this;
+        const status = document.getElementById('location-status');
+
+        if (!navigator.geolocation) {
+            status.textContent = '❌ Geolocation not supported';
+            status.className = 'location-status error';
+            return;
+        }
+
+        btn.disabled = true;
+        status.textContent = '🔍 Getting location...';
+        status.className = 'location-status loading';
+
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                const radius = document.getElementById('radius-slider').value;
+
+                // Redirect to nearby page with coordinates
+                window.location.href = `/nearby?latitude=${lat}&longitude=${lng}&radius_km=${radius}`;
+            },
+            function(error) {
+                btn.disabled = false;
+                let message = '❌ ';
+                // GeolocationPositionError codes: PERMISSION_DENIED=1, POSITION_UNAVAILABLE=2, TIMEOUT=3
+                if (error.code === 1) {
+                    message += 'Permission denied. Please enable location access.';
+                } else if (error.code === 2) {
+                    message += 'Location unavailable. Try manual entry.';
+                } else if (error.code === 3) {
+                    message += 'Location request timed out.';
+                } else {
+                    message += 'Error getting location.';
+                }
+                status.textContent = message;
+                status.className = 'location-status error';
+            }
+        );
+    });
+
+    // Update radius display
+    document.getElementById('radius-slider').addEventListener('input', function() {
+        document.getElementById('radius-display').textContent = this.value;
+    });
+
+    // Handle manual location form submission
+    document.getElementById('location-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const lat = document.getElementById('manual-latitude').value;
+        const lng = document.getElementById('manual-longitude').value;
+        const radius = document.getElementById('radius-slider').value;
+        const errorDiv = document.getElementById('form-error');
+
+        if (!lat || !lng) {
+            errorDiv.textContent = '❌ Please enter both latitude and longitude';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        // Hide error and proceed
+        errorDiv.style.display = 'none';
+        window.location.href = `/nearby?latitude=${lat}&longitude=${lng}&radius_km=${radius}`;
+    });
+</script>
+{% endblock %}

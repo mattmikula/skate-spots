@@ -1683,3 +1683,213 @@ footer {
         font-size: var(--font-size-sm);
     }
 }
+
+/* ============================================
+   NEARBY SPOTS DISCOVERY
+   ============================================ */
+
+.nearby-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-8);
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.location-input-section {
+    grid-column: 1;
+}
+
+.location-card {
+    background: var(--color-white);
+    border: 2px solid var(--color-blue-pale);
+    border-radius: 12px;
+    padding: var(--spacing-6);
+    box-shadow: var(--shadow-md);
+}
+
+.location-card h3 {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    margin-bottom: var(--spacing-4);
+    color: var(--color-black);
+}
+
+.location-buttons {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-4);
+    margin-bottom: var(--spacing-6);
+}
+
+.btn-large {
+    padding: var(--spacing-3) var(--spacing-6) !important;
+    font-size: var(--font-size-base) !important;
+    font-weight: 600;
+    border-radius: 8px;
+}
+
+.location-status {
+    font-size: var(--font-size-sm);
+    padding: var(--spacing-2) var(--spacing-3);
+    border-radius: 6px;
+    display: inline-block;
+}
+
+.location-status.loading {
+    color: var(--color-blue);
+    background: var(--color-blue-pale);
+}
+
+.location-status.error {
+    color: var(--color-error);
+    background: #fee;
+}
+
+.location-status.success {
+    color: var(--color-success);
+    background: #efe;
+}
+
+.location-divider {
+    text-align: center;
+    color: var(--color-gray-400);
+    font-weight: 500;
+    margin: var(--spacing-6) 0;
+    position: relative;
+}
+
+.location-divider::before,
+.location-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 45%;
+    height: 1px;
+    background: var(--color-gray-200);
+}
+
+.location-divider::before {
+    left: 0;
+}
+
+.location-divider::after {
+    right: 0;
+}
+
+.location-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-4);
+}
+
+.location-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+}
+
+.location-form label {
+    font-weight: 500;
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-700);
+}
+
+.location-form input[type="number"],
+.location-form input[type="range"] {
+    padding: var(--spacing-2) var(--spacing-3);
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+    font-size: var(--font-size-base);
+    font-family: monospace;
+}
+
+.location-form input[type="range"] {
+    cursor: pointer;
+    accent-color: var(--color-blue);
+}
+
+.radius-slider {
+    height: 6px !important;
+}
+
+.radius-info {
+    font-size: var(--font-size-xs);
+    color: var(--color-gray-400);
+    text-align: right;
+}
+
+.nearby-results {
+    grid-column: 1;
+}
+
+.results-header {
+    background: var(--color-blue-pale);
+    border-left: 4px solid var(--color-blue);
+    padding: var(--spacing-4);
+    border-radius: 6px;
+    margin-bottom: var(--spacing-6);
+}
+
+.results-header h3 {
+    margin: 0 0 var(--spacing-2) 0;
+    font-size: var(--font-size-lg);
+    color: var(--color-blue);
+}
+
+.location-coordinates {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-600);
+    font-weight: 500;
+}
+
+.nearby-spot-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--spacing-6);
+}
+
+.nearby-spot-card {
+    position: relative;
+}
+
+.spot-distance-badge {
+    position: absolute;
+    top: var(--spacing-3);
+    right: var(--spacing-3);
+    background: var(--color-blue);
+    color: var(--color-white);
+    padding: var(--spacing-2) var(--spacing-3);
+    border-radius: 20px;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    z-index: 10;
+    box-shadow: var(--shadow-md);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .nearby-container {
+        grid-template-columns: 1fr;
+    }
+
+    .location-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .location-status {
+        width: 100%;
+        text-align: center;
+    }
+
+    .nearby-spot-list {
+        grid-template-columns: 1fr;
+    }
+
+    .location-divider::before,
+    .location-divider::after {
+        width: 35%;
+    }
+}

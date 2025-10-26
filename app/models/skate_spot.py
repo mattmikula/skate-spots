@@ -166,6 +166,16 @@ class SkateSpotFilters(BaseModel):
         return False
 
 
+class NearbySpotFilters(SkateSpotFilters):
+    """Query parameters for finding nearby skate spots."""
+
+    latitude: float = Field(..., ge=-90, le=90, description="Center point latitude for search")
+    longitude: float = Field(..., ge=-180, le=180, description="Center point longitude for search")
+    radius_km: float = Field(
+        default=5, ge=0.1, le=50, description="Search radius in kilometers (default 5km, max 50km)"
+    )
+
+
 class SkateSpot(SkateSpotBase):
     """Complete skate spot model with database fields."""
 
@@ -186,6 +196,11 @@ class SkateSpot(SkateSpotBase):
         0,
         ge=0,
         description="Total number of ratings submitted for this skate spot.",
+    )
+    distance_km: float | None = Field(
+        None,
+        ge=0,
+        description="Distance in kilometers from query location (populated only for nearby queries)",
     )
     photos: list[SpotPhoto] = Field(
         default_factory=list,

@@ -124,6 +124,43 @@ def _filters_to_conditions(filters: SkateSpotFilters | None) -> list[Any]:
     return conditions
 
 
+def _haversine_distance(center_lat: float, center_lng: float) -> tuple[Any, Any]:
+    """Return great-circle distance expression and ordering clause for nearby queries.
+
+    Returns a tuple of (distance_expression, distance_column) to compute distance
+    between two coordinate pairs using the spherical law of cosines for SQLite.
+
+    Note: Despite the function name, this uses the spherical law of cosines
+    formula rather than the true Haversine formula for better performance with
+    SQLite's trigonometric functions while maintaining sufficient accuracy.
+
+    Args:
+        center_lat: Center point latitude in degrees
+        center_lng: Center point longitude in degrees
+
+    Returns:
+        Tuple of (distance_expression, distance_column) for use in SQLAlchemy queries
+    """
+    # Spherical law of cosines formula for great-circle distance:
+    # d = R * acos(cos(lat1) * cos(lat2) * cos(lng2 - lng1) + sin(lat1) * sin(lat2))
+    # Earth's radius in kilometers
+    earth_radius_km = 6371
+
+    # Convert degrees to radians for trigonometric functions
+    lat1_rad = func.radians(center_lat)
+    lng1_rad = func.radians(center_lng)
+    lat2_rad = func.radians(SkateSpotORM.latitude)
+    lng2_rad = func.radians(SkateSpotORM.longitude)
+
+    # Spherical law of cosines using SQLite trigonometric functions
+    distance_expr = earth_radius_km * func.acos(
+        func.cos(lat1_rad) * func.cos(lat2_rad) * func.cos(lng2_rad - lng1_rad)
+        + func.sin(lat1_rad) * func.sin(lat2_rad)
+    )
+
+    return distance_expr, distance_expr.label("distance_km")
+
+
 class SkateSpotRepository:
     """Repository handling database persistence for skate spots."""
 
@@ -190,6 +227,57 @@ class SkateSpotRepository:
 
             spots = session.scalars(stmt).all()
             return self._with_rating_summaries(session, spots)
+
+    def get_nearby(
+        self,
+        latitude: float,
+        longitude: float,
+        radius_km: float,
+        filters: SkateSpotFilters | None = None,
+    ) -> list[SkateSpot]:
+        """Get skate spots within specified radius, optionally filtering by criteria.
+
+        Uses the spherical law of cosines formula to calculate great-circle distances.
+
+        Args:
+            latitude: Center point latitude in degrees
+            longitude: Center point longitude in degrees
+            radius_km: Search radius in kilometers
+            filters: Optional filters to apply in addition to distance
+
+        Returns:
+            List of SkateSpot models sorted by distance (closest first)
+        """
+        with self._session_factory() as session:
+            distance_expr, distance_col = _haversine_distance(latitude, longitude)
+
+            stmt = select(SkateSpotORM, distance_col).order_by(distance_expr.asc())
+
+            # Filter by radius
+            stmt = stmt.where(distance_expr <= radius_km)
+
+            # Apply additional filters
+            conditions = _filters_to_conditions(filters)
+            if conditions:
+                stmt = stmt.where(*conditions)
+
+            # Execute query and extract results
+            results = session.execute(stmt).all()
+            if not results:
+                return []
+
+            # Extract ORM objects and distances
+            orm_spots = [row[0] for row in results]
+            distances = {row[0].id: row[1] for row in results}
+
+            # Get rating summaries
+            enriched = self._with_rating_summaries(session, orm_spots)
+
+            # Add distance information to each spot
+            for spot in enriched:
+                spot.distance_km = distances.get(str(spot.id))
+
+            return enriched
 
     def get_many_by_ids(self, spot_ids: list[UUID]) -> list[SkateSpot]:
         """Return skate spots matching the provided identifiers."""

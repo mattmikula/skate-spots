@@ -95,6 +95,47 @@ class SkateSpotService:
         )
         return is_owner
 
+    def get_nearby_spots(
+        self,
+        latitude: float,
+        longitude: float,
+        radius_km: float = 5,
+        filters: SkateSpotFilters | None = None,
+    ) -> list[SkateSpot]:
+        """Find skate spots within a specified radius of a location.
+
+        Args:
+            latitude: Center point latitude in degrees (-90 to 90)
+            longitude: Center point longitude in degrees (-180 to 180)
+            radius_km: Search radius in kilometers (0.1 to 50, default 5)
+            filters: Optional additional filters to apply
+
+        Returns:
+            List of SkateSpot models sorted by distance (closest first)
+
+        Raises:
+            ValueError: If coordinates are out of valid range or radius is invalid
+        """
+        # Validate coordinates
+        if not (-90 <= latitude <= 90):
+            raise ValueError("Latitude must be between -90 and 90 degrees")
+        if not (-180 <= longitude <= 180):
+            raise ValueError("Longitude must be between -180 and 180 degrees")
+
+        # Validate radius
+        if radius_km < 0.1 or radius_km > 50:
+            raise ValueError("Radius must be between 0.1 and 50 kilometers")
+
+        spots = self._repository.get_nearby(latitude, longitude, radius_km, filters)
+        self._logger.debug(
+            "found nearby spots",
+            latitude=latitude,
+            longitude=longitude,
+            radius_km=radius_km,
+            count=len(spots),
+        )
+        return spots
+
 
 def get_skate_spot_service(db: Annotated[Any, Depends(get_db)]) -> SkateSpotService:
     """Provide the skate spot service with activity tracking for dependency injection.

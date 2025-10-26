@@ -18,6 +18,7 @@ A modern FastAPI application for sharing and discovering skateboarding spots aro
 - **Community Comments** that let skaters share detailed feedback and discuss spots in real time via HTMX snippets and JSON APIs
 - **Inline Ratings UI** with HTMX-driven snippets that let logged-in users rate spots directly from the listings with instant feedback
 - **Dynamic Spot Filters** with HTMX-powered search and dropdowns so the catalogue updates instantly without full page reloads
+- **Nearby Spots Discovery** with radius-based search using browser geolocation or manual coordinates to find skate spots near any location, sorted by distance
 - **Spot Photo Uploads** with local media storage, editing, and responsive galleries on each spot card
 - **Personal Collections** so logged-in skaters can favorite spots and revisit them from their profile
 - **Social Feed** with activity tracking, user follows/followers, and personalized activity feeds from users you follow
