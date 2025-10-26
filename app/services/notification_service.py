@@ -393,10 +393,10 @@ class NotificationService:
         """
         if not candidates:
             raise ValueError("_select_message requires at least one candidate")
-        last_index = len(candidates) - 1
-        for index, (condition, message) in enumerate(candidates):
-            if condition or index == last_index:
+        for condition, message in candidates:
+            if condition:
                 return message
+        return candidates[-1][1]
 
 
 def get_notification_service(
