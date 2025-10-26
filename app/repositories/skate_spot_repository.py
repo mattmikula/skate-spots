@@ -125,10 +125,14 @@ def _filters_to_conditions(filters: SkateSpotFilters | None) -> list[Any]:
 
 
 def _haversine_distance(center_lat: float, center_lng: float) -> tuple[Any, Any]:
-    """Return Haversine distance expression and ordering clause for nearby queries.
+    """Return great-circle distance expression and ordering clause for nearby queries.
 
     Returns a tuple of (distance_expression, distance_column) to compute distance
-    between two coordinate pairs using the Haversine formula for SQLite.
+    between two coordinate pairs using the spherical law of cosines for SQLite.
+
+    Note: Despite the function name, this uses the spherical law of cosines
+    formula rather than the true Haversine formula for better performance with
+    SQLite's trigonometric functions while maintaining sufficient accuracy.
 
     Args:
         center_lat: Center point latitude in degrees
@@ -148,7 +152,7 @@ def _haversine_distance(center_lat: float, center_lng: float) -> tuple[Any, Any]
     lat2_rad = func.radians(SkateSpotORM.latitude)
     lng2_rad = func.radians(SkateSpotORM.longitude)
 
-    # Haversine formula using SQLite trigonometric functions
+    # Spherical law of cosines using SQLite trigonometric functions
     distance_expr = earth_radius_km * func.acos(
         func.cos(lat1_rad) * func.cos(lat2_rad) * func.cos(lng2_rad - lng1_rad)
         + func.sin(lat1_rad) * func.sin(lat2_rad)
@@ -233,7 +237,7 @@ class SkateSpotRepository:
     ) -> list[SkateSpot]:
         """Get skate spots within specified radius, optionally filtering by criteria.
 
-        Uses the Haversine formula to calculate distances.
+        Uses the spherical law of cosines formula to calculate great-circle distances.
 
         Args:
             latitude: Center point latitude in degrees
