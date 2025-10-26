@@ -11,6 +11,7 @@ from app.core.logging_middleware import RequestContextLogMiddleware
 from app.core.rate_limiter import rate_limiter
 from app.routers import (
     auth,
+    check_ins,
     comments,
     favorites,
     frontend,
@@ -50,6 +51,7 @@ app.include_router(ratings.router, prefix="/api/v1")
 app.include_router(comments.router, prefix="/api/v1")
 app.include_router(sessions.router, prefix="/api/v1")
 app.include_router(geocoding.router, prefix="/api/v1")
+app.include_router(check_ins.router, prefix="/api/v1")
 app.include_router(notifications.router, prefix="/api/v1")
 
 

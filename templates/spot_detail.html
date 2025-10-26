@@ -59,6 +59,16 @@
                 <p>{{ spot.description }}</p>
             </div>
 
+            <div
+                class="spot-detail-checkins"
+                hx-get="/skate-spots/{{ spot.id }}/check-ins-section"
+                hx-trigger="load"
+                hx-target="this"
+                hx-swap="outerHTML"
+            >
+                <div class="section-loading">Loading who's here...</div>
+            </div>
+
             <!-- Action Buttons (if owner or admin) -->
             {% if current_user %}
             <div class="spot-detail-actions">

@@ -102,6 +102,11 @@ class UserORM(Base):
         foreign_keys="NotificationORM.user_id",
         cascade="all, delete-orphan",
     )
+    check_ins: Mapped[list[SpotCheckInORM]] = relationship(
+        "SpotCheckInORM",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
 
 
 class SkateSpotORM(Base):
@@ -154,6 +159,11 @@ class SkateSpotORM(Base):
     )
     comments: Mapped[list[SpotCommentORM]] = relationship(
         "SpotCommentORM",
+        back_populates="spot",
+        cascade="all, delete-orphan",
+    )
+    check_ins: Mapped[list[SpotCheckInORM]] = relationship(
+        "SpotCheckInORM",
         back_populates="spot",
         cascade="all, delete-orphan",
     )
@@ -290,11 +300,11 @@ class ActivityFeedORM(Base):
     __tablename__ = "activity_feed"
     __table_args__ = (
         CheckConstraint(
-            "activity_type IN ('spot_created', 'spot_rated', 'spot_commented', 'spot_favorited', 'session_created', 'session_rsvp')",
+            "activity_type IN ('spot_created', 'spot_rated', 'spot_commented', 'spot_favorited', 'spot_checked_in', 'session_created', 'session_rsvp')",
             name="ck_activity_feed_activity_type",
         ),
         CheckConstraint(
-            "target_type IN ('spot', 'rating', 'comment', 'favorite', 'session', 'rsvp')",
+            "target_type IN ('spot', 'rating', 'comment', 'favorite', 'check_in', 'session', 'rsvp')",
             name="ck_activity_feed_target_type",
         ),
     )
@@ -320,7 +330,7 @@ class NotificationORM(Base):
     __tablename__ = "notifications"
     __table_args__ = (
         CheckConstraint(
-            "notification_type IN ('spot_created', 'spot_rated', 'spot_commented', 'spot_favorited', 'session_created', 'session_rsvp')",
+            "notification_type IN ('spot_created', 'spot_rated', 'spot_commented', 'spot_favorited', 'spot_checked_in', 'session_created', 'session_rsvp')",
             name="ck_notifications_type",
         ),
     )
@@ -444,3 +454,43 @@ class SessionRSVPORM(Base):
 
     session: Mapped[SessionORM] = relationship("SessionORM", back_populates="rsvps")
     user: Mapped[UserORM] = relationship("UserORM", back_populates="session_rsvps")
+
+
+class SpotCheckInORM(Base):
+    """Database model representing a real-time check-in at a skate spot."""
+
+    __tablename__ = "spot_check_ins"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('heading', 'arrived')",
+            name="ck_spot_check_ins_status",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    spot_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("skate_spots.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    message: Mapped[str | None] = mapped_column(String(280), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+    )
+
+    spot: Mapped[SkateSpotORM] = relationship("SkateSpotORM", back_populates="check_ins")
+    user: Mapped[UserORM] = relationship("UserORM", back_populates="check_ins")

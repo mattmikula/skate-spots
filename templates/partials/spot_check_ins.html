@@ -1,0 +1,125 @@
+<div
+    id="spot-checkins"
+    class="spot-checkins"
+    hx-get="/skate-spots/{{ spot_id }}/check-ins-section"
+    hx-trigger="every 60s"
+    hx-target="this"
+    hx-swap="outerHTML"
+>
+    <header class="spot-checkins__header">
+        <h3 class="spot-checkins__title">Who's here</h3>
+        <button
+            class="spot-checkins__refresh"
+            type="button"
+            hx-get="/skate-spots/{{ spot_id }}/check-ins-section"
+            hx-target="#spot-checkins"
+            hx-swap="outerHTML"
+        >
+            Refresh
+        </button>
+    </header>
+
+    {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% elif message %}
+    <div class="alert alert-success">{{ message }}</div>
+    {% endif %}
+
+    <section class="spot-checkins__action">
+        {% if current_user %}
+            {% if current_check_in %}
+                {% set status_value = current_check_in.status.value %}
+                {% set status_phrase = "at the spot" if status_value == "arrived" else "heading there" %}
+                <p class="spot-checkins__status">
+                    You're currently {{ status_phrase }}.
+                </p>
+                <form
+                    hx-post="/skate-spots/{{ spot_id }}/check-ins/{{ current_check_in.id }}/checkout"
+                    hx-target="#spot-checkins"
+                    hx-swap="outerHTML"
+                    class="spot-checkins__form"
+                >
+                    <input type="hidden" name="spot_id" value="{{ spot_id }}">
+                    <label class="spot-checkins__label" for="checkout-note">Wrap-up note (optional)</label>
+                    <input
+                        id="checkout-note"
+                        type="text"
+                        name="message"
+                        maxlength="280"
+                        class="spot-checkins__input"
+                        placeholder="Let people know if you're leaving or switching spots"
+                    >
+                    <button type="submit" class="spot-checkins__button spot-checkins__button--checkout">
+                        Check out
+                    </button>
+                </form>
+            {% else %}
+                <form
+                    hx-post="/skate-spots/{{ spot_id }}/check-ins"
+                    hx-target="#spot-checkins"
+                    hx-swap="outerHTML"
+                    class="spot-checkins__form"
+                >
+                    <label class="spot-checkins__label" for="checkin-status">I'm...</label>
+                    <select id="checkin-status" name="status" class="spot-checkins__select">
+                        <option value="arrived">at the spot</option>
+                        <option value="heading">heading there</option>
+                    </select>
+                    <label class="spot-checkins__label" for="checkin-message">Add a quick note (optional)</label>
+                    <input
+                        id="checkin-message"
+                        type="text"
+                        name="message"
+                        maxlength="280"
+                        class="spot-checkins__input"
+                        placeholder="Call out the obstacle you're skating, meetup plans, etc."
+                    >
+                    <button type="submit" class="spot-checkins__button">
+                        Share check-in
+                    </button>
+                </form>
+            {% endif %}
+        {% else %}
+            <p class="spot-checkins__login-prompt">
+                <a href="/login">Log in</a> to let friends know you're here.
+            </p>
+        {% endif %}
+    </section>
+
+    <section class="spot-checkins__list">
+        {% if active_check_ins %}
+            <ul>
+                {% for check_in in active_check_ins %}
+                    {% set actor = check_in.actor %}
+                    {% set is_self = current_user and actor and (actor.id|string) == current_user.id %}
+                    {% set status_value = check_in.status.value %}
+                    <li class="spot-checkins__item {% if is_self %}spot-checkins__item--self{% endif %}">
+                        <div class="spot-checkins__item-header">
+                            <span class="spot-checkins__name">
+                                {{ (actor.display_name or actor.username) if actor else "Someone" }}
+                            </span>
+                            <span class="spot-checkins__badge">
+                                {% if status_value == "heading" %}
+                                    Heading there
+                                {% else %}
+                                    At the spot
+                                {% endif %}
+                            </span>
+                        </div>
+                        {% if check_in.message %}
+                        <p class="spot-checkins__note">{{ check_in.message }}</p>
+                        {% endif %}
+                        <time
+                            class="spot-checkins__time"
+                            datetime="{{ check_in.created_at.isoformat() }}"
+                        >
+                            since {{ check_in.created_at.strftime("%b %d, %I:%M %p") }}
+                        </time>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="spot-checkins__empty">No one has checked in yet. Be the first to drop a pin.</p>
+        {% endif %}
+    </section>
+</div>
