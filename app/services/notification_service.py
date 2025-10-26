@@ -396,10 +396,7 @@ class NotificationService:
         for condition, message in candidates:
             if condition:
                 return message
-        last_condition, last_message = candidates[-1]
-        if not last_condition:
-            raise ValueError("_select_message requires a fallback candidate with a true condition")
-        return last_message
+        raise ValueError("_select_message requires at least one candidate with a true condition")
 
 
 def get_notification_service(
