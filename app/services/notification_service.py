@@ -275,95 +275,128 @@ class NotificationService:
         This method always returns a valid message string. If the notification
         type is unrecognized, it returns a generic message.
         """
+        metadata = metadata or {}
         try:
             notification_enum = NotificationType(notification_type)
         except ValueError:  # pragma: no cover - defensive
-            # Fallback for unrecognized notification types
             return "New activity"
 
         name = self._actor_name(actor)
-        source = (metadata or {}).get("source")
+        source = metadata.get("source")
+        handler = {
+            NotificationType.SPOT_CREATED: self._spot_created_message,
+            NotificationType.SPOT_COMMENTED: self._spot_commented_message,
+            NotificationType.SPOT_RATED: self._spot_rated_message,
+            NotificationType.SPOT_FAVORITED: self._spot_favorited_message,
+            NotificationType.SPOT_CHECKED_IN: self._spot_checked_in_message,
+            NotificationType.SESSION_CREATED: self._session_created_message,
+            NotificationType.SESSION_RSVP: self._session_rsvp_message,
+        }.get(notification_enum)
 
-        if notification_enum is NotificationType.SPOT_CREATED:
-            spot_name = (metadata or {}).get("spot_name")
-            if spot_name:
-                return f'{name} added a new spot "{spot_name}"'
-            return f"{name} added a new spot"
+        if handler is None:
+            return f"{name} has new activity"
+        return handler(name, metadata, source)
 
-        if notification_enum is NotificationType.SPOT_COMMENTED:
-            spot_name = (metadata or {}).get("spot_name")
-            if source == "spot_owner":
-                if spot_name:
-                    return f'{name} commented on your spot "{spot_name}"'
-                return f"{name} commented on your spot"
-            if spot_name:
-                return f'{name} commented on "{spot_name}"'
-            return f"{name} left a comment"
+    def _spot_created_message(self, name: str, metadata: dict, _source: str | None) -> str:
+        spot_name = metadata.get("spot_name")
+        return self._select_message(
+            (bool(spot_name), f'{name} added a new spot "{spot_name}"'),
+            (True, f"{name} added a new spot"),
+        )
 
-        if notification_enum is NotificationType.SPOT_RATED:
-            spot_name = (metadata or {}).get("spot_name")
-            score = (metadata or {}).get("score")
-            if source == "spot_owner":
-                if spot_name and score:
-                    return f'{name} rated your spot "{spot_name}" {score}/5'
-                if spot_name:
-                    return f'{name} rated your spot "{spot_name}"'
-                if score:
-                    return f"{name} rated your spot {score}/5"
-                return f"{name} rated your spot"
-            if spot_name and score:
-                return f'{name} rated "{spot_name}" {score}/5'
-            if spot_name:
-                return f'{name} rated "{spot_name}"'
-            return f"{name} left a rating"
+    def _spot_commented_message(self, name: str, metadata: dict, source: str | None) -> str:
+        spot_name = metadata.get("spot_name")
+        return self._select_message(
+            (
+                source == "spot_owner" and bool(spot_name),
+                f'{name} commented on your spot "{spot_name}"',
+            ),
+            (source == "spot_owner", f"{name} commented on your spot"),
+            (bool(spot_name), f'{name} commented on "{spot_name}"'),
+            (True, f"{name} left a comment"),
+        )
 
-        if notification_enum is NotificationType.SPOT_FAVORITED:
-            spot_name = (metadata or {}).get("spot_name")
-            if source == "spot_owner":
-                if spot_name:
-                    return f'{name} favorited your spot "{spot_name}"'
-                return f"{name} favorited your spot"
-            if spot_name:
-                return f'{name} favorited "{spot_name}"'
-            return f"{name} favorited a spot"
+    def _spot_rated_message(self, name: str, metadata: dict, source: str | None) -> str:
+        spot_name = metadata.get("spot_name")
+        score = metadata.get("score")
+        has_spot_name = bool(spot_name)
+        has_score = score is not None
+        return self._select_message(
+            (
+                source == "spot_owner" and has_spot_name and has_score,
+                f'{name} rated your spot "{spot_name}" {score}/5',
+            ),
+            (source == "spot_owner" and has_spot_name, f'{name} rated your spot "{spot_name}"'),
+            (source == "spot_owner" and has_score, f"{name} rated your spot {score}/5"),
+            (source == "spot_owner", f"{name} rated your spot"),
+            (has_spot_name and has_score, f'{name} rated "{spot_name}" {score}/5'),
+            (has_spot_name, f'{name} rated "{spot_name}"'),
+            (True, f"{name} left a rating"),
+        )
 
-        if notification_enum is NotificationType.SPOT_CHECKED_IN:
-            spot_name = (metadata or {}).get("spot_name")
-            status = (metadata or {}).get("status")
-            heading = status == "heading"
-            if source == "spot_owner":
-                if spot_name:
-                    if heading:
-                        return f'{name} is heading to your spot "{spot_name}"'
-                    return f'{name} is at your spot "{spot_name}"'
-                if heading:
-                    return f"{name} is heading to your spot"
-                return f"{name} is at your spot"
-            if spot_name:
-                if heading:
-                    return f'{name} is heading to "{spot_name}"'
-                return f'{name} checked in at "{spot_name}"'
-            if heading:
-                return f"{name} is heading to a spot"
-            return f"{name} checked in at a spot"
+    def _spot_favorited_message(self, name: str, metadata: dict, source: str | None) -> str:
+        spot_name = metadata.get("spot_name")
+        return self._select_message(
+            (
+                source == "spot_owner" and bool(spot_name),
+                f'{name} favorited your spot "{spot_name}"',
+            ),
+            (source == "spot_owner", f"{name} favorited your spot"),
+            (bool(spot_name), f'{name} favorited "{spot_name}"'),
+            (True, f"{name} favorited a spot"),
+        )
 
-        if notification_enum is NotificationType.SESSION_CREATED:
-            session_title = (metadata or {}).get("session_title")
-            if session_title:
-                return f'{name} scheduled a session "{session_title}"'
-            return f"{name} scheduled a session"
+    def _spot_checked_in_message(self, name: str, metadata: dict, source: str | None) -> str:
+        spot_name = metadata.get("spot_name")
+        heading = metadata.get("status") == "heading"
+        return self._select_message(
+            (
+                source == "spot_owner" and heading and bool(spot_name),
+                f'{name} is heading to your spot "{spot_name}"',
+            ),
+            (source == "spot_owner" and bool(spot_name), f'{name} is at your spot "{spot_name}"'),
+            (source == "spot_owner" and heading, f"{name} is heading to your spot"),
+            (source == "spot_owner", f"{name} is at your spot"),
+            (heading and bool(spot_name), f'{name} is heading to "{spot_name}"'),
+            (bool(spot_name), f'{name} checked in at "{spot_name}"'),
+            (heading, f"{name} is heading to a spot"),
+            (True, f"{name} checked in at a spot"),
+        )
 
-        if notification_enum is NotificationType.SESSION_RSVP:
-            session_title = (metadata or {}).get("session_title")
-            response = (metadata or {}).get("response")
-            if session_title and response:
-                return f'{name} responded "{response}" to your session "{session_title}"'
-            if session_title:
-                return f'{name} responded to your session "{session_title}"'
-            return f"{name} updated an RSVP"
+    def _session_created_message(self, name: str, metadata: dict, _source: str | None) -> str:
+        session_title = metadata.get("session_title")
+        return self._select_message(
+            (bool(session_title), f'{name} scheduled a session "{session_title}"'),
+            (True, f"{name} scheduled a session"),
+        )
 
-        # Defensive fallback for any unhandled notification types
-        return f"{name} has new activity"
+    def _session_rsvp_message(self, name: str, metadata: dict, _source: str | None) -> str:
+        session_title = metadata.get("session_title")
+        response = metadata.get("response")
+        has_session_title = bool(session_title)
+        has_response = bool(response)
+        return self._select_message(
+            (
+                has_session_title and has_response,
+                f'{name} responded "{response}" to your session "{session_title}"',
+            ),
+            (has_session_title, f'{name} responded to your session "{session_title}"'),
+            (True, f"{name} updated an RSVP"),
+        )
+
+    @staticmethod
+    def _select_message(*candidates: tuple[bool, str]) -> str:
+        """Return the first candidate whose condition is truthy.
+
+        The final candidate is expected to be an unconditional fallback (condition is True).
+        Raises ValueError if no candidates are provided or the fallback is missing.
+        """
+        if not candidates:
+            raise ValueError("_select_message requires at least one candidate")
+        for condition, message in candidates:
+            if condition:
+                return message
+        raise ValueError("_select_message requires at least one candidate with a true condition")
 
 
 def get_notification_service(
