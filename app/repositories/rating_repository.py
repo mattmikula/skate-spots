@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -60,7 +60,7 @@ class RatingRepository:
             else:
                 orm_rating.score = rating_data.score
                 orm_rating.comment = rating_data.comment
-                orm_rating.updated_at = datetime.utcnow()
+                orm_rating.updated_at = datetime.now(UTC)
 
             session.commit()
             session.refresh(orm_rating)

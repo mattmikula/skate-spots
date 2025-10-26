@@ -129,12 +129,14 @@ class SkateSpotORM(Base):
     user_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("users.id"), nullable=False, index=True
     )
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=lambda: datetime.now(UTC)
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
     # Relationships
@@ -189,7 +191,9 @@ class SpotPhotoORM(Base):
     )
     file_path: Mapped[str] = mapped_column(String(512), nullable=False)
     original_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=lambda: datetime.now(UTC)
+    )
 
     spot: Mapped[SkateSpotORM] = relationship("SkateSpotORM", back_populates="photos")
     uploader: Mapped[UserORM | None] = relationship("UserORM", back_populates="uploaded_photos")
@@ -213,12 +217,14 @@ class RatingORM(Base):
     )
     score: Mapped[int] = mapped_column(Integer, nullable=False)
     comment: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=lambda: datetime.now(UTC)
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
     spot: Mapped[SkateSpotORM] = relationship("SkateSpotORM", back_populates="ratings")
@@ -238,7 +244,9 @@ class FavoriteSpotORM(Base):
     spot_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("skate_spots.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=lambda: datetime.now(UTC)
+    )
 
     user: Mapped[UserORM] = relationship("UserORM", back_populates="favorite_spots")
     spot: Mapped[SkateSpotORM] = relationship("SkateSpotORM", back_populates="favorited_by")
@@ -257,12 +265,14 @@ class SpotCommentORM(Base):
         String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     content: Mapped[str] = mapped_column(String(1000), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=lambda: datetime.now(UTC)
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
     spot: Mapped[SkateSpotORM] = relationship("SkateSpotORM", back_populates="comments")
@@ -284,7 +294,9 @@ class UserFollowORM(Base):
     following_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=lambda: datetime.now(UTC)
+    )
 
     follower_user: Mapped[UserORM] = relationship(
         "UserORM", foreign_keys=[follower_id], back_populates="following"
@@ -318,7 +330,7 @@ class ActivityFeedORM(Base):
     target_id: Mapped[str] = mapped_column(String(36), nullable=False)
     activity_metadata: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.utcnow, index=True
+        DateTime, nullable=False, default=lambda: datetime.now(UTC), index=True
     )
 
     actor: Mapped[UserORM] = relationship("UserORM", back_populates="activities")
@@ -484,12 +496,14 @@ class SpotCheckInORM(Base):
     message: Mapped[str | None] = mapped_column(String(280), nullable=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
     ended_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=lambda: datetime.now(UTC)
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
     spot: Mapped[SkateSpotORM] = relationship("SkateSpotORM", back_populates="check_ins")

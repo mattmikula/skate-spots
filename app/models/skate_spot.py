@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from uuid import UUID, uuid4
 
@@ -70,7 +70,8 @@ class SpotPhoto(SpotPhotoBase):
 
     id: UUID = Field(default_factory=uuid4, description="Unique identifier for the photo")
     created_at: datetime = Field(
-        default_factory=datetime.utcnow, description="Timestamp when the photo was added"
+        default_factory=lambda: datetime.now(UTC),
+        description="Timestamp when the photo was added",
     )
 
     @computed_field(return_type=str)
@@ -169,9 +170,11 @@ class SkateSpot(SkateSpotBase):
     """Complete skate spot model with database fields."""
 
     id: UUID = Field(default_factory=uuid4, description="Unique identifier")
-    created_at: datetime = Field(default_factory=datetime.utcnow, description="Creation timestamp")
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC), description="Creation timestamp"
+    )
     updated_at: datetime = Field(
-        default_factory=datetime.utcnow, description="Last update timestamp"
+        default_factory=lambda: datetime.now(UTC), description="Last update timestamp"
     )
     average_rating: float | None = Field(
         None,

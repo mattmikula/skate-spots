@@ -746,7 +746,7 @@ async def submit_check_in(
             context,
             status_code=status.HTTP_404_NOT_FOUND,
         )
-    except Exception:  # noqa: BLE001
+    except (SpotCheckInNotFoundError, SpotCheckInPermissionError):
         context = _check_in_context(
             request,
             spot_id,
@@ -810,19 +810,6 @@ async def checkout_check_in(
             context,
             status_code=status.HTTP_403_FORBIDDEN,
         )
-    except Exception:  # noqa: BLE001
-        context = _check_in_context(
-            request,
-            spot_id,
-            check_in_service,
-            current_user,
-            error="Unable to update the check-in.",
-        )
-        return templates.TemplateResponse(
-            "partials/spot_check_ins.html",
-            context,
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
 
 
 @router.get("/skate-spots/{spot_id}/edit", response_class=HTMLResponse)
@@ -884,8 +871,8 @@ async def session_detail(
         spot = skate_spot_service.get_spot(spot_id)
         if spot is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Spot not found")
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Spot not found") from exc
+    except HTTPException:
+        raise
 
     try:
         session = session_service.get_session(

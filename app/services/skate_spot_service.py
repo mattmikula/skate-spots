@@ -43,8 +43,8 @@ class SkateSpotService:
         if self._activity_service:
             try:
                 self._activity_service.record_spot_created(user_id, str(spot.id), spot.name)
-            except Exception as e:
-                self._logger.warning("failed to record spot creation activity", error=str(e))
+            except Exception as exc:
+                self._logger.warning("failed to record spot creation activity", error=str(exc))
 
         return spot
 

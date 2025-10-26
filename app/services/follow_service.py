@@ -81,10 +81,10 @@ class FollowService:
                 "user_id": following_user.id,
                 "username": following_user.username,
             }
-        except ValueError as e:
-            if "already following" in str(e).lower():
-                raise AlreadyFollowingError(f"Already following {following_username}") from e
-            raise FollowError(str(e)) from e
+        except ValueError as exc:
+            if "already following" in str(exc).lower():
+                raise AlreadyFollowingError(f"Already following {following_username}") from exc
+            raise FollowError(str(exc)) from exc
 
     def unfollow_user(self, follower_id: str, following_username: str) -> bool:
         """Unfollow a user.
