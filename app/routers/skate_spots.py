@@ -33,7 +33,7 @@ from app.models.skate_spot import (
 )
 from app.services.photo_storage import PhotoStorageError, delete_photos, save_photo_upload
 from app.services.skate_spot_service import SkateSpotService, get_skate_spot_service
-from spots.filters import build_skate_spot_filters
+from spots.filters import build_nearby_spot_filters, build_skate_spot_filters
 
 router = APIRouter(prefix="/skate-spots", tags=["skate-spots"])
 _TRUE_VALUES = {"true", "on", "1"}
@@ -325,6 +325,50 @@ async def list_skate_spots(
     )
 
     return service.list_spots(filters)
+
+
+@router.get("/nearby", response_model=list[SkateSpot])
+async def get_nearby_spots(
+    service: Annotated[SkateSpotService, Depends(get_skate_spot_service)],
+    latitude: float = Query(..., ge=-90, le=90, description="Center point latitude"),
+    longitude: float = Query(..., ge=-180, le=180, description="Center point longitude"),
+    radius_km: float = Query(5, ge=0.1, le=50, description="Search radius in kilometers"),
+    search: str | None = None,
+    spot_type: Annotated[list[SpotType] | None, Query()] = None,
+    difficulty: Annotated[list[Difficulty] | None, Query()] = None,
+    city: str | None = None,
+    country: str | None = None,
+    is_public: Annotated[bool | None, Query()] = None,
+    requires_permission: Annotated[bool | None, Query()] = None,
+) -> list[SkateSpot]:
+    """Get skate spots within a specified radius of a location.
+
+    Returns spots sorted by distance (closest first) with distance_km field populated.
+    """
+    try:
+        filters = build_nearby_spot_filters(
+            latitude=latitude,
+            longitude=longitude,
+            radius_km=radius_km,
+            search=search,
+            spot_types=spot_type,
+            difficulties=difficulty,
+            city=city,
+            country=country,
+            is_public=is_public,
+            requires_permission=requires_permission,
+        )
+        return service.get_nearby_spots(
+            latitude=filters.latitude,
+            longitude=filters.longitude,
+            radius_km=filters.radius_km,
+            filters=filters,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
 
 
 @router.get("/geojson", response_model=GeoJSONFeatureCollection)
