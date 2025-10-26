@@ -386,16 +386,17 @@ class NotificationService:
 
     @staticmethod
     def _select_message(*candidates: tuple[bool, str]) -> str:
-        """Return the first message whose condition is truthy.
+        """Return the first candidate whose condition is truthy.
 
+        If no condition is met, the final candidate's message is returned.
         Raises ValueError if no candidates are provided.
         """
         if not candidates:
             raise ValueError("_select_message requires at least one candidate")
-        for condition, message in candidates:
-            if condition:
+        last_index = len(candidates) - 1
+        for index, (condition, message) in enumerate(candidates):
+            if condition or index == last_index:
                 return message
-        return candidates[-1][1]
 
 
 def get_notification_service(
