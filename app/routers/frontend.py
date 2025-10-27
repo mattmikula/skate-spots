@@ -80,7 +80,7 @@ from app.services.user_profile_service import (
     UserProfileService,
     get_user_profile_service,
 )
-from spots.filters import build_skate_spot_filters
+from app.utils.filters import build_skate_spot_filters
 
 router = APIRouter(tags=["frontend"])
 templates = Jinja2Templates(directory="templates")

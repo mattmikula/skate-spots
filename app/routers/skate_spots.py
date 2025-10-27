@@ -33,7 +33,7 @@ from app.models.skate_spot import (
 )
 from app.services.photo_storage import PhotoStorageError, delete_photos, save_photo_upload
 from app.services.skate_spot_service import SkateSpotService, get_skate_spot_service
-from spots.filters import build_nearby_spot_filters, build_skate_spot_filters
+from app.utils.filters import build_nearby_spot_filters, build_skate_spot_filters
 
 router = APIRouter(prefix="/skate-spots", tags=["skate-spots"])
 _TRUE_VALUES = {"true", "on", "1"}
