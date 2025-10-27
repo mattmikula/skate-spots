@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from app.models.skate_spot import Difficulty, SpotType
-from spots.filters import build_skate_spot_filters
+from app.utils.filters import build_skate_spot_filters
 
 
 def test_build_filters_returns_none_when_no_values() -> None:
