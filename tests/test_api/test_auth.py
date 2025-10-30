@@ -147,6 +147,20 @@ class TestLogout:
         data = response.json()
         assert "logged out" in data["message"].lower()
 
+    def test_logout_form_request(self, client, test_user, auth_token):
+        """Test logout via browser form redirects and clears cookie."""
+        response = client.post(
+            "/api/v1/auth/logout",
+            cookies={"access_token": auth_token},
+            headers={"accept": "text/html"},
+            follow_redirects=False,
+        )
+
+        assert response.status_code == 303
+        assert response.headers["location"] == "/"
+        # Ensure the cookie removal header is present
+        assert "access_token=" in response.headers.get("set-cookie", "")
+
 
 class TestGetCurrentUser:
     """Tests for getting current user info."""
