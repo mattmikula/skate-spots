@@ -5,8 +5,8 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Response, status
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response, status
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.core.config import get_settings
 from app.core.dependencies import get_current_user, get_user_repository
@@ -188,11 +188,24 @@ async def login(
 
 
 @router.post("/logout")
-async def logout(response: Response) -> dict[str, str]:
+async def logout(request: Request) -> Response:
     """Logout by clearing the access token cookie."""
-    response.delete_cookie(key="access_token")
-    logger.info("logout successful")
-    return {"message": "Successfully logged out"}
+    accept_header = request.headers.get("accept", "")
+
+    # Default to returning JSON for API consumers
+    json_response = JSONResponse({"message": "Successfully logged out"})
+    json_response.delete_cookie(key="access_token")
+
+    if "text/html" in accept_header:
+        redirect_response = RedirectResponse(
+            url="/", status_code=status.HTTP_303_SEE_OTHER
+        )
+        redirect_response.delete_cookie(key="access_token")
+        logger.info("logout successful", response_type="redirect")
+        return redirect_response
+
+    logger.info("logout successful", response_type="json")
+    return json_response
 
 
 @router.get("/me", response_model=User)
