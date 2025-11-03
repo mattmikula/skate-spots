@@ -261,7 +261,7 @@ def _get_session_service_with_activity(
     return session_service
 
 
-def _session_context(
+async def _session_context(
     request: Request,
     spot_id: UUID,
     session_service: SessionService,
@@ -276,7 +276,7 @@ def _session_context(
 
     context_error = error
     try:
-        sessions = session_service.list_upcoming_sessions(
+        sessions = await session_service.list_upcoming_sessions(
             spot_id, current_user_id=str(current_user.id) if current_user else None
         )
     except SessionSpotNotFoundError:
@@ -929,7 +929,7 @@ async def session_section(
 ) -> HTMLResponse:
     """Render the session list and form snippet for a skate spot."""
 
-    context = _session_context(request, spot_id, session_service, current_user)
+    context = await _session_context(request, spot_id, session_service, current_user)
     return templates.TemplateResponse("partials/session_list.html", context)
 
 
@@ -955,7 +955,7 @@ async def session_detail(
         raise
 
     try:
-        session = session_service.get_session(
+        session = await session_service.get_session(
             session_id, current_user_id=str(current_user.id) if current_user else None
         )
     except SessionNotFoundError as exc:
@@ -989,7 +989,7 @@ async def create_session_partial(
     """Handle creation of a new session via HTMX."""
 
     if current_user is None:
-        context = _session_context(
+        context = await _session_context(
             request,
             spot_id,
             session_service,
@@ -1008,7 +1008,7 @@ async def create_session_partial(
     try:
         payload = SessionCreate(**payload_dict)
     except ValidationError as error:
-        context = _session_context(
+        context = await _session_context(
             request,
             spot_id,
             session_service,
@@ -1023,9 +1023,9 @@ async def create_session_partial(
         )
 
     try:
-        session_service.create_session(spot_id, current_user, payload)
+        await session_service.create_session(spot_id, current_user, payload)
     except SessionSpotNotFoundError as exc:
-        context = _session_context(
+        context = await _session_context(
             request,
             spot_id,
             session_service,
@@ -1039,7 +1039,7 @@ async def create_session_partial(
             status_code=status.HTTP_404_NOT_FOUND,
         )
     except SessionPermissionError as exc:
-        context = _session_context(
+        context = await _session_context(
             request,
             spot_id,
             session_service,
@@ -1053,7 +1053,7 @@ async def create_session_partial(
             status_code=status.HTTP_403_FORBIDDEN,
         )
     except ValueError as exc:
-        context = _session_context(
+        context = await _session_context(
             request,
             spot_id,
             session_service,
@@ -1067,7 +1067,7 @@ async def create_session_partial(
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
-    context = _session_context(
+    context = await _session_context(
         request,
         spot_id,
         session_service,
@@ -1097,7 +1097,7 @@ async def submit_session_rsvp(
     """Create or update an RSVP via HTMX."""
 
     if current_user is None:
-        context = _session_context(
+        context = await _session_context(
             request,
             spot_id,
             session_service,
@@ -1113,7 +1113,7 @@ async def submit_session_rsvp(
     try:
         response_value = SessionResponse(response_choice)
     except ValueError:
-        context = _session_context(
+        context = await _session_context(
             request,
             spot_id,
             session_service,
@@ -1129,8 +1129,8 @@ async def submit_session_rsvp(
     payload = SessionRSVPCreate(response=response_value, note=note)
 
     try:
-        session_service.rsvp_session(session_id, current_user, payload)
-        context = _session_context(
+        await session_service.rsvp_session(session_id, current_user, payload)
+        context = await _session_context(
             request,
             spot_id,
             session_service,
@@ -1139,7 +1139,7 @@ async def submit_session_rsvp(
         )
         status_code = status.HTTP_200_OK
     except SessionCapacityError as exc:
-        context = _session_context(
+        context = await _session_context(
             request,
             spot_id,
             session_service,
@@ -1148,7 +1148,7 @@ async def submit_session_rsvp(
         )
         status_code = status.HTTP_409_CONFLICT
     except SessionInactiveError as exc:
-        context = _session_context(
+        context = await _session_context(
             request,
             spot_id,
             session_service,
@@ -1157,7 +1157,7 @@ async def submit_session_rsvp(
         )
         status_code = status.HTTP_400_BAD_REQUEST
     except SessionNotFoundError as exc:
-        context = _session_context(
+        context = await _session_context(
             request,
             spot_id,
             session_service,
@@ -1166,7 +1166,7 @@ async def submit_session_rsvp(
         )
         status_code = status.HTTP_404_NOT_FOUND
     except SessionPermissionError as exc:
-        context = _session_context(
+        context = await _session_context(
             request,
             spot_id,
             session_service,
@@ -1175,7 +1175,7 @@ async def submit_session_rsvp(
         )
         status_code = status.HTTP_403_FORBIDDEN
     except SessionSpotNotFoundError as exc:
-        context = _session_context(
+        context = await _session_context(
             request,
             spot_id,
             session_service,
@@ -1205,7 +1205,7 @@ async def withdraw_session_rsvp(
     """Withdraw the current user's RSVP."""
 
     if current_user is None:
-        context = _session_context(
+        context = await _session_context(
             request,
             spot_id,
             session_service,
@@ -1219,8 +1219,8 @@ async def withdraw_session_rsvp(
         )
 
     try:
-        session_service.withdraw_rsvp(session_id, current_user)
-        context = _session_context(
+        await session_service.withdraw_rsvp(session_id, current_user)
+        context = await _session_context(
             request,
             spot_id,
             session_service,
@@ -1229,7 +1229,7 @@ async def withdraw_session_rsvp(
         )
         status_code = status.HTTP_200_OK
     except SessionRSVPNotFoundError as exc:
-        context = _session_context(
+        context = await _session_context(
             request,
             spot_id,
             session_service,
@@ -1238,7 +1238,7 @@ async def withdraw_session_rsvp(
         )
         status_code = status.HTTP_404_NOT_FOUND
     except (SessionNotFoundError, SessionSpotNotFoundError) as exc:
-        context = _session_context(
+        context = await _session_context(
             request,
             spot_id,
             session_service,
@@ -1247,7 +1247,7 @@ async def withdraw_session_rsvp(
         )
         status_code = status.HTTP_404_NOT_FOUND
     except SessionPermissionError as exc:
-        context = _session_context(
+        context = await _session_context(
             request,
             spot_id,
             session_service,
@@ -1277,7 +1277,7 @@ async def cancel_session_partial(
     """Allow organisers or admins to cancel a session."""
 
     if current_user is None:
-        context = _session_context(
+        context = await _session_context(
             request,
             spot_id,
             session_service,
@@ -1291,8 +1291,8 @@ async def cancel_session_partial(
         )
 
     try:
-        session_service.change_status(session_id, current_user, SessionStatus.CANCELLED)
-        context = _session_context(
+        await session_service.change_status(session_id, current_user, SessionStatus.CANCELLED)
+        context = await _session_context(
             request,
             spot_id,
             session_service,
@@ -1301,7 +1301,7 @@ async def cancel_session_partial(
         )
         status_code = status.HTTP_200_OK
     except SessionPermissionError as exc:
-        context = _session_context(
+        context = await _session_context(
             request,
             spot_id,
             session_service,
@@ -1310,7 +1310,7 @@ async def cancel_session_partial(
         )
         status_code = status.HTTP_403_FORBIDDEN
     except (SessionNotFoundError, SessionSpotNotFoundError) as exc:
-        context = _session_context(
+        context = await _session_context(
             request,
             spot_id,
             session_service,

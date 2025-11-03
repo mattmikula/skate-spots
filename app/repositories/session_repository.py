@@ -7,10 +7,10 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import asc, select
-from sqlalchemy.orm import Session as OrmSession
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.db.database import SessionLocal
+from app.db.database import AsyncSessionLocal
 from app.db.models import SessionORM, SessionRSVPORM
 from app.models.session import (
     Session,
@@ -23,7 +23,7 @@ from app.models.session import (
     SessionUpdate,
 )
 
-SessionFactory = Callable[[], OrmSession]
+AsyncSessionFactory = Callable[[], AsyncSession]
 
 
 def _session_stats(orm_session: SessionORM) -> SessionStats:
@@ -92,8 +92,8 @@ def _rsvp_to_model(orm_rsvp: SessionRSVPORM) -> SessionRSVP:
 class SessionRepository:
     """Persistence layer for sessions and RSVPs."""
 
-    def __init__(self, session_factory: SessionFactory | None = None) -> None:
-        self._session_factory = session_factory or SessionLocal
+    def __init__(self, session_factory: AsyncSessionFactory | None = None) -> None:
+        self._session_factory = session_factory or AsyncSessionLocal
 
     def _session_select(self, session_id: UUID | str):
         return (
@@ -117,7 +117,7 @@ class SessionRepository:
             .order_by(asc(SessionORM.start_time))
         )
 
-    def get_by_id(
+    async def get_by_id(
         self,
         session_id: UUID,
         *,
@@ -125,13 +125,14 @@ class SessionRepository:
     ) -> Session | None:
         """Return a session by its identifier."""
 
-        with self._session_factory() as db:
-            orm_session = db.scalars(self._session_select(session_id)).unique().one_or_none()
+        async with self._session_factory() as db:
+            result = await db.execute(self._session_select(session_id))
+            orm_session = result.unique().scalar_one_or_none()
             if orm_session is None:
                 return None
             return _session_to_model(orm_session, current_user_id=current_user_id)
 
-    def list_upcoming_for_spot(
+    async def list_upcoming_for_spot(
         self,
         spot_id: UUID,
         *,
@@ -141,14 +142,15 @@ class SessionRepository:
         """Return upcoming sessions for a spot."""
 
         now = now or datetime.now(UTC)
-        with self._session_factory() as db:
+        async with self._session_factory() as db:
             stmt = self._spot_sessions_select(spot_id, now=now)
-            sessions = db.scalars(stmt).unique().all()
+            result = await db.execute(stmt)
+            sessions = result.unique().scalars().all()
             return [
                 _session_to_model(session, current_user_id=current_user_id) for session in sessions
             ]
 
-    def create(
+    async def create(
         self,
         spot_id: UUID,
         organizer_id: str,
@@ -156,7 +158,7 @@ class SessionRepository:
     ) -> Session:
         """Persist a new session."""
 
-        with self._session_factory() as db:
+        async with self._session_factory() as db:
             session = SessionORM(
                 spot_id=str(spot_id),
                 organizer_id=str(organizer_id),
@@ -169,17 +171,18 @@ class SessionRepository:
                 capacity=payload.capacity,
             )
             db.add(session)
-            db.commit()
-            db.refresh(session)
-            db.refresh(session, attribute_names=["rsvps"])
-            return _session_to_model(session)
+            await db.commit()
+            result = await db.execute(self._session_select(session.id))
+            orm_session = result.unique().scalar_one()
+            return _session_to_model(orm_session)
 
-    def update(self, session_id: UUID, payload: SessionUpdate) -> Session | None:
+    async def update(self, session_id: UUID, payload: SessionUpdate) -> Session | None:
         """Apply updates to a session."""
 
         data = payload.model_dump(exclude_unset=True)
-        with self._session_factory() as db:
-            orm_session = db.scalars(self._session_select(session_id)).unique().one_or_none()
+        async with self._session_factory() as db:
+            result = await db.execute(self._session_select(session_id))
+            orm_session = result.unique().scalar_one_or_none()
             if orm_session is None:
                 return None
 
@@ -187,38 +190,40 @@ class SessionRepository:
                 setattr(orm_session, field, value)
 
             db.add(orm_session)
-            db.commit()
-            db.refresh(orm_session)
-            db.refresh(orm_session, attribute_names=["rsvps"])
-            return _session_to_model(orm_session)
+            await db.commit()
+            result = await db.execute(self._session_select(session_id))
+            updated_session = result.unique().scalar_one()
+            return _session_to_model(updated_session)
 
-    def set_status(self, session_id: UUID, status: SessionStatus) -> Session | None:
+    async def set_status(self, session_id: UUID, status: SessionStatus) -> Session | None:
         """Update the status of a session."""
 
-        with self._session_factory() as db:
-            orm_session = db.scalars(self._session_select(session_id)).unique().one_or_none()
+        async with self._session_factory() as db:
+            result = await db.execute(self._session_select(session_id))
+            orm_session = result.unique().scalar_one_or_none()
             if orm_session is None:
                 return None
 
             orm_session.status = status.value
             db.add(orm_session)
-            db.commit()
-            db.refresh(orm_session)
-            db.refresh(orm_session, attribute_names=["rsvps"])
-            return _session_to_model(orm_session)
+            await db.commit()
+            result = await db.execute(self._session_select(session_id))
+            updated_session = result.unique().scalar_one()
+            return _session_to_model(updated_session)
 
-    def delete(self, session_id: UUID) -> bool:
+    async def delete(self, session_id: UUID) -> bool:
         """Delete a session by identifier."""
 
-        with self._session_factory() as db:
-            orm_session = db.scalars(self._session_select(session_id)).unique().one_or_none()
+        async with self._session_factory() as db:
+            result = await db.execute(self._session_select(session_id))
+            orm_session = result.unique().scalar_one_or_none()
             if orm_session is None:
                 return False
-            db.delete(orm_session)
-            db.commit()
+            await db.delete(orm_session)
+            await db.commit()
             return True
 
-    def upsert_rsvp(
+    async def upsert_rsvp(
         self,
         session_id: UUID,
         user_id: str,
@@ -226,13 +231,14 @@ class SessionRepository:
     ) -> tuple[Session, SessionRSVP]:
         """Create or update an RSVP for the user."""
 
-        with self._session_factory() as db:
+        async with self._session_factory() as db:
             stmt = (
                 select(SessionRSVPORM)
                 .where(SessionRSVPORM.session_id == str(session_id))
                 .where(SessionRSVPORM.user_id == str(user_id))
             )
-            orm_rsvp = db.scalars(stmt).one_or_none()
+            result = await db.execute(stmt)
+            orm_rsvp = result.scalars().one_or_none()
             if orm_rsvp is None:
                 orm_rsvp = SessionRSVPORM(
                     session_id=str(session_id),
@@ -245,58 +251,63 @@ class SessionRepository:
                 orm_rsvp.note = payload.note
 
             db.add(orm_rsvp)
-            db.commit()
-            db.refresh(orm_rsvp)
-
-            orm_session = db.scalars(self._session_select(session_id)).unique().one()
+            await db.commit()
+            await db.refresh(orm_rsvp)
+            session_result = await db.execute(self._session_select(session_id))
+            orm_session = session_result.unique().scalar_one()
             return _session_to_model(orm_session, current_user_id=str(user_id)), _rsvp_to_model(
                 orm_rsvp
             )
 
-    def remove_rsvp(self, session_id: UUID, user_id: str) -> Session | None:
+    async def remove_rsvp(self, session_id: UUID, user_id: str) -> Session | None:
         """Remove an RSVP and return the updated session."""
 
-        with self._session_factory() as db:
+        async with self._session_factory() as db:
             stmt = (
                 select(SessionRSVPORM)
                 .where(SessionRSVPORM.session_id == str(session_id))
                 .where(SessionRSVPORM.user_id == str(user_id))
             )
-            orm_rsvp = db.scalars(stmt).one_or_none()
+            result = await db.execute(stmt)
+            orm_rsvp = result.scalars().one_or_none()
             if orm_rsvp is None:
                 return None
 
-            db.delete(orm_rsvp)
-            db.commit()
+            await db.delete(orm_rsvp)
+            await db.commit()
 
-            orm_session = db.scalars(self._session_select(session_id)).unique().one()
+            session_result = await db.execute(self._session_select(session_id))
+            orm_session = session_result.unique().scalar_one()
             return _session_to_model(orm_session)
 
-    def next_waitlisted(self, session_id: UUID) -> SessionRSVP | None:
+    async def next_waitlisted(self, session_id: UUID) -> SessionRSVP | None:
         """Return the oldest waitlisted RSVP."""
 
-        with self._session_factory() as db:
+        async with self._session_factory() as db:
             stmt = (
                 select(SessionRSVPORM)
                 .where(SessionRSVPORM.session_id == str(session_id))
                 .where(SessionRSVPORM.response == SessionResponse.WAITLIST.value)
                 .order_by(asc(SessionRSVPORM.created_at))
             )
-            orm_rsvp = db.scalars(stmt).first()
+            result = await db.execute(stmt)
+            orm_rsvp = result.scalars().first()
             return _rsvp_to_model(orm_rsvp) if orm_rsvp else None
 
-    def promote_waitlisted(self, rsvp_id: UUID) -> Session | None:
+    async def promote_waitlisted(self, rsvp_id: UUID) -> Session | None:
         """Promote a waitlisted RSVP to going."""
 
-        with self._session_factory() as db:
+        async with self._session_factory() as db:
             stmt = select(SessionRSVPORM).where(SessionRSVPORM.id == str(rsvp_id))
-            orm_rsvp = db.scalars(stmt).one_or_none()
+            result = await db.execute(stmt)
+            orm_rsvp = result.scalars().one_or_none()
             if orm_rsvp is None:
                 return None
 
             orm_rsvp.response = SessionResponse.GOING.value
             db.add(orm_rsvp)
-            db.commit()
+            await db.commit()
 
-            orm_session = db.scalars(self._session_select(UUID(orm_rsvp.session_id))).unique().one()
+            session_result = await db.execute(self._session_select(UUID(orm_rsvp.session_id)))
+            orm_session = session_result.unique().scalar_one()
             return _session_to_model(orm_session)

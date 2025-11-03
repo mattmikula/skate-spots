@@ -75,7 +75,7 @@ class SessionService:
             self._logger.warning("session requested for missing spot", spot_id=str(spot_id))
             raise SessionSpotNotFoundError(f"Skate spot with id {spot_id} not found.")
 
-    def get_session(
+    async def get_session(
         self,
         session_id: UUID,
         *,
@@ -93,20 +93,20 @@ class SessionService:
         Raises:
             SessionNotFoundError: If the session doesn't exist
         """
-        session = self._sessions.get_by_id(session_id, current_user_id=current_user_id)
+        session = await self._sessions.get_by_id(session_id, current_user_id=current_user_id)
         if session is None:
             self._logger.warning("session not found", session_id=str(session_id))
             raise SessionNotFoundError(f"Session with id {session_id} not found.")
         return session
 
-    def _ensure_session(
+    async def _ensure_session(
         self,
         session_id: UUID,
         *,
         current_user_id: str | None = None,
     ) -> Session:
         """Internal helper that calls get_session(). Kept for backward compatibility."""
-        return self.get_session(session_id, current_user_id=current_user_id)
+        return await self.get_session(session_id, current_user_id=current_user_id)
 
     @staticmethod
     def _ensure_upcoming(start_time: datetime) -> None:
@@ -117,7 +117,7 @@ class SessionService:
     def _is_organizer(session: Session, user: UserORM) -> bool:
         return str(session.organizer_id) == str(user.id)
 
-    def list_upcoming_sessions(
+    async def list_upcoming_sessions(
         self,
         spot_id: UUID,
         *,
@@ -126,7 +126,9 @@ class SessionService:
         """Return upcoming sessions for a skate spot."""
 
         self._ensure_spot_exists(spot_id)
-        sessions = self._sessions.list_upcoming_for_spot(spot_id, current_user_id=current_user_id)
+        sessions = await self._sessions.list_upcoming_for_spot(
+            spot_id, current_user_id=current_user_id
+        )
         self._logger.debug(
             "listed upcoming sessions",
             spot_id=str(spot_id),
@@ -134,7 +136,7 @@ class SessionService:
         )
         return sessions
 
-    def create_session(
+    async def create_session(
         self,
         spot_id: UUID,
         organizer: UserORM,
@@ -145,7 +147,7 @@ class SessionService:
         self._ensure_spot_exists(spot_id)
         self._ensure_upcoming(payload.start_time)
 
-        session = self._sessions.create(spot_id, organizer.id, payload)
+        session = await self._sessions.create(spot_id, organizer.id, payload)
         self._logger.info(
             "session created",
             session_id=str(session.id),
@@ -163,7 +165,7 @@ class SessionService:
 
         return session
 
-    def update_session(
+    async def update_session(
         self,
         session_id: UUID,
         user: UserORM,
@@ -171,7 +173,7 @@ class SessionService:
     ) -> Session:
         """Update a session when permitted."""
 
-        session = self._ensure_session(session_id)
+        session = await self._ensure_session(session_id)
 
         if not (user.is_admin or self._is_organizer(session, user)):
             self._logger.debug(
@@ -192,7 +194,7 @@ class SessionService:
                 "Only administrators can re-activate cancelled or completed sessions."
             )
 
-        updated = self._sessions.update(session_id, payload)
+        updated = await self._sessions.update(session_id, payload)
         if updated is None:
             raise SessionNotFoundError(f"Session with id {session_id} not found.")
         self._logger.info(
@@ -202,7 +204,7 @@ class SessionService:
         )
         return updated
 
-    def change_status(
+    async def change_status(
         self,
         session_id: UUID,
         user: UserORM,
@@ -210,11 +212,11 @@ class SessionService:
     ) -> Session | None:
         """Explicitly set the session status."""
 
-        session = self._ensure_session(session_id)
+        session = await self._ensure_session(session_id)
         if not (user.is_admin or self._is_organizer(session, user)):
             raise SessionPermissionError("You are not allowed to change the session status.")
 
-        updated = self._sessions.set_status(session_id, status)
+        updated = await self._sessions.set_status(session_id, status)
         if updated is None:
             raise SessionNotFoundError(f"Session with id {session_id} not found.")
 
@@ -224,16 +226,16 @@ class SessionService:
             status=status.value,
             user_id=user.id,
         )
-        return self._sessions.get_by_id(session_id, current_user_id=str(user.id))
+        return await self._sessions.get_by_id(session_id, current_user_id=str(user.id))
 
-    def delete_session(self, session_id: UUID, user: UserORM) -> None:
+    async def delete_session(self, session_id: UUID, user: UserORM) -> None:
         """Delete a session entirely."""
 
-        session = self._ensure_session(session_id)
+        session = await self._ensure_session(session_id)
         if not (user.is_admin or self._is_organizer(session, user)):
             raise SessionPermissionError("You are not allowed to delete this session.")
 
-        deleted = self._sessions.delete(session_id)
+        deleted = await self._sessions.delete(session_id)
         if not deleted:
             raise SessionNotFoundError(f"Session with id {session_id} not found.")
         self._logger.info(
@@ -242,7 +244,7 @@ class SessionService:
             user_id=user.id,
         )
 
-    def rsvp_session(
+    async def rsvp_session(
         self,
         session_id: UUID,
         user: UserORM,
@@ -250,7 +252,7 @@ class SessionService:
     ) -> Session:
         """Create or update an RSVP for the current user."""
 
-        session = self._ensure_session(session_id, current_user_id=str(user.id))
+        session = await self._ensure_session(session_id, current_user_id=str(user.id))
         if session.status != SessionStatus.SCHEDULED:
             raise SessionInactiveError("Cannot RSVP to a cancelled or completed session.")
 
@@ -271,7 +273,7 @@ class SessionService:
         ):
             raise SessionCapacityError("This session has reached capacity.")
 
-        updated_session, rsvp = self._sessions.upsert_rsvp(session_id, user.id, payload)
+        updated_session, rsvp = await self._sessions.upsert_rsvp(session_id, user.id, payload)
         self._logger.info(
             "session RSVP recorded",
             session_id=str(session_id),
@@ -289,14 +291,14 @@ class SessionService:
                 session_title=updated_session.title if updated_session else None,
             )
 
-        self._maybe_promote_waitlist(updated_session)
-        return self._sessions.get_by_id(session_id, current_user_id=str(user.id))
+        await self._maybe_promote_waitlist(updated_session)
+        return await self._sessions.get_by_id(session_id, current_user_id=str(user.id))
 
-    def withdraw_rsvp(self, session_id: UUID, user: UserORM) -> Session:
+    async def withdraw_rsvp(self, session_id: UUID, user: UserORM) -> Session:
         """Remove the user's RSVP and rebalance the waitlist."""
 
-        self._ensure_session(session_id)
-        updated = self._sessions.remove_rsvp(session_id, user.id)
+        await self._ensure_session(session_id)
+        updated = await self._sessions.remove_rsvp(session_id, user.id)
         if updated is None:
             raise SessionRSVPNotFoundError("You do not have an RSVP for this session.")
 
@@ -305,20 +307,20 @@ class SessionService:
             session_id=str(session_id),
             user_id=user.id,
         )
-        self._maybe_promote_waitlist(updated)
-        return self._sessions.get_by_id(session_id, current_user_id=str(user.id))
+        await self._maybe_promote_waitlist(updated)
+        return await self._sessions.get_by_id(session_id, current_user_id=str(user.id))
 
-    def _maybe_promote_waitlist(self, session: Session) -> bool:
+    async def _maybe_promote_waitlist(self, session: Session) -> bool:
         """Promote the next waitlisted skater if space is available."""
 
         if session.capacity is None:
             return False
 
         if session.stats.going < session.capacity:
-            candidate = self._sessions.next_waitlisted(session.id)
+            candidate = await self._sessions.next_waitlisted(session.id)
             if candidate is None:
                 return False
-            promoted = self._sessions.promote_waitlisted(candidate.id)
+            promoted = await self._sessions.promote_waitlisted(candidate.id)
             if promoted is None:
                 return False
             self._logger.debug(

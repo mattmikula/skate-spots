@@ -60,7 +60,7 @@ async def list_spot_sessions(
     """Return scheduled sessions for the given skate spot."""
 
     try:
-        return service.list_upcoming_sessions(
+        return await service.list_upcoming_sessions(
             spot_id, current_user_id=str(current_user.id) if current_user else None
         )
     except (
@@ -89,7 +89,7 @@ async def create_spot_session(
     """Create a session for a spot."""
 
     try:
-        return service.create_session(spot_id, current_user, payload)
+        return await service.create_session(spot_id, current_user, payload)
     except (
         SessionSpotNotFoundError,
         SessionNotFoundError,
@@ -111,7 +111,7 @@ async def update_session(
     """Update details for a session."""
 
     try:
-        return service.update_session(session_id, current_user, payload)
+        return await service.update_session(session_id, current_user, payload)
     except (
         SessionSpotNotFoundError,
         SessionNotFoundError,
@@ -132,7 +132,7 @@ async def delete_session(
     """Delete a session."""
 
     try:
-        service.delete_session(session_id, current_user)
+        await service.delete_session(session_id, current_user)
     except (
         SessionSpotNotFoundError,
         SessionNotFoundError,
@@ -156,7 +156,7 @@ async def rsvp_session(
     """Create or update the current user's RSVP."""
 
     try:
-        return service.rsvp_session(session_id, current_user, payload)
+        return await service.rsvp_session(session_id, current_user, payload)
     except (
         SessionSpotNotFoundError,
         SessionNotFoundError,
@@ -177,7 +177,7 @@ async def withdraw_rsvp(
     """Withdraw the authenticated user's RSVP."""
 
     try:
-        return service.withdraw_rsvp(session_id, current_user)
+        return await service.withdraw_rsvp(session_id, current_user)
     except (
         SessionSpotNotFoundError,
         SessionNotFoundError,
