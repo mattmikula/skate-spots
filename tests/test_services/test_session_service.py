@@ -43,16 +43,17 @@ def _create_spot(session_factory, owner_id: str):
     )
 
 
-def _service(session_factory, activity_service=None) -> SessionService:
+def _service(session_factory, async_session_factory, activity_service=None) -> SessionService:
     return SessionService(
-        SessionRepository(session_factory=session_factory),
+        SessionRepository(session_factory=async_session_factory),
         SkateSpotRepository(session_factory=session_factory),
         activity_service=activity_service,
     )
 
 
-def test_create_and_list_session(session_factory):
-    service = _service(session_factory)
+@pytest.mark.asyncio
+async def test_create_and_list_session(session_factory, async_session_factory):
+    service = _service(session_factory, async_session_factory)
     organizer = _create_user(session_factory, "organizer@example.com", "organizer")
     spot = _create_spot(session_factory, organizer.id)
 
@@ -66,16 +67,17 @@ def test_create_and_list_session(session_factory):
         capacity=6,
     )
 
-    session = service.create_session(spot.id, organizer, payload)
+    session = await service.create_session(spot.id, organizer, payload)
     assert session.title == "Sunrise Flow"
-    listed = service.list_upcoming_sessions(spot.id, current_user_id=str(organizer.id))
+    listed = await service.list_upcoming_sessions(spot.id, current_user_id=str(organizer.id))
     assert len(listed) == 1
     assert listed[0].stats.going == 0
     assert listed[0].user_response is None
 
 
-def test_waitlist_promotion_after_withdraw(session_factory):
-    service = _service(session_factory)
+@pytest.mark.asyncio
+async def test_waitlist_promotion_after_withdraw(session_factory, async_session_factory):
+    service = _service(session_factory, async_session_factory)
     organizer = _create_user(session_factory, "organizer@example.com", "organizer")
     attendee = _create_user(session_factory, "attendee@example.com", "attendee")
     spot = _create_spot(session_factory, organizer.id)
@@ -87,24 +89,29 @@ def test_waitlist_promotion_after_withdraw(session_factory):
         end_time=datetime.now(UTC) + timedelta(hours=2),
         capacity=1,
     )
-    session = service.create_session(spot.id, organizer, payload)
+    session = await service.create_session(spot.id, organizer, payload)
 
-    service.rsvp_session(session.id, organizer, SessionRSVPCreate(response=SessionResponse.GOING))
+    await service.rsvp_session(
+        session.id, organizer, SessionRSVPCreate(response=SessionResponse.GOING)
+    )
 
     with pytest.raises(SessionCapacityError):
-        service.rsvp_session(
+        await service.rsvp_session(
             session.id, attendee, SessionRSVPCreate(response=SessionResponse.GOING)
         )
 
-    service.rsvp_session(session.id, attendee, SessionRSVPCreate(response=SessionResponse.WAITLIST))
-    service.withdraw_rsvp(session.id, organizer)
+    await service.rsvp_session(
+        session.id, attendee, SessionRSVPCreate(response=SessionResponse.WAITLIST)
+    )
+    await service.withdraw_rsvp(session.id, organizer)
 
-    refreshed = service.list_upcoming_sessions(spot.id, current_user_id=str(attendee.id))[0]
+    refreshed = (await service.list_upcoming_sessions(spot.id, current_user_id=str(attendee.id)))[0]
     assert refreshed.stats.going == 1
     assert refreshed.user_response == SessionResponse.GOING
 
 
-def test_session_creation_records_activity(session_factory):
+@pytest.mark.asyncio
+async def test_session_creation_records_activity(session_factory, async_session_factory):
     organizer = _create_user(session_factory, "organizer@example.com", "organizer")
     spot = _create_spot(session_factory, organizer.id)
 
@@ -113,7 +120,7 @@ def test_session_creation_records_activity(session_factory):
     try:
         activity_service = ActivityService(db)
         service_with_activity = SessionService(
-            SessionRepository(session_factory=session_factory),
+            SessionRepository(session_factory=async_session_factory),
             SkateSpotRepository(session_factory=session_factory),
             activity_service=activity_service,
         )
@@ -126,7 +133,7 @@ def test_session_creation_records_activity(session_factory):
             capacity=6,
         )
 
-        session = service_with_activity.create_session(spot.id, organizer, payload)
+        session = await service_with_activity.create_session(spot.id, organizer, payload)
         assert session.title == "Sunrise Flow"
 
         # Verify activity was recorded
@@ -139,8 +146,9 @@ def test_session_creation_records_activity(session_factory):
         db.close()
 
 
-def test_session_rsvp_records_activity(session_factory):
-    service = _service(session_factory)
+@pytest.mark.asyncio
+async def test_session_rsvp_records_activity(session_factory, async_session_factory):
+    service = _service(session_factory, async_session_factory)
     organizer = _create_user(session_factory, "organizer@example.com", "organizer")
     attendee = _create_user(session_factory, "attendee@example.com", "attendee")
     spot = _create_spot(session_factory, organizer.id)
@@ -152,19 +160,19 @@ def test_session_rsvp_records_activity(session_factory):
         end_time=datetime.now(UTC) + timedelta(hours=2),
         capacity=10,
     )
-    session = service.create_session(spot.id, organizer, payload)
+    session = await service.create_session(spot.id, organizer, payload)
 
     # Create activity service and update service
     db = session_factory()
     try:
         activity_service = ActivityService(db)
         service_with_activity = SessionService(
-            SessionRepository(session_factory=session_factory),
+            SessionRepository(session_factory=async_session_factory),
             SkateSpotRepository(session_factory=session_factory),
             activity_service=activity_service,
         )
 
-        service_with_activity.rsvp_session(
+        await service_with_activity.rsvp_session(
             session.id, attendee, SessionRSVPCreate(response=SessionResponse.GOING)
         )
 

@@ -1,15 +1,18 @@
 """Shared test fixtures and configuration."""
 
+import asyncio
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app.core.dependencies import get_user_repository
 from app.core.rate_limiter import rate_limiter
 from app.core.security import create_access_token, get_password_hash
-from app.db.database import Base, get_db
+from app.db.database import Base, get_async_db, get_db
 from app.models.user import UserCreate
 from app.repositories.comment_repository import CommentRepository
 from app.repositories.favorite_repository import FavoriteRepository
@@ -37,27 +40,63 @@ from main import app
 
 
 @pytest.fixture
-def session_factory():
-    """Create an in-memory SQLite session factory for tests."""
+def _session_factory_bundle(tmp_path_factory):
+    """Initialise paired sync and async session factories against a temporary SQLite file."""
 
-    engine = create_engine(
-        "sqlite+pysqlite:///:memory:",
+    db_dir = tmp_path_factory.mktemp("db")
+    db_path = Path(db_dir) / "test.sqlite3"
+    sync_url = f"sqlite+pysqlite:///{db_path}"
+    async_url = f"sqlite+aiosqlite:///{db_path}"
+
+    sync_engine = create_engine(
+        sync_url,
         connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
         future=True,
     )
-    Base.metadata.create_all(engine)
-    TestSessionLocal = sessionmaker(
-        bind=engine,
+    Base.metadata.create_all(sync_engine)
+
+    async_engine = create_async_engine(
+        async_url,
+        connect_args={"check_same_thread": False},
+        future=True,
+    )
+
+    sync_session_maker = sessionmaker(
+        bind=sync_engine,
         autoflush=False,
         autocommit=False,
         expire_on_commit=False,
     )
+    async_session_maker = async_sessionmaker(
+        bind=async_engine,
+        autoflush=False,
+        autocommit=False,
+        expire_on_commit=False,
+    )
+
     try:
-        yield TestSessionLocal
+        yield sync_session_maker, async_session_maker, async_engine, db_path
     finally:
-        Base.metadata.drop_all(engine)
-        engine.dispose()
+        Base.metadata.drop_all(sync_engine)
+        sync_engine.dispose()
+        asyncio.run(async_engine.dispose())
+        db_path.unlink(missing_ok=True)
+
+
+@pytest.fixture
+def session_factory(_session_factory_bundle):
+    """Provide a synchronous session factory for repositories that remain sync."""
+
+    sync_session_maker, _, _, _ = _session_factory_bundle
+    return sync_session_maker
+
+
+@pytest.fixture
+def async_session_factory(_session_factory_bundle):
+    """Provide an async session factory for repositories that use AsyncSession."""
+
+    _, async_session_maker, _, _ = _session_factory_bundle
+    return async_session_maker
 
 
 @pytest.fixture(autouse=True)
@@ -78,7 +117,7 @@ def fresh_service(session_factory):
 
 
 @pytest.fixture
-def client(session_factory):
+def client(session_factory, async_session_factory):
     """Create a FastAPI test client with a test database."""
 
     repository = SkateSpotRepository(session_factory=session_factory)
@@ -89,7 +128,7 @@ def client(session_factory):
     comment_service = CommentService(comment_repository, repository)
     favorite_repository = FavoriteRepository(session_factory=session_factory)
     favorite_service = FavoriteService(favorite_repository, repository)
-    session_repository = SessionRepository(session_factory=session_factory)
+    session_repository = SessionRepository(session_factory=async_session_factory)
     session_service = SessionService(session_repository, repository)
     profile_repository = UserProfileRepository(session_factory=session_factory)
     profile_service = UserProfileService(profile_repository)
@@ -109,6 +148,10 @@ def client(session_factory):
         finally:
             db.close()
 
+    async def override_get_async_db():
+        async with async_session_factory() as db:
+            yield db
+
     app.dependency_overrides[get_skate_spot_service] = lambda: service
     app.dependency_overrides[get_rating_service] = lambda: rating_service
     app.dependency_overrides[get_comment_service] = lambda: comment_service
@@ -117,6 +160,7 @@ def client(session_factory):
     app.dependency_overrides[get_user_repository] = override_get_user_repository
     app.dependency_overrides[get_favorite_service] = lambda: favorite_service
     app.dependency_overrides[get_user_profile_service] = lambda: profile_service
+    app.dependency_overrides[get_async_db] = override_get_async_db
 
     try:
         with TestClient(app) as test_client:
@@ -130,6 +174,7 @@ def client(session_factory):
         app.dependency_overrides.pop(get_user_repository, None)
         app.dependency_overrides.pop(get_favorite_service, None)
         app.dependency_overrides.pop(get_user_profile_service, None)
+        app.dependency_overrides.pop(get_async_db, None)
 
 
 @pytest.fixture
