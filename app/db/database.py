@@ -28,12 +28,10 @@ def _load_settings():
 def _ensure_async_driver(url: str) -> str:
     """Return an async-compatible database URL for the configured backend."""
 
-    if url.startswith("sqlite+aiosqlite://") or url.startswith("postgresql+asyncpg://"):
+    if url.startswith("sqlite+aiosqlite://"):
         return url
     if url.startswith("sqlite://"):
         return url.replace("sqlite://", "sqlite+aiosqlite://", 1)
-    if url.startswith("postgresql://"):
-        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
     return url
 
 
