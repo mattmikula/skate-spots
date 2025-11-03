@@ -197,9 +197,7 @@ async def logout(request: Request) -> Response:
     json_response.delete_cookie(key="access_token")
 
     if "text/html" in accept_header:
-        redirect_response = RedirectResponse(
-            url="/", status_code=status.HTTP_303_SEE_OTHER
-        )
+        redirect_response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
         redirect_response.delete_cookie(key="access_token")
         logger.info("logout successful", response_type="redirect")
         return redirect_response
