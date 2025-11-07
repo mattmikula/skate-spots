@@ -29,10 +29,14 @@ format:
 test:
 	uv run pytest
 
+coverage:
+	uv run coverage run -m pytest
+	uv run coverage report
+
 serve:
 	uv run uvicorn main:app --reload
 
-check: lint test
+check: lint coverage
 
 migrate:
 	uv run alembic upgrade head
