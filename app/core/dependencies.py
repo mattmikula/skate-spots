@@ -2,26 +2,27 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import Cookie, Depends, HTTPException, status
 
 from app.core.security import decode_access_token
-from app.db import models as db_models
 from app.db.database import get_db
 from app.repositories import user_repository
 
-UserRepository = user_repository.UserRepository
-UserORM = db_models.UserORM
+if TYPE_CHECKING:
+    from app.db.models import UserORM
+else:
+    UserORM = Any
 
 
-def get_user_repository(db: Annotated[Any, Depends(get_db)]) -> UserRepository:
+def get_user_repository(db: Annotated[Any, Depends(get_db)]) -> user_repository.UserRepository:
     """Get user repository instance."""
-    return UserRepository(db)
+    return user_repository.UserRepository(db)
 
 
 async def get_current_user(
-    user_repo: Annotated[UserRepository, Depends(get_user_repository)],
+    user_repo: Annotated[user_repository.UserRepository, Depends(get_user_repository)],
     access_token: Annotated[str | None, Cookie()] = None,
 ) -> UserORM:
     """Get the current authenticated user from the access token cookie."""
@@ -32,7 +33,6 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Decode the token
     payload = decode_access_token(access_token)
     if payload is None:
         raise HTTPException(
@@ -49,7 +49,6 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Get user from database
     user = user_repo.get_by_id(user_id)
     if user is None:
         raise HTTPException(
@@ -76,7 +75,7 @@ async def get_current_active_user(
 
 
 async def get_optional_user(
-    user_repo: Annotated[UserRepository, Depends(get_user_repository)],
+    user_repo: Annotated[user_repository.UserRepository, Depends(get_user_repository)],
     access_token: Annotated[str | None, Cookie()] = None,
 ) -> UserORM | None:
     """Get the current user if authenticated, otherwise return None."""

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 import bcrypt
 from jose import JWTError, jwt
@@ -62,7 +62,7 @@ def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = 
     else:
         expire = datetime.now(UTC) + timedelta(minutes=settings.access_token_expire_minutes)
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=ALGORITHM)
+    encoded_jwt = cast("str", jwt.encode(to_encode, settings.secret_key, algorithm=ALGORITHM))
     return encoded_jwt
 
 
@@ -70,7 +70,9 @@ def decode_access_token(token: str) -> dict[str, Any] | None:
     """Decode and validate a JWT access token."""
     try:
         settings = get_settings()
-        payload = jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
+        payload = cast(
+            "dict[str, Any]", jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
+        )
         return payload
     except JWTError as exc:
         logger.warning("access token decode failed", error=str(exc))
