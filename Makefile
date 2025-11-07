@@ -1,4 +1,4 @@
-.PHONY: help install dev lint format test serve clean check migrate revision downgrade
+.PHONY: help install dev lint format test mypy coverage serve clean check migrate revision downgrade
 
 help:
 	@echo "Available commands:"
@@ -7,6 +7,8 @@ help:
 	@echo "  lint       - Check code with ruff"
 	@echo "  format     - Format code with ruff"
 	@echo "  test       - Run tests with pytest"
+	@echo "  mypy       - Run static type checks"
+	@echo "  coverage   - Run pytest with coverage enforcement"
 	@echo "  serve      - Start development server"
 	@echo "  check      - Run lint and tests"
 	@echo "  migrate    - Apply database migrations"
@@ -29,6 +31,9 @@ format:
 test:
 	uv run pytest
 
+mypy:
+	uv run mypy
+
 coverage:
 	uv run coverage run -m pytest
 	uv run coverage report
@@ -36,7 +41,7 @@ coverage:
 serve:
 	uv run uvicorn main:app --reload
 
-check: lint coverage
+check: lint mypy coverage
 
 migrate:
 	uv run alembic upgrade head

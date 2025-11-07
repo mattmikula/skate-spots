@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from logging.config import dictConfig
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import structlog
 import structlog.types
@@ -30,7 +30,7 @@ def setup_logging(settings: Settings | None = None, *, force: bool = False) -> N
     log_level = settings.log_level
 
     timestamper = structlog.processors.TimeStamper(fmt="iso", key="timestamp")
-    shared_processors = [
+    shared_processors: list[structlog.types.Processor] = [
         merge_contextvars,
         structlog.stdlib.add_logger_name,
         structlog.processors.add_log_level,
@@ -96,8 +96,8 @@ def get_logger(name: str | None = None) -> FilteringBoundLogger:
         setup_logging()
 
     if name is None:
-        return structlog.get_logger()
-    return structlog.get_logger(name)
+        return cast("FilteringBoundLogger", structlog.get_logger())
+    return cast("FilteringBoundLogger", structlog.get_logger(name))
 
 
 __all__ = ["setup_logging", "get_logger", "bind_contextvars", "clear_contextvars"]

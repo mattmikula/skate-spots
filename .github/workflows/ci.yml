@@ -35,5 +35,8 @@ jobs:
     - name: Check code formatting
       run: uv run ruff format --check
 
+    - name: Run mypy
+      run: make mypy
+
     - name: Run tests with coverage
       run: make coverage

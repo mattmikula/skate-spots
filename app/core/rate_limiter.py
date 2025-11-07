@@ -7,8 +7,14 @@ import time
 from collections import abc, defaultdict, deque
 from dataclasses import dataclass
 from threading import Lock
+from typing import TYPE_CHECKING
 
 from fastapi import Depends, HTTPException, Request, status
+
+if TYPE_CHECKING:
+    from fastapi.params import Depends as DependsMarker
+else:
+    DependsMarker = Depends
 
 
 @dataclass(frozen=True)
@@ -67,7 +73,7 @@ AUTH_REGISTER_LIMIT = RateLimitRule(scope="auth:register", limit=5, window_secon
 SKATE_SPOT_WRITE_LIMIT = RateLimitRule(scope="skate-spots:write", limit=50, window_seconds=60)
 
 
-def rate_limit_dependency(rule: RateLimitRule) -> abc.Callable[[Request], None]:
+def rate_limit_dependency(rule: RateLimitRule) -> abc.Callable[[Request], abc.Awaitable[None]]:
     """Create a FastAPI dependency that enforces a rate limit rule."""
 
     async def _dependency(request: Request) -> None:
@@ -90,7 +96,7 @@ def rate_limit_dependency(rule: RateLimitRule) -> abc.Callable[[Request], None]:
     return _dependency
 
 
-def rate_limited(rule: RateLimitRule) -> Depends:
+def rate_limited(rule: RateLimitRule) -> DependsMarker:
     """Return a dependency that enforces the provided rate limit rule."""
 
     return Depends(rate_limit_dependency(rule))

@@ -171,8 +171,11 @@ curl "http://localhost:8000/api/v1/auth/users/kickflip_master"
 make test
 # Or directly: uv run pytest
 
-# Run tests with coverage (fails under 80% branch coverage)
+# Run tests with coverage (fails under 75% branch coverage)
 make coverage
+
+# Static type checks
+make mypy
 
 # Run specific test packages
 uv run pytest tests/test_models/        # Model validation tests
@@ -182,7 +185,7 @@ uv run pytest tests/test_api/           # API integration tests
 # Check code quality
 make lint          # Check code with ruff
 make format        # Format code with ruff
-make check         # Run lint plus coverage-enforced tests
+make check         # Run lint, mypy, and coverage-enforced tests
 
 # Database migrations
 make migrate       # Apply the latest migrations

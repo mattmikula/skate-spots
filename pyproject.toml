@@ -82,6 +82,7 @@ dev = [
     "alembic>=1.14.1",
     "ruff>=0.12.10",
     "coverage[toml]>=7.6.4",
+    "mypy>=1.13.0",
 ]
 
 [tool.coverage.run]
@@ -97,3 +98,19 @@ omit = [
 show_missing = true
 skip_covered = true
 fail_under = 75
+
+[tool.mypy]
+python_version = "3.12"
+files = ["app/core"]
+pretty = true
+show_error_codes = true
+warn_unused_ignores = true
+warn_return_any = true
+ignore_missing_imports = true
+follow_imports = "skip"
+plugins = ["pydantic.mypy"]
+
+[tool.pydantic-mypy]
+init_typed = true
+warn_required_dynamic_aliases = true
+warn_untyped_fields = true
