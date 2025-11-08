@@ -1,5 +1,8 @@
 """Tests for the notification repository."""
 
+from __future__ import annotations
+
+import json
 
 import pytest
 
@@ -59,6 +62,10 @@ def test_create_notification(notification_repository, test_user, second_user):
     assert notification.is_read is False
     assert notification.read_at is None
     assert notification.notification_metadata is not None
+
+    # Verify metadata serialization
+    metadata = json.loads(notification.notification_metadata)
+    assert metadata == {"spot_name": "Test Skate Park"}
 
 
 def test_create_notification_without_metadata(notification_repository, test_user):
