@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 from typing import Annotated
-from uuid import UUID  # noqa: TC003
+from uuid import UUID  # noqa: TCH003
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from app.core.dependencies import get_current_user, get_optional_user
 from app.core.rate_limiter import SKATE_SPOT_WRITE_LIMIT, rate_limited
-from app.db.models import UserORM  # noqa: TC001
-from app.models.comment import Comment, CommentCreate  # noqa: TC001
+from app.db.models import UserORM  # noqa: TCH001
+from app.models.comment import Comment, CommentCreate  # noqa: TCH001
 from app.services.comment_service import (
     CommentNotFoundError,
     CommentPermissionError,

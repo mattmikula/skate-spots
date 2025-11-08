@@ -1,6 +1,6 @@
 # Skate Spots API
 
-[![CI](https://github.com/yourusername/skate-spots/workflows/CI/badge.svg)](https://github.com/yourusername/skate-spots/actions)
+[![CI](https://github.com/mattmikula/skate-spots/workflows/CI/badge.svg)](https://github.com/mattmikula/skate-spots/actions)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.12-blue)](https://www.python.org/downloads/)
 
