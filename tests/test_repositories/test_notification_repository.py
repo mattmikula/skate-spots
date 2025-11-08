@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 from datetime import UTC
-from typing import TYPE_CHECKING
 
 import pytest
 
@@ -12,9 +11,6 @@ from app.repositories.notification_repository import (
     NotificationCreateData,
     NotificationRepository,
 )
-
-if TYPE_CHECKING:
-    from sqlalchemy.orm import Session
 
 
 @pytest.fixture
