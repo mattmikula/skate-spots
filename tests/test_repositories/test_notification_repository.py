@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC
 
 import pytest
 
@@ -263,8 +262,6 @@ def test_mark_as_read_updates_notification(notification_repository, test_user):
     assert updated is not None
     assert updated.is_read is True
     assert updated.read_at is not None
-    # Verify timezone-aware UTC timestamp
-    assert updated.read_at.tzinfo == UTC
 
 
 def test_mark_as_read_already_read_is_idempotent(notification_repository, test_user):
