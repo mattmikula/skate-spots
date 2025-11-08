@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import shutil
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
 from uuid import uuid4
@@ -44,7 +44,7 @@ def _generate_destination(upload: UploadFile, media_root: Path) -> tuple[Path, s
     """Return destination path for an upload and the stored relative path string."""
 
     suffix = Path(upload.filename or "").suffix.lower()
-    timestamp = datetime.utcnow()
+    timestamp = datetime.now(UTC)
     subdir = Path(str(timestamp.year), f"{timestamp.month:02d}")
     destination_dir = media_root / subdir
     destination_dir.mkdir(parents=True, exist_ok=True)
