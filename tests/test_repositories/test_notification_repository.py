@@ -1,6 +1,10 @@
 """Tests for the notification repository."""
 
-from uuid import UUID
+from __future__ import annotations
+
+import json
+from datetime import UTC
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -8,6 +12,9 @@ from app.repositories.notification_repository import (
     NotificationCreateData,
     NotificationRepository,
 )
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
 
 
 @pytest.fixture
@@ -61,6 +68,10 @@ def test_create_notification(notification_repository, test_user, second_user):
     assert notification.read_at is None
     assert notification.notification_metadata is not None
 
+    # Verify metadata serialization
+    metadata = json.loads(notification.notification_metadata)
+    assert metadata == {"spot_name": "Test Skate Park"}
+
 
 def test_create_notification_without_metadata(notification_repository, test_user):
     """Notifications can be created without metadata."""
@@ -109,7 +120,7 @@ def test_bulk_create_empty_list_returns_empty(notification_repository):
     assert notifications == []
 
 
-def test_list_for_user_unread_only(notification_repository, test_user, second_user):
+def test_list_for_user_unread_only(notification_repository, test_user):
     """Listing notifications can filter to unread only."""
     # Create mix of read and unread
     n1 = notification_repository.create(
@@ -118,7 +129,7 @@ def test_list_for_user_unread_only(notification_repository, test_user, second_us
             notification_type="spot_commented",
         )
     )
-    n2 = notification_repository.create(
+    notification_repository.create(
         NotificationCreateData(
             user_id=test_user.id,
             notification_type="spot_rated",
@@ -256,6 +267,8 @@ def test_mark_as_read_updates_notification(notification_repository, test_user):
     assert updated is not None
     assert updated.is_read is True
     assert updated.read_at is not None
+    # Verify timezone-aware UTC timestamp
+    assert updated.read_at.tzinfo == UTC
 
 
 def test_mark_as_read_already_read_is_idempotent(notification_repository, test_user):
