@@ -1,7 +1,5 @@
 """Tests for the notification repository."""
 
-from uuid import UUID
-
 import pytest
 
 from app.repositories.notification_repository import (
@@ -109,7 +107,7 @@ def test_bulk_create_empty_list_returns_empty(notification_repository):
     assert notifications == []
 
 
-def test_list_for_user_unread_only(notification_repository, test_user, second_user):
+def test_list_for_user_unread_only(notification_repository, test_user):
     """Listing notifications can filter to unread only."""
     # Create mix of read and unread
     n1 = notification_repository.create(
@@ -118,7 +116,7 @@ def test_list_for_user_unread_only(notification_repository, test_user, second_us
             notification_type="spot_commented",
         )
     )
-    n2 = notification_repository.create(
+    notification_repository.create(
         NotificationCreateData(
             user_id=test_user.id,
             notification_type="spot_rated",
