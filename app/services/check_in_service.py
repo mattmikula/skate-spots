@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID
 
@@ -202,7 +202,7 @@ class CheckInService:
 
     @staticmethod
     def _now() -> datetime:
-        return datetime.utcnow()
+        return datetime.now(UTC)
 
     def _to_model(self, record: SpotCheckInORM, *, now: datetime) -> SpotCheckIn:
         """Convert ORM check-in to API model."""
@@ -214,7 +214,13 @@ class CheckInService:
             display_name=record.user.display_name,
             profile_photo_url=record.user.profile_photo_url,
         )
-        is_active = record.ended_at is None and record.expires_at > now
+        # Ensure expires_at is timezone-aware for comparison
+        expires_at = (
+            record.expires_at.replace(tzinfo=UTC)
+            if record.expires_at.tzinfo is None
+            else record.expires_at
+        )
+        is_active = record.ended_at is None and expires_at > now
         return SpotCheckIn(
             id=UUID(record.id),
             spot_id=UUID(record.spot_id),

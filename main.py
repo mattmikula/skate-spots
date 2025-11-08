@@ -1,5 +1,7 @@
 """Main FastAPI application entry point."""
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -28,10 +30,23 @@ settings = get_settings()
 setup_logging(settings)
 logger = get_logger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Manage application startup and shutdown lifecycle."""
+    # Startup
+    setup_logging(settings, force=True)
+    logger.info("application startup complete", version=app.version)
+    yield
+    # Shutdown
+    logger.info("application shutdown")
+
+
 app = FastAPI(
     title="Skate Spots API",
     description="An API for sharing and discovering skateboarding spots",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(RequestContextLogMiddleware)
@@ -57,21 +72,6 @@ app.include_router(sessions.router, prefix="/api/v1")
 app.include_router(geocoding.router, prefix="/api/v1")
 app.include_router(check_ins.router, prefix="/api/v1")
 app.include_router(notifications.router, prefix="/api/v1")
-
-
-@app.on_event("startup")
-async def _log_startup() -> None:
-    """Ensure logging is configured once uvicorn has initialised."""
-
-    setup_logging(settings, force=True)
-    logger.info("application startup complete", version=app.version)
-
-
-@app.on_event("shutdown")
-async def _log_shutdown() -> None:
-    """Emit a shutdown log event for observability pipelines."""
-
-    logger.info("application shutdown")
 
 
 if __name__ == "__main__":
