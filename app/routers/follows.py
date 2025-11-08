@@ -21,7 +21,7 @@ from app.services.follow_service import (
     get_follow_service,
 )
 
-router = APIRouter(prefix="/api/v1/users", tags=["follows"])
+router = APIRouter(prefix="/users", tags=["follows"])
 templates = Jinja2Templates(directory="templates")
 
 

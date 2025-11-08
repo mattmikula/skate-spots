@@ -10,10 +10,12 @@ from app.core.logging import get_logger, setup_logging
 from app.core.logging_middleware import RequestContextLogMiddleware
 from app.core.rate_limiter import rate_limiter
 from app.routers import (
+    activity,
     auth,
     check_ins,
     comments,
     favorites,
+    follows,
     frontend,
     geocoding,
     notifications,
@@ -45,7 +47,9 @@ app.mount(settings.media_url_path, StaticFiles(directory=media_directory), name=
 # Include routers
 app.include_router(frontend.router)
 app.include_router(auth.router, prefix="/api/v1")
+app.include_router(activity.router)  # Has its own prefix: /api/v1/feed
 app.include_router(favorites.router, prefix="/api/v1")
+app.include_router(follows.router, prefix="/api/v1")
 app.include_router(skate_spots.router, prefix="/api/v1")
 app.include_router(ratings.router, prefix="/api/v1")
 app.include_router(comments.router, prefix="/api/v1")
