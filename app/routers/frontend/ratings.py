@@ -21,8 +21,6 @@ from app.services.rating_service import (
     SpotNotFoundError as RatingSpotNotFoundError,
 )
 
-
-
 router = APIRouter(tags=["frontend"])
 
 

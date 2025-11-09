@@ -16,8 +16,6 @@ from app.services.notification_service import (
     get_notification_service,
 )
 
-
-
 router = APIRouter(tags=["frontend"])
 
 

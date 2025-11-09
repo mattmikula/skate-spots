@@ -31,8 +31,6 @@ from app.services.session_service import (
 )
 from app.services.skate_spot_service import SkateSpotService, get_skate_spot_service
 
-
-
 router = APIRouter(tags=["frontend"])
 
 

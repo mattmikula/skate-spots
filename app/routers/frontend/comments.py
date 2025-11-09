@@ -23,8 +23,6 @@ from app.services.comment_service import (
     SpotNotFoundError as CommentSpotNotFoundError,
 )
 
-
-
 router = APIRouter(tags=["frontend"])
 
 

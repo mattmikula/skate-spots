@@ -19,8 +19,6 @@ from app.services.favorite_service import (
     SpotNotFoundError as FavoriteSpotNotFoundError,
 )
 
-
-
 router = APIRouter(tags=["frontend"])
 
 

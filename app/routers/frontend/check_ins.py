@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated
+from typing import Annotated
 from uuid import UUID  # noqa: TCH003
 
 from fastapi import APIRouter, Depends, Request, status
