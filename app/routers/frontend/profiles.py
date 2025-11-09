@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from typing import Annotated
-from uuid import UUID  # noqa: TCH003
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse
