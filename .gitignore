@@ -219,3 +219,6 @@ media/
 
 # Feature planning documents (private planning)
 FEATURE_IDEAS.md
+
+# Local task tracking and notes (not pushed to git)
+.local/
