@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     CheckConstraint,
     DateTime,
@@ -168,6 +169,12 @@ class SkateSpotORM(Base):
         "SpotCheckInORM",
         back_populates="spot",
         cascade="all, delete-orphan",
+    )
+    weather_snapshot: Mapped[WeatherSnapshotORM | None] = relationship(
+        "WeatherSnapshotORM",
+        back_populates="spot",
+        cascade="all, delete-orphan",
+        uselist=False,
     )
 
 
@@ -508,3 +515,30 @@ class SpotCheckInORM(Base):
 
     spot: Mapped[SkateSpotORM] = relationship("SkateSpotORM", back_populates="check_ins")
     user: Mapped[UserORM] = relationship("UserORM", back_populates="check_ins")
+
+
+class WeatherSnapshotORM(Base):
+    """Cached weather payload for a skate spot."""
+
+    __tablename__ = "weather_snapshots"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    spot_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("skate_spots.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    provider: Mapped[str] = mapped_column(String(50), nullable=False, default="open-meteo")
+    payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+        server_default=func.now(),
+    )
+
+    spot: Mapped[SkateSpotORM] = relationship("SkateSpotORM", back_populates="weather_snapshot")

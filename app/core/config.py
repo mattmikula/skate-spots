@@ -41,6 +41,16 @@ class Settings(BaseSettings):
         alias="GEOCODING_USER_AGENT",
         description="User agent string for geocoding API requests (Nominatim)",
     )
+    weather_cache_minutes: int = Field(
+        default=20,
+        alias="WEATHER_CACHE_MINUTES",
+        description="Freshness window for cached weather responses",
+    )
+    weather_stale_minutes: int = Field(
+        default=120,
+        alias="WEATHER_STALE_MINUTES",
+        description="Maximum staleness before we drop cached weather",
+    )
 
     model_config = {
         "env_prefix": "SKATE_SPOTS_",

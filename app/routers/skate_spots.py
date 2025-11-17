@@ -31,9 +31,16 @@ from app.models.skate_spot import (
     SkateSpotUpdate,
     SpotType,
 )
+from app.models.weather import WeatherSnapshot
 from app.services.geocoding_service import GeocodingService, get_geocoding_service
 from app.services.photo_storage import PhotoStorageError, delete_photos, save_photo_upload
 from app.services.skate_spot_service import SkateSpotService, get_skate_spot_service
+from app.services.weather_service import (
+    WeatherService,
+    WeatherSpotNotFoundError,
+    WeatherUnavailableError,
+    get_weather_service,
+)
 from app.utils.filters import build_nearby_spot_filters, build_skate_spot_filters
 
 router = APIRouter(prefix="/skate-spots", tags=["skate-spots"])
@@ -542,6 +549,32 @@ async def update_skate_spot(
             detail=f"Skate spot with id {spot_id} not found",
         )
     return updated_spot
+
+
+@router.get(
+    "/{spot_id}/weather",
+    response_model=WeatherSnapshot,
+    summary="Get current weather for a skate spot",
+)
+async def get_skate_spot_weather(
+    spot_id: UUID,
+    weather_service: Annotated[WeatherService, Depends(get_weather_service)],
+    force_refresh: bool = Query(
+        default=False,
+        description="Force a provider fetch instead of using cached data when available",
+    ),
+) -> WeatherSnapshot:
+    """Return current conditions and a short forecast for a skate spot."""
+
+    try:
+        return weather_service.get_weather_for_spot(spot_id, force_refresh=force_refresh)
+    except WeatherSpotNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except WeatherUnavailableError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Weather information is temporarily unavailable.",
+        ) from None
 
 
 @router.delete(

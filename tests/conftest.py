@@ -1,6 +1,7 @@
 """Shared test fixtures and configuration."""
 
 import asyncio
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -14,6 +15,7 @@ from app.core.rate_limiter import rate_limiter
 from app.core.security import create_access_token, get_password_hash
 from app.db.database import Base, get_async_db, get_db
 from app.models.user import UserCreate
+from app.models.weather import HourlyForecast, WeatherCondition, WeatherData
 from app.repositories.comment_repository import CommentRepository
 from app.repositories.favorite_repository import FavoriteRepository
 from app.repositories.rating_repository import RatingRepository
@@ -21,6 +23,7 @@ from app.repositories.session_repository import SessionRepository
 from app.repositories.skate_spot_repository import SkateSpotRepository
 from app.repositories.user_profile_repository import UserProfileRepository
 from app.repositories.user_repository import UserRepository
+from app.repositories.weather_repository import WeatherRepository
 from app.services.comment_service import CommentService, get_comment_service
 from app.services.favorite_service import FavoriteService, get_favorite_service
 from app.services.rating_service import (
@@ -36,7 +39,52 @@ from app.services.user_profile_service import (
     UserProfileService,
     get_user_profile_service,
 )
+from app.services.weather_service import (
+    WeatherService,
+    get_weather_service,
+)
 from main import app
+
+
+class StubWeatherClient:
+    """Stub provider returning deterministic weather data in tests."""
+
+    def __init__(self) -> None:
+        self.should_fail = False
+        self.payload = self._build_payload()
+
+    def _build_payload(self):
+        now = datetime.now(UTC)
+        return WeatherData(
+            source="stub",
+            fetched_at=now,
+            current=WeatherCondition(
+                observed_at=now,
+                temperature_c=18.0,
+                apparent_temperature_c=17.0,
+                wind_speed_kph=10.0,
+                precipitation_probability=20.0,
+                condition_code=1,
+                summary="Mostly clear",
+                icon="🌤️",
+            ),
+            forecast=[
+                HourlyForecast(
+                    timestamp=now + timedelta(hours=idx + 1),
+                    temperature_c=18.0 + idx,
+                    precipitation_probability=10.0 * idx,
+                    condition_code=1,
+                    summary="Clear",
+                    icon="☀️",
+                )
+                for idx in range(3)
+            ],
+        )
+
+    def fetch(self, latitude: float, longitude: float):
+        if self.should_fail:
+            raise RuntimeError("Weather provider down")
+        return self.payload
 
 
 @pytest.fixture
@@ -132,6 +180,7 @@ def client(session_factory, async_session_factory):
     session_service = SessionService(session_repository, repository)
     profile_repository = UserProfileRepository(session_factory=session_factory)
     profile_service = UserProfileService(profile_repository)
+    weather_stub_client = StubWeatherClient()
 
     # Override database session
     def override_get_db():
@@ -152,6 +201,18 @@ def client(session_factory, async_session_factory):
         async with async_session_factory() as db:
             yield db
 
+    def override_get_weather_service():
+        db = session_factory()
+        try:
+            repo = WeatherRepository(db)
+            yield WeatherService(
+                db,
+                repository=repo,
+                client=weather_stub_client,
+            )
+        finally:
+            db.close()
+
     app.dependency_overrides[get_skate_spot_service] = lambda: service
     app.dependency_overrides[get_rating_service] = lambda: rating_service
     app.dependency_overrides[get_comment_service] = lambda: comment_service
@@ -161,9 +222,11 @@ def client(session_factory, async_session_factory):
     app.dependency_overrides[get_favorite_service] = lambda: favorite_service
     app.dependency_overrides[get_user_profile_service] = lambda: profile_service
     app.dependency_overrides[get_async_db] = override_get_async_db
+    app.dependency_overrides[get_weather_service] = override_get_weather_service
 
     try:
         with TestClient(app) as test_client:
+            test_client.weather_stub_client = weather_stub_client  # type: ignore[attr-defined]
             yield test_client
     finally:
         app.dependency_overrides.pop(get_skate_spot_service, None)
@@ -175,6 +238,7 @@ def client(session_factory, async_session_factory):
         app.dependency_overrides.pop(get_favorite_service, None)
         app.dependency_overrides.pop(get_user_profile_service, None)
         app.dependency_overrides.pop(get_async_db, None)
+        app.dependency_overrides.pop(get_weather_service, None)
 
 
 @pytest.fixture

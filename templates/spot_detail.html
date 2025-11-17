@@ -60,6 +60,16 @@
             </div>
 
             <div
+                class="spot-detail-weather"
+                hx-get="/skate-spots/{{ spot.id }}/weather"
+                hx-trigger="load"
+                hx-target="this"
+                hx-swap="innerHTML"
+            >
+                <div class="section-loading">Loading weather...</div>
+            </div>
+
+            <div
                 class="spot-detail-checkins"
                 hx-get="/skate-spots/{{ spot.id }}/check-ins-section"
                 hx-trigger="load"
