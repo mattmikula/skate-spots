@@ -40,7 +40,7 @@ class OpenMeteoWeatherClient:
             "current_weather": "true",
             "hourly": "temperature_2m,apparent_temperature,precipitation_probability,weathercode",
             "forecast_days": 1,
-            "timezone": "auto",
+            "timezone": "UTC",
         }
 
         try:
@@ -111,12 +111,11 @@ class OpenMeteoWeatherClient:
         )
 
         forecast_hours: list[HourlyForecast] = []
-        for idx, timestamp in enumerate(hourly_times[:12]):
-            code_for_hour = None
-            if idx < len(hourly_codes):
+        start_idx = current_idx if current_idx is not None else 0
+        for idx, timestamp in enumerate(hourly_times[start_idx : start_idx + 12], start=start_idx):
+            code_for_hour = weather_code
+            if idx < len(hourly_codes) and hourly_codes[idx] is not None:
                 code_for_hour = hourly_codes[idx]
-            if code_for_hour is None:
-                code_for_hour = weather_code
 
             forecast_hours.append(
                 HourlyForecast(
@@ -138,11 +137,14 @@ class OpenMeteoWeatherClient:
 
     @staticmethod
     def _parse_timestamp(timestamp_str: str | None) -> datetime:
-        """Parse provider timestamps into aware datetimes."""
+        """Parse provider timestamps into aware UTC datetimes."""
 
         if not timestamp_str:
             return datetime.now(UTC)
-        return datetime.fromisoformat(timestamp_str).replace(tzinfo=UTC)
+        parsed = datetime.fromisoformat(timestamp_str)
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=UTC)
+        return parsed.astimezone(UTC)
 
 
 _WEATHER_CODE_SUMMARIES: dict[int, str] = {
