@@ -71,7 +71,17 @@ def decode_access_token(token: str) -> dict[str, Any] | None:
     try:
         settings = get_settings()
         payload = cast(
-            "dict[str, Any]", jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
+            "dict[str, Any]",
+            jwt.decode(
+                token,
+                settings.secret_key,
+                algorithms=[ALGORITHM],
+                options={
+                    "verify_signature": True,
+                    "verify_exp": True,
+                    "require_exp": True,
+                },
+            ),
         )
         return payload
     except JWTError as exc:

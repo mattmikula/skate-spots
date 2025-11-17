@@ -58,12 +58,13 @@ class WeatherService:
 
         now = self._now()
         cached_record = self._repo.get_for_spot(str(spot_id))
-        if cached_record and not force_refresh and cached_record.expires_at > now:
-            return self._to_snapshot(cached_record, cached=True, stale=False)
-
-        stale_available = False
         if cached_record:
-            stale_available = cached_record.expires_at + self._stale_window > now
+            cached_expires_at = self._ensure_aware(cached_record.expires_at)
+            if not force_refresh and cached_expires_at > now:
+                return self._to_snapshot(cached_record, cached=True, stale=False)
+            stale_available = cached_expires_at + self._stale_window > now
+        else:
+            stale_available = False
 
         try:
             provider_data = self._client.fetch(spot.latitude, spot.longitude)
@@ -72,7 +73,7 @@ class WeatherService:
                 self._logger.warning(
                     "serving stale weather after provider failure",
                     spot_id=str(spot_id),
-                    expires_at=cached_record.expires_at.isoformat(),
+                    expires_at=self._ensure_aware(cached_record.expires_at).isoformat(),
                 )
                 return self._to_snapshot(cached_record, cached=True, stale=True)
             raise WeatherUnavailableError("Weather provider unavailable") from exc
@@ -119,6 +120,12 @@ class WeatherService:
     @staticmethod
     def _now() -> datetime:
         return datetime.now(UTC)
+
+    @staticmethod
+    def _ensure_aware(value: datetime) -> datetime:
+        if value.tzinfo is None:
+            return value.replace(tzinfo=UTC)
+        return value
 
 
 def get_weather_service(db: Annotated[Any, Depends(get_db)]) -> WeatherService:
