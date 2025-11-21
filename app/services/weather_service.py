@@ -58,8 +58,10 @@ class WeatherService:
 
         now = self._now()
         cached_record = self._repo.get_for_spot(str(spot_id))
+        is_expired = False
         if cached_record:
             cached_expires_at = self._ensure_aware(cached_record.expires_at)
+            is_expired = cached_expires_at <= now
             if not force_refresh and cached_expires_at > now:
                 return self._to_snapshot(cached_record, cached=True, stale=False)
             stale_available = cached_expires_at + self._stale_window > now
@@ -70,21 +72,25 @@ class WeatherService:
             provider_data = self._client.fetch(spot.latitude, spot.longitude)
         except WeatherProviderError as exc:
             if cached_record and stale_available:
+                stale = is_expired
                 self._logger.warning(
-                    "serving stale weather after provider failure",
+                    "serving cached weather after provider failure",
                     spot_id=str(spot_id),
                     expires_at=self._ensure_aware(cached_record.expires_at).isoformat(),
+                    stale=stale,
                 )
-                return self._to_snapshot(cached_record, cached=True, stale=True)
+                return self._to_snapshot(cached_record, cached=True, stale=stale)
             raise WeatherUnavailableError("Weather provider unavailable") from exc
         except Exception as exc:  # pragma: no cover - defensive
             if cached_record and stale_available:
+                stale = is_expired
                 self._logger.warning(
-                    "serving stale weather after unexpected error",
+                    "serving cached weather after unexpected error",
                     spot_id=str(spot_id),
                     error=str(exc),
+                    stale=stale,
                 )
-                return self._to_snapshot(cached_record, cached=True, stale=True)
+                return self._to_snapshot(cached_record, cached=True, stale=stale)
             raise WeatherUnavailableError("Weather provider unavailable") from exc
 
         expires_at = now + self._ttl

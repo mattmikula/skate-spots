@@ -95,6 +95,29 @@ def spot(session_factory):
     return created
 
 
+@pytest.fixture
+def cached_weather(weather_service, spot):
+    """Warm the cache for a spot and reset the provider call counter."""
+
+    service, client, db = weather_service
+    service.get_weather_for_spot(spot.id)
+    client.calls = 0
+    return service, client, db
+
+
+@pytest.fixture
+def expired_weather_cache(cached_weather, spot):
+    """Warm and then expire the cache for a spot."""
+
+    service, client, db = cached_weather
+    record = db.query(WeatherSnapshotORM).filter_by(spot_id=str(spot.id)).first()
+    assert record is not None
+    record.expires_at = datetime.now(UTC) - timedelta(minutes=5)
+    db.commit()
+    client.calls = 0
+    return service, client
+
+
 def test_fetches_and_caches_weather(weather_service, spot):
     """Initial fetch hits provider and stores a snapshot."""
 
@@ -109,37 +132,44 @@ def test_fetches_and_caches_weather(weather_service, spot):
     assert stored is not None
 
 
-def test_returns_cached_weather_when_fresh(weather_service, spot):
-    """Subsequent calls within TTL use cache."""
+def test_returns_cached_weather_when_fresh(cached_weather, spot):
+    """Uses cached snapshot when it is still within TTL."""
 
-    service, client, _ = weather_service
+    service, client, _ = cached_weather
 
-    first = service.get_weather_for_spot(spot.id)
-    second = service.get_weather_for_spot(spot.id)
+    snapshot = service.get_weather_for_spot(spot.id)
 
-    assert first.cached is False
-    assert second.cached is True
-    assert client.calls == 1
+    assert snapshot.cached is True
+    assert snapshot.stale is False
+    assert client.calls == 0
 
 
-def test_serves_stale_when_provider_unavailable(weather_service, spot):
+def test_serves_stale_when_provider_unavailable(expired_weather_cache, spot):
     """Falls back to stale cache when provider fails."""
 
-    service, client, db = weather_service
-
-    initial = service.get_weather_for_spot(spot.id)
-    record = db.query(WeatherSnapshotORM).filter_by(spot_id=str(spot.id)).first()
-    assert record is not None
-    record.expires_at = datetime.now(UTC) - timedelta(minutes=5)
-    db.commit()
+    service, client = expired_weather_cache
 
     client.should_fail = True
     snapshot = service.get_weather_for_spot(spot.id)
 
-    assert initial.cached is False
     assert snapshot.cached is True
     assert snapshot.stale is True
-    assert client.calls == 2
+    assert client.calls == 1
+
+
+def test_force_refresh_failure_returns_fresh_cache(weather_service, spot):
+    """Force refresh should still return fresh cache without marking it stale."""
+
+    service, client, _ = weather_service
+    service.get_weather_for_spot(spot.id)
+    client.calls = 0
+
+    client.should_fail = True
+    snapshot = service.get_weather_for_spot(spot.id, force_refresh=True)
+
+    assert snapshot.cached is True
+    assert snapshot.stale is False
+    assert client.calls == 1
 
 
 def test_missing_spot_raises(weather_service):
