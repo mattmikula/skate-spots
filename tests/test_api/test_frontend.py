@@ -195,6 +195,17 @@ def test_map_view_includes_leaflet(client):
     assert b"/api/v1/skate-spots/geojson" in response.content
 
 
+def test_nearby_page_includes_location_search(client):
+    """Nearby discovery page exposes geolocation and place search controls."""
+    response = client.get("/nearby")
+    body = response.text
+
+    assert response.status_code == 200
+    assert "Use My Location" in body
+    assert 'name="location"' in body
+    assert "Search by place" in body
+
+
 def test_rating_section_anonymous(client, created_spot_id):  # noqa: ARG001
     """Rating section shows summary and login prompt for anonymous users."""
 

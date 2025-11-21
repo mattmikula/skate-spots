@@ -31,6 +31,7 @@ from app.models.skate_spot import (
     SkateSpotUpdate,
     SpotType,
 )
+from app.services.geocoding_service import GeocodingService, get_geocoding_service
 from app.services.photo_storage import PhotoStorageError, delete_photos, save_photo_upload
 from app.services.skate_spot_service import SkateSpotService, get_skate_spot_service
 from app.utils.filters import build_nearby_spot_filters, build_skate_spot_filters
@@ -121,6 +122,44 @@ async def _store_uploads(
             await upload.close()
 
     return stored_payloads, stored_paths
+
+
+def _resolve_nearby_coordinates(
+    latitude: float | None,
+    longitude: float | None,
+    location_query: str | None,
+    geocoding_service: GeocodingService,
+) -> tuple[float, float]:
+    """Resolve coordinates for nearby lookups.
+
+    Prefers explicit coordinates when both are provided; otherwise falls back to a
+    text location query via the geocoder. Raises an HTTP 422 when inputs are
+    incomplete and a 404 when the geocoder cannot find the location.
+    """
+    if latitude is not None and longitude is not None:
+        return latitude, longitude
+
+    if (latitude is not None) ^ (longitude is not None):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Provide both latitude and longitude together.",
+        )
+
+    if not location_query:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Provide latitude/longitude or a location query.",
+        )
+
+    results = geocoding_service.search_address(location_query, limit=1)
+    if not results:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Unable to find that location. Try a more specific place name.",
+        )
+
+    resolved = results[0]
+    return resolved.latitude, resolved.longitude
 
 
 async def _parse_form_for_create(
@@ -330,8 +369,24 @@ async def list_skate_spots(
 @router.get("/nearby", response_model=list[SkateSpot])
 async def get_nearby_spots(
     service: Annotated[SkateSpotService, Depends(get_skate_spot_service)],
-    latitude: float = Query(..., ge=-90, le=90, description="Center point latitude"),
-    longitude: float = Query(..., ge=-180, le=180, description="Center point longitude"),
+    geocoding_service: Annotated[GeocodingService, Depends(get_geocoding_service)],
+    latitude: float | None = Query(
+        None,
+        ge=-90,
+        le=90,
+        description="Center point latitude (optional with location query)",
+    ),
+    longitude: float | None = Query(
+        None,
+        ge=-180,
+        le=180,
+        description="Center point longitude (optional with location query)",
+    ),
+    location: str | None = Query(
+        None,
+        min_length=3,
+        description="Location query to geocode when coordinates are not provided",
+    ),
     radius_km: float = Query(5, ge=0.1, le=50, description="Search radius in kilometers"),
     search: str | None = None,
     spot_type: Annotated[list[SpotType] | None, Query()] = None,
@@ -344,11 +399,15 @@ async def get_nearby_spots(
     """Get skate spots within a specified radius of a location.
 
     Returns spots sorted by distance (closest first) with distance_km field populated.
+    Supports either explicit coordinates or a location string that is geocoded.
     """
+    resolved_latitude, resolved_longitude = _resolve_nearby_coordinates(
+        latitude, longitude, location, geocoding_service
+    )
     try:
         filters = build_nearby_spot_filters(
-            latitude=latitude,
-            longitude=longitude,
+            latitude=resolved_latitude,
+            longitude=resolved_longitude,
             radius_km=radius_km,
             search=search,
             spot_types=spot_type,

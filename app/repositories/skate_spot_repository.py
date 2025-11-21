@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import UTC, datetime
+from math import acos, cos, radians, sin
 from typing import Any
 from uuid import UUID
 
 from sqlalchemy import func, or_, select
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from app.db.database import SessionLocal
@@ -161,6 +163,18 @@ def _haversine_distance(center_lat: float, center_lng: float) -> tuple[Any, Any]
     return distance_expr, distance_expr.label("distance_km")
 
 
+def _distance_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    """Return great-circle distance between two coordinate pairs in kilometers."""
+
+    earth_radius_km = 6371
+
+    lat1_rad, lng1_rad, lat2_rad, lng2_rad = map(radians, (lat1, lng1, lat2, lng2))
+    inner = cos(lat1_rad) * cos(lat2_rad) * cos(lng2_rad - lng1_rad) + sin(lat1_rad) * sin(lat2_rad)
+    # Clamp to valid domain to avoid math domain errors from floating point drift
+    clamped = min(1, max(-1, inner))
+    return earth_radius_km * acos(clamped)
+
+
 class SkateSpotRepository:
     """Repository handling database persistence for skate spots."""
 
@@ -262,7 +276,14 @@ class SkateSpotRepository:
                 stmt = stmt.where(*conditions)
 
             # Execute query and extract results
-            results = session.execute(stmt).all()
+            try:
+                results = session.execute(stmt).all()
+            except OperationalError as exc:
+                message = str(exc).lower()
+                if "no such function" not in message:
+                    raise
+                return self._get_nearby_fallback(session, latitude, longitude, radius_km, filters)
+
             if not results:
                 return []
 
@@ -278,6 +299,43 @@ class SkateSpotRepository:
                 spot.distance_km = distances.get(str(spot.id))
 
             return enriched
+
+    def _get_nearby_fallback(
+        self,
+        session: Session,
+        latitude: float,
+        longitude: float,
+        radius_km: float,
+        filters: SkateSpotFilters | None,
+    ) -> list[SkateSpot]:
+        """Compute nearby spots in Python when SQLite lacks trig functions."""
+
+        stmt = select(SkateSpotORM)
+        conditions = _filters_to_conditions(filters)
+        if conditions:
+            stmt = stmt.where(*conditions)
+
+        spots = session.scalars(stmt).all()
+        if not spots:
+            return []
+
+        within_radius: list[tuple[SkateSpotORM, float]] = []
+        for spot in spots:
+            distance = _distance_km(latitude, longitude, spot.latitude, spot.longitude)
+            if distance <= radius_km:
+                within_radius.append((spot, distance))
+
+        if not within_radius:
+            return []
+
+        ordered_spots = [spot for spot, _ in sorted(within_radius, key=lambda row: row[1])]
+        enriched = self._with_rating_summaries(session, ordered_spots)
+        distance_map = {spot.id: distance for spot, distance in within_radius}
+
+        for spot in enriched:
+            spot.distance_km = distance_map.get(str(spot.id))
+
+        return enriched
 
     def get_many_by_ids(self, spot_ids: list[UUID]) -> list[SkateSpot]:
         """Return skate spots matching the provided identifiers."""

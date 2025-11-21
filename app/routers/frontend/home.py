@@ -24,6 +24,7 @@ from app.services.favorite_service import (
     FavoriteService,
     get_favorite_service,
 )
+from app.services.geocoding_service import GeocodingService, get_geocoding_service
 from app.services.skate_spot_service import SkateSpotService, get_skate_spot_service
 from app.utils.filters import build_skate_spot_filters
 
@@ -86,6 +87,7 @@ async def nearby_spots_page(
     request: Request,
     service: Annotated[SkateSpotService, Depends(get_skate_spot_service)],
     favorite_service: Annotated[FavoriteService, Depends(get_favorite_service)],
+    geocoding_service: Annotated[GeocodingService, Depends(get_geocoding_service)],
     current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
 ) -> HTMLResponse:
     """Display nearby skate spots based on latitude/longitude parameters."""
@@ -93,27 +95,50 @@ async def nearby_spots_page(
     latitude_str = request.query_params.get("latitude", "").strip()
     longitude_str = request.query_params.get("longitude", "").strip()
     radius_km_str = request.query_params.get("radius_km", "5").strip()
+    location_query = request.query_params.get("location", "").strip()
 
-    # If no location provided, show the location input form
-    if not latitude_str or not longitude_str:
-        context = {
-            "request": request,
-            "current_user": current_user,
-            "spot_types": list(SpotType),
-            "difficulties": list(Difficulty),
-        }
-        return templates.TemplateResponse("nearby.html", context)
-
-    # Parse coordinates and radius
+    # Parse radius and coordinates if present
     try:
-        latitude = float(latitude_str)
-        longitude = float(longitude_str)
+        latitude = float(latitude_str) if latitude_str else None
+        longitude = float(longitude_str) if longitude_str else None
         radius_km = float(radius_km_str)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Invalid coordinates or radius",
         ) from exc
+
+    # If no location provided, show the location input form
+    if latitude is None and longitude is None and not location_query:
+        context = {
+            "request": request,
+            "current_user": current_user,
+            "spot_types": list(SpotType),
+            "difficulties": list(Difficulty),
+            "location_query": location_query or None,
+        }
+        return templates.TemplateResponse("nearby.html", context)
+
+    # Require both coordinates when present
+    if (latitude is not None) ^ (longitude is not None):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Provide both latitude and longitude or a location search.",
+        )
+
+    # Geocode when only a location is provided
+    resolved_location_label = location_query or None
+    if latitude is None and longitude is None:
+        results = geocoding_service.search_address(location_query, limit=1)
+        if not results:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Unable to find that location. Try a more specific place name.",
+            )
+        resolved = results[0]
+        latitude = resolved.latitude
+        longitude = resolved.longitude
+        resolved_location_label = resolved.address or resolved_location_label
 
     # Extract additional filters
     filter_values = _extract_filter_values(request)
@@ -156,6 +181,8 @@ async def nearby_spots_page(
         "latitude": latitude,
         "longitude": longitude,
         "radius_km": radius_km,
+        "location_query": location_query or None,
+        "resolved_location_label": resolved_location_label,
     }
     return templates.TemplateResponse(template_name, context)
 
