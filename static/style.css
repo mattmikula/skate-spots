@@ -1889,6 +1889,59 @@ footer {
     accent-color: var(--color-blue);
 }
 
+.location-search-results {
+    margin-top: var(--spacing-2);
+    border: 1px solid var(--color-gray-200);
+    border-radius: 8px;
+    box-shadow: var(--shadow-sm);
+    background: var(--color-white);
+    max-height: 260px;
+    overflow-y: auto;
+    display: none;
+}
+
+.location-search-results.visible {
+    display: block;
+}
+
+.location-result {
+    width: 100%;
+    text-align: left;
+    border: none;
+    background: transparent;
+    padding: var(--spacing-3) var(--spacing-4);
+    border-bottom: 1px solid var(--color-gray-100);
+    cursor: pointer;
+}
+
+.location-result:hover {
+    background: var(--color-gray-50);
+}
+
+.location-result:last-child {
+    border-bottom: none;
+}
+
+.location-result__title {
+    font-weight: 600;
+    color: var(--color-black);
+}
+
+.location-result__meta {
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-500);
+}
+
+.location-result.muted {
+    color: var(--color-gray-500);
+    cursor: default;
+}
+
+.location-result.error {
+    color: var(--color-error);
+    cursor: default;
+}
+
 .radius-slider {
     height: 6px !important;
 }
@@ -1922,6 +1975,11 @@ footer {
     font-size: var(--font-size-sm);
     color: var(--color-gray-600);
     font-weight: 500;
+}
+
+.coordinates-inline {
+    color: var(--color-gray-500);
+    font-size: var(--font-size-sm);
 }
 
 .nearby-spot-list {

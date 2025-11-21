@@ -23,8 +23,23 @@
 
             <div class="location-divider">or</div>
 
-            <form id="location-form" class="location-form">
+            <form id="location-form" class="location-form" method="get" action="/nearby">
                 <div id="form-error" class="location-status error" style="display: none;" role="alert" aria-live="polite"></div>
+
+                <div class="form-group">
+                    <label for="location-query">Search by place</label>
+                    <input
+                        type="search"
+                        id="location-query"
+                        name="location"
+                        value="{{ location_query or '' }}"
+                        placeholder="City, address, or zip (e.g. Barcelona or 90210)"
+                        autocomplete="off"
+                        aria-describedby="location-query-help"
+                    >
+                    <p id="location-query-help" class="form-help">We'll geocode this if you don't have coordinates.</p>
+                    <div id="location-results" class="location-search-results" role="listbox" aria-live="polite"></div>
+                </div>
 
                 <div class="form-group">
                     <label for="manual-latitude">Latitude</label>
@@ -36,6 +51,7 @@
                         min="-90"
                         max="90"
                         step="0.0001"
+                        value="{{ latitude | default('', true) }}"
                         aria-required="true"
                     >
                 </div>
@@ -50,6 +66,7 @@
                         min="-180"
                         max="180"
                         step="0.0001"
+                        value="{{ longitude | default('', true) }}"
                         aria-required="true"
                     >
                 </div>
@@ -62,7 +79,7 @@
                         name="radius_km"
                         min="1"
                         max="50"
-                        value="5"
+                        value="{{ radius_km | default(5, true) }}"
                         class="radius-slider"
                     >
                     <div class="radius-info">1 km - 50 km</div>
@@ -74,11 +91,18 @@
     </div>
 
     <!-- Results Section (shown only when location is provided) -->
-    {% if latitude is not None %}
+    {% if latitude is defined and latitude is not none %}
     <div class="nearby-results">
         <div class="results-header">
             <h3>Spots within {{ radius_km }} km</h3>
-            <p class="location-coordinates">📍 {{ latitude | round(4) }}, {{ longitude | round(4) }}</p>
+            <p class="location-coordinates">
+                📍
+                {% if resolved_location_label %}
+                    {{ resolved_location_label }} <span class="coordinates-inline">({{ latitude | round(4) }}, {{ longitude | round(4) }})</span>
+                {% else %}
+                    {{ latitude | round(4) }}, {{ longitude | round(4) }}
+                {% endif %}
+            </p>
         </div>
 
         <!-- Filters Form -->
@@ -95,6 +119,7 @@
             <input type="hidden" name="latitude" value="{{ latitude }}">
             <input type="hidden" name="longitude" value="{{ longitude }}">
             <input type="hidden" name="radius_km" value="{{ radius_km }}">
+            <input type="hidden" name="location" value="{{ location_query or '' }}">
 
             <div class="filter-grid">
                 <div class="filter-field">
@@ -149,7 +174,10 @@
             <div class="filter-actions">
                 <button type="submit" class="btn btn-primary">Apply filters</button>
                 {% if has_active_filters %}
-                <a href="/nearby?latitude={{ latitude }}&longitude={{ longitude }}&radius_km={{ radius_km }}" class="btn btn-secondary">Clear filters</a>
+                <a
+                    href="/nearby?latitude={{ latitude }}&longitude={{ longitude }}&radius_km={{ radius_km }}{% if location_query %}&location={{ location_query | urlencode }}{% endif %}"
+                    class="btn btn-secondary"
+                >Clear filters</a>
                 {% endif %}
                 <span id="nearby-filter-indicator" class="htmx-indicator" role="status" aria-live="polite">
                     Updating spots…
@@ -166,71 +194,238 @@
 </div>
 
 <script>
-    // Handle "Use My Location" button
-    document.getElementById('use-my-location').addEventListener('click', function() {
-        const btn = this;
-        const status = document.getElementById('location-status');
+(function() {
+    const form = document.getElementById('location-form');
+    const latInput = document.getElementById('manual-latitude');
+    const lngInput = document.getElementById('manual-longitude');
+    const locationInput = document.getElementById('location-query');
+    const resultsList = document.getElementById('location-results');
+    const statusEl = document.getElementById('location-status');
+    const errorEl = document.getElementById('form-error');
+    const useLocationBtn = document.getElementById('use-my-location');
+    const radiusSlider = document.getElementById('radius-slider');
+    const radiusDisplay = document.getElementById('radius-display');
+    const LAST_LOCATION_KEY = 'skate-spots:last-location';
+    let searchTimeout;
 
+    const updateRadiusDisplay = () => {
+        radiusDisplay.textContent = radiusSlider.value;
+    };
+    updateRadiusDisplay();
+
+    function persistLocation(lat, lng, label) {
+        try {
+            localStorage.setItem(
+                LAST_LOCATION_KEY,
+                JSON.stringify({ lat, lng, label })
+            );
+        } catch (err) {
+            // Ignore storage failures
+        }
+    }
+
+    function restoreLocation() {
+        if (latInput.value || lngInput.value) {
+            return;
+        }
+        try {
+            const raw = localStorage.getItem(LAST_LOCATION_KEY);
+            if (!raw) {
+                return;
+            }
+            const saved = JSON.parse(raw);
+            if (!saved.lat || !saved.lng) {
+                return;
+            }
+            latInput.value = saved.lat;
+            lngInput.value = saved.lng;
+            statusEl.textContent = saved.label
+                ? `Using saved location: ${saved.label}`
+                : 'Using saved location';
+            statusEl.className = 'location-status success';
+        } catch (err) {
+            // Ignore parse failures
+        }
+    }
+    restoreLocation();
+
+    function clearResults() {
+        resultsList.innerHTML = '';
+        resultsList.classList.remove('visible');
+    }
+
+    function buildSearchUrl() {
+        const params = new URLSearchParams(new FormData(form));
+        return `/nearby?${params.toString()}`;
+    }
+
+    function redirectWithForm() {
+        window.location.href = buildSearchUrl();
+    }
+
+    function applyCoordinates(lat, lng, label, shouldNavigate = true) {
+        latInput.value = Number(lat).toFixed(6);
+        lngInput.value = Number(lng).toFixed(6);
+        if (locationInput && label) {
+            locationInput.value = label;
+        }
+        statusEl.textContent = `✅ Using ${label || 'selected location'}`;
+        statusEl.className = 'location-status success';
+        persistLocation(latInput.value, lngInput.value, label || null);
+        if (shouldNavigate) {
+            redirectWithForm();
+        }
+    }
+
+    // Handle "Use My Location" button
+    useLocationBtn.addEventListener('click', function() {
         if (!navigator.geolocation) {
-            status.textContent = '❌ Geolocation not supported';
-            status.className = 'location-status error';
+            statusEl.textContent = '❌ Geolocation not supported';
+            statusEl.className = 'location-status error';
             return;
         }
 
-        btn.disabled = true;
-        status.textContent = '🔍 Getting location...';
-        status.className = 'location-status loading';
+        useLocationBtn.disabled = true;
+        statusEl.textContent = '🔍 Getting location...';
+        statusEl.className = 'location-status loading';
 
         navigator.geolocation.getCurrentPosition(
             function(position) {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
-                const radius = document.getElementById('radius-slider').value;
-
-                // Redirect to nearby page with coordinates
-                window.location.href = `/nearby?latitude=${lat}&longitude=${lng}&radius_km=${radius}`;
+                applyCoordinates(lat, lng, 'current location');
             },
             function(error) {
-                btn.disabled = false;
+                useLocationBtn.disabled = false;
                 let message = '❌ ';
-                // GeolocationPositionError codes: PERMISSION_DENIED=1, POSITION_UNAVAILABLE=2, TIMEOUT=3
                 if (error.code === 1) {
                     message += 'Permission denied. Please enable location access.';
                 } else if (error.code === 2) {
-                    message += 'Location unavailable. Try manual entry.';
+                    message += 'Location unavailable. Try manual search.';
                 } else if (error.code === 3) {
                     message += 'Location request timed out.';
                 } else {
                     message += 'Error getting location.';
                 }
-                status.textContent = message;
-                status.className = 'location-status error';
-            }
+                statusEl.textContent = message;
+                statusEl.className = 'location-status error';
+            },
+            { timeout: 10000 }
         );
     });
 
     // Update radius display
-    document.getElementById('radius-slider').addEventListener('input', function() {
-        document.getElementById('radius-display').textContent = this.value;
-    });
+    radiusSlider.addEventListener('input', updateRadiusDisplay);
 
-    // Handle manual location form submission
-    document.getElementById('location-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const lat = document.getElementById('manual-latitude').value;
-        const lng = document.getElementById('manual-longitude').value;
-        const radius = document.getElementById('radius-slider').value;
-        const errorDiv = document.getElementById('form-error');
+    function renderLocationResults(results, query) {
+        resultsList.innerHTML = '';
+        resultsList.classList.add('visible');
 
-        if (!lat || !lng) {
-            errorDiv.textContent = '❌ Please enter both latitude and longitude';
-            errorDiv.style.display = 'block';
+        if (!results.length) {
+            const empty = document.createElement('div');
+            empty.className = 'location-result muted';
+            empty.textContent = 'No matches. Try a nearby city or postcode.';
+            resultsList.appendChild(empty);
             return;
         }
 
-        // Hide error and proceed
-        errorDiv.style.display = 'none';
-        window.location.href = `/nearby?latitude=${lat}&longitude=${lng}&radius_km=${radius}`;
+        results.forEach((result) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'location-result';
+            const label =
+                result.address ||
+                [result.city, result.country].filter(Boolean).join(', ') ||
+                query;
+            button.dataset.lat = result.latitude;
+            button.dataset.lng = result.longitude;
+            button.dataset.label = label;
+
+            const title = document.createElement('div');
+            title.className = 'location-result__title';
+            title.textContent = label;
+
+            const meta = document.createElement('div');
+            meta.className = 'location-result__meta';
+            meta.textContent = `${Number(result.latitude).toFixed(4)}, ${Number(
+                result.longitude
+            ).toFixed(4)}`;
+
+            button.appendChild(title);
+            button.appendChild(meta);
+            button.addEventListener('click', () => {
+                clearResults();
+                applyCoordinates(result.latitude, result.longitude, label);
+            });
+            resultsList.appendChild(button);
+        });
+    }
+
+    if (locationInput) {
+        locationInput.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            const query = locationInput.value.trim();
+
+            if (!query || query.length < 3) {
+                clearResults();
+                return;
+            }
+
+            searchTimeout = setTimeout(async () => {
+                resultsList.innerHTML =
+                    '<div class="location-result muted">Searching…</div>';
+                resultsList.classList.add('visible');
+                try {
+                    const response = await fetch(
+                        `/api/v1/geocoding/search?q=${encodeURIComponent(
+                            query
+                        )}&limit=5`
+                    );
+                    if (!response.ok) {
+                        throw new Error('Search failed');
+                    }
+                    const results = await response.json();
+                    renderLocationResults(results, query);
+                } catch (err) {
+                    resultsList.innerHTML =
+                        '<div class="location-result error">Error searching. Please try again.</div>';
+                    resultsList.classList.add('visible');
+                }
+            }, 350);
+        });
+    }
+
+    document.addEventListener('click', (event) => {
+        if (
+            !locationInput.contains(event.target) &&
+            !resultsList.contains(event.target)
+        ) {
+            clearResults();
+        }
     });
+
+    // Handle manual location form submission
+    form.addEventListener('submit', function(e) {
+        const hasCoords = latInput.value && lngInput.value;
+        const hasQuery = locationInput.value.trim().length > 0;
+
+        if (!hasCoords && !hasQuery) {
+            e.preventDefault();
+            errorEl.textContent =
+                '❌ Please choose a place or provide coordinates.';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        errorEl.style.display = 'none';
+        if (hasCoords) {
+            persistLocation(
+                latInput.value,
+                lngInput.value,
+                locationInput.value || 'manual coordinates'
+            );
+        }
+    });
+})();
 </script>
 {% endblock %}
