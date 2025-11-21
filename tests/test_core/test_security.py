@@ -128,8 +128,12 @@ class TestJWTTokens:
         data = {"sub": "user123"}
         token = create_access_token(data)
 
-        # Tamper with the token by changing a character
-        tampered_token = token[:-1] + ("a" if token[-1] != "a" else "b")
+        # Tamper with the token in a way that always changes the signature bytes.
+        # Altering the final base64 character can leave the decoded signature unchanged due
+        # to padding, so flip the first signature character instead.
+        header, payload, signature = token.split(".")
+        tampered_signature = ("a" if signature[0] != "a" else "b") + signature[1:]
+        tampered_token = ".".join([header, payload, tampered_signature])
 
         payload = decode_access_token(tampered_token)
 
