@@ -29,6 +29,7 @@ from app.services.skate_spot_service import SkateSpotService, get_skate_spot_ser
 from app.utils.filters import build_skate_spot_filters
 
 router = APIRouter(tags=["frontend"])
+MILES_PER_KM = 0.621371
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -108,6 +109,8 @@ async def nearby_spots_page(
             detail="Invalid coordinates or radius",
         ) from exc
 
+    radius_miles = radius_km * MILES_PER_KM
+
     # If no location provided, show the location input form
     if latitude is None and longitude is None and not location_query:
         context = {
@@ -116,6 +119,8 @@ async def nearby_spots_page(
             "spot_types": list(SpotType),
             "difficulties": list(Difficulty),
             "location_query": location_query or None,
+            "radius_km": radius_km,
+            "radius_miles": radius_miles,
         }
         return templates.TemplateResponse("nearby.html", context)
 
@@ -181,6 +186,7 @@ async def nearby_spots_page(
         "latitude": latitude,
         "longitude": longitude,
         "radius_km": radius_km,
+        "radius_miles": radius_miles,
         "location_query": location_query or None,
         "resolved_location_label": resolved_location_label,
     }

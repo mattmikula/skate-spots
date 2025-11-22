@@ -3,9 +3,10 @@
     {% for spot in spots %}
     <div class="nearby-spot-card">
         {% set distance = spot.distance_km %}
+        {% set distance_miles = distance * 0.621371 if distance is not none else None %}
         <div class="spot-distance-badge">
             {% if distance is not none %}
-                {{ distance | round(1) }} km away
+                {{ distance_miles | round(1) }} mi away
             {% endif %}
         </div>
         {% include "spot_card.html" %}
@@ -14,7 +15,7 @@
 </div>
 {% else %}
 <div class="empty-state">
-    <p>No skate spots found within {{ radius_km }} km.</p>
+    <p>No skate spots found within {{ radius_miles | round(1) }} miles.</p>
     <p class="empty-state-hint">Try increasing the radius or adjusting your filters.</p>
     <a href="/skate-spots/new" class="btn btn-primary" style="margin-top: 1rem;">+ Add New Spot</a>
 </div>
