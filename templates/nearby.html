@@ -4,15 +4,26 @@
 
 {% block content %}
 <div class="page-header">
-    <h2>Find Nearby Spots</h2>
-    <a href="/skate-spots/new" class="btn btn-primary">+ Add New Spot</a>
+    <div>
+        <p class="eyebrow-label">Local finder</p>
+        <h2>Find Nearby Spots</h2>
+        <p class="page-subtitle">Use your location or any city and we will surface the closest places to roll.</p>
+    </div>
+    <a href="/skate-spots/new" class="btn btn-primary btn-ghost">+ Add New Spot</a>
 </div>
 
 <div class="nearby-container">
     <!-- Location Input Section -->
     <div class="location-input-section">
         <div class="location-card">
-            <h3>Search Location</h3>
+            <div class="location-card__header">
+                <div>
+                    <p class="eyebrow-label">Search hub</p>
+                    <h3>Search by location</h3>
+                    <p class="location-card__hint">We keep this local and private—pick a spot to see miles within reach.</p>
+                </div>
+                <span class="pill pill-soft">Miles first</span>
+            </div>
 
             <div class="location-buttons">
                 <button id="use-my-location" class="btn btn-primary btn-large">
@@ -24,9 +35,9 @@
             <div class="location-divider">or</div>
 
             <form id="location-form" class="location-form" method="get" action="/nearby">
-                <div id="form-error" class="location-status error" style="display: none;" role="alert" aria-live="polite"></div>
+                <div id="form-error" class="location-status error form-span-2" style="display: none;" role="alert" aria-live="polite"></div>
 
-                <div class="form-group">
+                <div class="form-group form-span-2">
                     <label for="location-query">Search by place</label>
                     <input
                         type="search"
@@ -71,18 +82,25 @@
                     >
                 </div>
 
-                <div class="form-group">
-                    <label for="radius-slider">Search Radius: <span id="radius-display">5</span> km</label>
+                <div class="form-group form-span-2">
+                    <label for="radius-slider">Search Radius: <span id="radius-display">{{ radius_miles | default(3.1, true) | round(1) }}</span> mi</label>
                     <input
                         type="range"
                         id="radius-slider"
-                        name="radius_km"
+                        name="radius_miles"
                         min="1"
-                        max="50"
-                        value="{{ radius_km | default(5, true) }}"
+                        max="31"
+                        step="0.1"
+                        value="{{ radius_miles | default(3.1, true) | round(1) }}"
                         class="radius-slider"
                     >
-                    <div class="radius-info">1 km - 50 km</div>
+                    <input
+                        type="hidden"
+                        id="radius-km"
+                        name="radius_km"
+                        value="{{ radius_km | default(5, true) }}"
+                    >
+                    <div class="radius-info">1 mi - 31 mi (max 50 km)</div>
                 </div>
 
                 <button type="submit" class="btn btn-primary">Search Nearby Spots</button>
@@ -94,7 +112,7 @@
     {% if latitude is defined and latitude is not none %}
     <div class="nearby-results">
         <div class="results-header">
-            <h3>Spots within {{ radius_km }} km</h3>
+            <h3>Spots within {{ radius_miles | round(1) }} miles</h3>
             <p class="location-coordinates">
                 📍
                 {% if resolved_location_label %}
@@ -108,7 +126,7 @@
         <!-- Filters Form -->
         <form
             id="nearby-filter-form"
-            class="filter-form"
+            class="filter-form filter-form-horizontal"
             hx-get="/nearby"
             hx-target="#nearby-spot-results"
             hx-push-url="true"
@@ -205,11 +223,19 @@
     const useLocationBtn = document.getElementById('use-my-location');
     const radiusSlider = document.getElementById('radius-slider');
     const radiusDisplay = document.getElementById('radius-display');
+    const radiusKmInputs = document.querySelectorAll('input[name=\"radius_km\"]');
     const LAST_LOCATION_KEY = 'skate-spots:last-location';
     let searchTimeout;
 
+    const clampRadiusKm = (kmValue) => Math.min(Math.max(kmValue, 1), 50);
+    const milesToKm = (miles) => miles * 1.60934;
     const updateRadiusDisplay = () => {
-        radiusDisplay.textContent = radiusSlider.value;
+        const milesValue = parseFloat(radiusSlider.value) || 0;
+        const radiusKm = clampRadiusKm(milesToKm(milesValue));
+        radiusDisplay.textContent = milesValue % 1 === 0 ? milesValue : milesValue.toFixed(1);
+        radiusKmInputs.forEach((input) => {
+            input.value = radiusKm.toFixed(2);
+        });
     };
     updateRadiusDisplay();
 
@@ -255,6 +281,7 @@
     }
 
     function buildSearchUrl() {
+        updateRadiusDisplay();
         const params = new URLSearchParams(new FormData(form));
         return `/nearby?${params.toString()}`;
     }
