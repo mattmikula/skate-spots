@@ -1,0 +1,82 @@
+<div class="spot-weather-card" hx-target="this" hx-swap="outerHTML">
+    <div class="spot-weather-header">
+        <div class="spot-weather-title">
+            <span>Weather</span>
+            {% if weather and weather.stale %}
+                <span class="weather-chip warning">Stale</span>
+            {% elif weather and weather.cached %}
+                <span class="weather-chip">Cached</span>
+            {% endif %}
+        </div>
+        <button
+            class="btn btn-link weather-refresh"
+            hx-get="/skate-spots/{{ spot_id }}/weather?force_refresh=1"
+            hx-target="closest .spot-weather-card"
+            hx-swap="outerHTML"
+            title="Refresh weather"
+        >
+            ↻ Refresh
+        </button>
+    </div>
+
+    {% if error %}
+        <div class="weather-error">{{ error }}</div>
+    {% elif weather %}
+        <div class="weather-current">
+            <div class="weather-main">
+                <div class="weather-temp">
+                    {{ weather.data.current.temperature_c | round(0) | int }}°C
+                    {% if weather.data.current.icon %}
+                        <span class="weather-icon">{{ weather.data.current.icon }}</span>
+                    {% endif %}
+                </div>
+                <div class="weather-summary">{{ weather.data.current.summary }}</div>
+            </div>
+            <div class="weather-meta">
+                {% if weather.data.current.apparent_temperature_c is not none %}
+                    <span>Feels like {{ weather.data.current.apparent_temperature_c | round(0) | int }}°C</span>
+                {% endif %}
+                {% if weather.data.current.precipitation_probability is not none %}
+                    <span>Rain: {{ weather.data.current.precipitation_probability | round(0) | int }}%</span>
+                {% endif %}
+                {% if weather.data.current.wind_speed_kph is not none %}
+                    <span>Wind: {{ weather.data.current.wind_speed_kph | round(0) | int }} km/h</span>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if weather.data.forecast %}
+        <div class="weather-forecast">
+            {% for forecast in weather.data.forecast[:4] %}
+                <div class="weather-forecast-item">
+                    <div class="weather-forecast-time">
+                        {{ forecast.timestamp.strftime("%H:%M") }} UTC
+                    </div>
+                    <div class="weather-forecast-icon">
+                        {{ forecast.icon or "…" }}
+                    </div>
+                    <div class="weather-forecast-temp">
+                        {{ forecast.temperature_c | round(0) | int }}°C
+                    </div>
+                    {% if forecast.precipitation_probability is not none %}
+                        <div class="weather-forecast-precip">
+                            {{ forecast.precipitation_probability | round(0) | int }}%
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="weather-footer">
+            <span>
+                Updated {{ weather.fetched_at.strftime("%H:%M UTC") }},
+                next refresh after {{ weather.expires_at.strftime("%H:%M UTC") }}
+            </span>
+        </div>
+    {% else %}
+        <div class="weather-empty">
+            Weather data is not available yet. Try refreshing.
+        </div>
+    {% endif %}
+</div>

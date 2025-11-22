@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID  # noqa: TCH003
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.core.dependencies import get_optional_user
@@ -16,6 +16,12 @@ from app.services.favorite_service import (
     get_favorite_service,
 )
 from app.services.skate_spot_service import SkateSpotService, get_skate_spot_service
+from app.services.weather_service import (
+    WeatherService,
+    WeatherSpotNotFoundError,
+    WeatherUnavailableError,
+    get_weather_service,
+)
 
 router = APIRouter(tags=["frontend"])
 
@@ -73,6 +79,45 @@ async def spot_detail_page(
             "favorite_spot_ids": favorite_spot_ids,
             "is_owner": is_owner,
         },
+    )
+
+
+@router.get("/skate-spots/{spot_id}/weather", response_class=HTMLResponse)
+async def spot_weather_section(
+    request: Request,
+    spot_id: UUID,
+    weather_service: Annotated[WeatherService, Depends(get_weather_service)],
+    force_refresh: bool = Query(
+        default=False,
+        description="Force refresh from provider rather than using cached data",
+    ),
+    current_user: Annotated[UserORM | None, Depends(get_optional_user)] = None,
+) -> HTMLResponse:
+    """Render the weather card partial for a spot."""
+
+    try:
+        snapshot = weather_service.get_weather_for_spot(spot_id, force_refresh=force_refresh)
+        error = None
+        status_code = status.HTTP_200_OK
+    except WeatherSpotNotFoundError as exc:
+        snapshot = None
+        error = str(exc)
+        status_code = status.HTTP_404_NOT_FOUND
+    except WeatherUnavailableError:
+        snapshot = None
+        error = "Weather information is temporarily unavailable."
+        status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+
+    return templates.TemplateResponse(
+        "partials/spot_weather.html",
+        {
+            "request": request,
+            "spot_id": spot_id,
+            "weather": snapshot,
+            "current_user": current_user,
+            "error": error,
+        },
+        status_code=status_code,
     )
 
 

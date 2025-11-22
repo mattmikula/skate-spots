@@ -9,6 +9,7 @@ from .session_repository import SessionRepository
 from .skate_spot_repository import SkateSpotRepository
 from .user_profile_repository import UserProfileRepository
 from .user_repository import UserRepository
+from .weather_repository import WeatherRepository
 
 __all__ = [
     "ActivityRepository",
@@ -22,4 +23,5 @@ __all__ = [
     "SkateSpotRepository",
     "UserProfileRepository",
     "UserRepository",
+    "WeatherRepository",
 ]

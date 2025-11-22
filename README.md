@@ -206,6 +206,7 @@ Key configuration values:
 - `SKATE_SPOTS_SECRET_KEY` – Secret used to sign JWT access tokens (change this in production).
 - `SKATE_SPOTS_ACCESS_TOKEN_EXPIRE_MINUTES` – Lifetime of authentication tokens (default 30 minutes).
 - `SKATE_SPOTS_GEOCODING_USER_AGENT` – User agent string for Nominatim geocoding requests (default: "skate-spots-app").
+- `SKATE_SPOTS_WEATHER_CACHE_MINUTES` / `SKATE_SPOTS_WEATHER_STALE_MINUTES` – Weather cache freshness and max staleness windows (defaults: 20 mins fresh, 120 mins stale fallback).
 
 ## 🚦 Rate Limiting
 
@@ -243,7 +244,9 @@ Database schema changes are managed with [Alembic](https://alembic.sqlalchemy.or
 | `GET` | `/` | Home page |
 | `GET` | `/skate-spots` | View all skate spots (HTML) |
 | `GET` | `/skate-spots/new` | Create new spot form |
+| `GET` | `/skate-spots/{id}` | Skate spot detail with photos, comments, ratings, sessions |
 | `GET` | `/skate-spots/{id}/edit` | Edit spot form |
+| `GET` | `/skate-spots/{id}/weather` | HTMX weather card for a single spot |
 | `GET` | `/map` | Interactive map view |
 | `GET` | `/profile` | Current user's profile with stats and favorites (requires auth) |
 | `POST` | `/profile` | Update profile bio, avatar, and location (requires auth) |
@@ -258,6 +261,7 @@ Database schema changes are managed with [Alembic](https://alembic.sqlalchemy.or
 | `GET` | `/api/v1/skate-spots/` | List all skate spots (JSON) |
 | `POST` | `/api/v1/skate-spots/` | Create a new skate spot (JSON or form data) |
 | `GET` | `/api/v1/skate-spots/{id}` | Get a specific skate spot (JSON) |
+| `GET` | `/api/v1/skate-spots/{id}/weather` | Current weather + short forecast for a spot |
 | `PUT` | `/api/v1/skate-spots/{id}` | Update a skate spot (JSON or form data) |
 | `DELETE` | `/api/v1/skate-spots/{id}` | Delete a skate spot |
 | `GET` | `/api/v1/skate-spots/{id}/comments/` | List comments for a skate spot |
