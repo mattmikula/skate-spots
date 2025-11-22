@@ -69,6 +69,22 @@
                 <div class="section-loading">Loading weather...</div>
             </div>
 
+            <script>
+                document.addEventListener("htmx:responseError", (event) => {
+                    const target = event.detail.target;
+                    if (!target || !target.classList.contains("spot-detail-weather")) {
+                        return;
+                    }
+                    const html = event.detail.xhr && event.detail.xhr.responseText;
+                    if (html) {
+                        target.innerHTML = html;
+                    } else {
+                        target.innerHTML =
+                            '<div class="weather-error">Weather information is temporarily unavailable.</div>';
+                    }
+                });
+            </script>
+
             <div
                 class="spot-detail-checkins"
                 hx-get="/skate-spots/{{ spot.id }}/check-ins-section"
