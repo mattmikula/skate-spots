@@ -44,13 +44,9 @@ class OpenMeteoWeatherClient:
         }
 
         try:
-            response = httpx.get(
-                OPEN_METEO_URL,
-                params=params,
-                timeout=self._timeout,
-                transport=self._transport,
-            )
-            response.raise_for_status()
+            with httpx.Client(timeout=self._timeout, transport=self._transport) as client:
+                response = client.get(OPEN_METEO_URL, params=params)
+                response.raise_for_status()
         except httpx.HTTPError as exc:  # pragma: no cover - network level guard
             self._logger.warning(
                 "weather provider request failed",

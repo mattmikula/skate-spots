@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta, timezone
 
+import httpx
+
 from app.adapters.weather_client import OpenMeteoWeatherClient
 
 
@@ -70,3 +72,35 @@ def test_offsets_are_converted_to_utc():
     assert data.current.observed_at.hour == 10
     assert data.forecast[0].timestamp.hour == 10
     assert data.forecast[1].timestamp.hour == 11
+
+
+def test_uses_injected_transport():
+    """Client should honor injected transports for testability."""
+
+    called = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:  # pragma: no cover - transport hook
+        called["url"] = str(request.url)
+        payload = {
+            "current_weather": {
+                "time": "2025-01-01T00:00:00Z",
+                "temperature": 5.0,
+                "weathercode": 1,
+                "windspeed": 10.0,
+            },
+            "hourly": {
+                "time": ["2025-01-01T00:00:00Z"],
+                "temperature_2m": [5.0],
+                "apparent_temperature": [4.0],
+                "precipitation_probability": [10.0],
+                "weathercode": [1],
+            },
+        }
+        return httpx.Response(200, json=payload)
+
+    client = OpenMeteoWeatherClient(transport=httpx.MockTransport(handler))
+
+    data = client.fetch(0.0, 0.0)
+
+    assert called["url"].startswith("https://api.open-meteo.com/v1/forecast")
+    assert data.current.temperature_c == 5.0
