@@ -57,7 +57,7 @@ downgrade:
 	uv run alembic downgrade -1
 
 clean:
-	find . -type d -name __pycache__ -delete
-	find . -type f -name "*.pyc" -delete
-	rm -rf .pytest_cache
-	rm -rf .ruff_cache
+	find . -path "./.venv" -prune -o -path "./venv" -prune -o -type d -name "__pycache__" -exec rm -rf {} +
+	find . -path "./.venv" -prune -o -path "./venv" -prune -o -type f -name "*.pyc" -exec rm -f {} +
+	rm -rf .pytest_cache .ruff_cache
+	rm -f server.log

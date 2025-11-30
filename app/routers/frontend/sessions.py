@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 from uuid import UUID  # noqa: TCH003
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
 from pydantic import ValidationError
+
+if TYPE_CHECKING:
+    from starlette.datastructures import FormData
 
 from app.core.dependencies import get_optional_user
 from app.db.models import UserORM  # noqa: TCH001
@@ -79,7 +82,7 @@ async def _session_context(
     }
 
 
-def _session_form_payload(form) -> tuple[dict[str, object], dict[str, str]]:
+def _session_form_payload(form: FormData) -> tuple[dict[str, object], dict[str, str]]:
     """Extract the payload and redisplay data for the session create form."""
     fields = [
         "title",
@@ -187,7 +190,7 @@ async def create_session_partial(
             status_code=status.HTTP_401_UNAUTHORIZED,
         )
 
-    form = await request.form()
+    form: FormData = await request.form()
     payload_dict, redisplay = _session_form_payload(form)
 
     try:

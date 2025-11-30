@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 from uuid import UUID  # noqa: TCH003
 
 from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import HTMLResponse
 from pydantic import ValidationError
+
+if TYPE_CHECKING:
+    from starlette.datastructures import FormData
 
 from app.core.dependencies import get_optional_user
 from app.db.models import UserORM  # noqa: TCH001
@@ -96,7 +99,7 @@ async def submit_check_in(
             status_code=status.HTTP_401_UNAUTHORIZED,
         )
 
-    form = await request.form()
+    form: FormData = await request.form()
     status_value = (form.get("status") or SpotCheckInStatus.ARRIVED.value).strip().lower()
     message = form.get("message")
     ttl_raw = form.get("ttl_minutes")
@@ -182,7 +185,7 @@ async def checkout_check_in(
     if current_user is None:
         return HTMLResponse(status_code=status.HTTP_401_UNAUTHORIZED, content="")
 
-    form = await request.form()
+    form: FormData = await request.form()
     message = form.get("message")
 
     try:
