@@ -1,7 +1,9 @@
 """REST API endpoints for skate spots."""
 
-from typing import Annotated
-from uuid import UUID
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Annotated
+from uuid import UUID  # noqa: TCH003
 
 from fastapi import (
     APIRouter,
@@ -18,7 +20,7 @@ from starlette.datastructures import UploadFile as StarletteUploadFile
 
 from app.core.dependencies import get_current_user
 from app.core.rate_limiter import SKATE_SPOT_WRITE_LIMIT, rate_limited
-from app.db.models import UserORM
+from app.db.models import UserORM  # noqa: TCH001
 from app.models.skate_spot import (
     Difficulty,
     GeoJSONFeature,
@@ -43,11 +45,14 @@ from app.services.weather_service import (
 )
 from app.utils.filters import build_nearby_spot_filters, build_skate_spot_filters
 
+if TYPE_CHECKING:
+    from starlette.datastructures import FormData
+
 router = APIRouter(prefix="/skate-spots", tags=["skate-spots"])
 _TRUE_VALUES = {"true", "on", "1"}
 
 
-async def _parse_location_from_form(form) -> Location:
+async def _parse_location_from_form(form: FormData) -> Location:
     """Parse Location object from form data.
 
     Args:
@@ -92,7 +97,7 @@ def _coerce_form_bool(value: str | None, default: bool) -> bool:
     return normalised in _TRUE_VALUES
 
 
-def _extract_uploads(form, field_name: str) -> list[UploadFile]:
+def _extract_uploads(form: FormData, field_name: str) -> list[UploadFile]:
     """Return a list of ``UploadFile`` instances for the given form field."""
 
     uploads = []
@@ -176,7 +181,7 @@ async def _parse_form_for_create(
 ) -> tuple[SkateSpotCreate, list[str]]:
     """Parse a multipart form submission when creating a skate spot."""
 
-    form = await request.form()
+    form: FormData = await request.form()
 
     try:
         location = await _parse_location_from_form(form)
@@ -221,7 +226,7 @@ async def _parse_form_for_update(
 ) -> tuple[SkateSpotUpdate, list[str], list[str]]:
     """Parse a multipart form submission when updating a skate spot."""
 
-    form = await request.form()
+    form: FormData = await request.form()
 
     try:
         location = await _parse_location_from_form(form)
