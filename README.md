@@ -28,6 +28,7 @@ A modern FastAPI application for sharing and discovering skateboarding spots aro
 - **Session Scheduling** that lets crews organise meetups, manage RSVPs, and automatically promote waitlisted skaters when spots open up
 - **Notifications** to alert you when followed skaters create spots, interact with your content, or RSVP to your sessions, with unread tracking
 - **Spot Check-ins** so skaters can announce when they're heading to or already at a spot, see who else is around, and trigger follower/owner alerts in real time
+- **Condition Reports** that let users report real-time spot conditions (surface quality, crowdedness, security, overall status) with auto-expiring 24-hour reports and community notifications
 - **Rich Data Model** with locations, difficulty levels, and spot types
 - **Comprehensive Validation** using Pydantic models
 - **Clean Architecture** with separation of concerns
@@ -117,6 +118,17 @@ Real-time check-ins let the community know who is sessioning each spot:
 - `POST /api/v1/check-ins/{check_in_id}/checkout` — end an active check-in, optionally including a wrap-up message.
 
 The spot detail page ships an HTMX-powered widget that displays active check-ins, allows logged-in skaters to share their status or check out, and refreshes automatically every minute. Each check-in generates activity feed entries and notifications for followers and spot owners so crews stay in sync.
+
+### Condition Reports
+
+Users can report real-time spot conditions to help the community make informed decisions about which spots to visit:
+
+- `POST /api/v1/skate-spots/{spot_id}/condition-reports` — create a condition report with `overall_status` (required: prime, good, okay, rough, closed) and optional dimensions for `surface_quality`, `crowdedness`, `security`, and a 280-character `note`.
+- `GET /api/v1/skate-spots/{spot_id}/condition-reports/latest` — get the most recent active report for a spot (returns null if none exist).
+- `GET /api/v1/skate-spots/{spot_id}/condition-reports` — list recent active reports for a spot (up to 50, ordered by newest first).
+- `DELETE /api/v1/condition-reports/{report_id}` — delete your own condition report (requires authentication and ownership).
+
+Reports automatically expire after 24 hours and can be soft-deleted by their author. Each report generates activity feed entries and notifications for the spot owner and the reporter's followers. The spot detail page includes an HTMX widget that auto-refreshes every 5 minutes, displays the latest conditions with color-coded badges, and provides a collapsible form for submitting new reports.
 
 ### Authentication Workflow
 
@@ -247,6 +259,9 @@ Database schema changes are managed with [Alembic](https://alembic.sqlalchemy.or
 | `GET` | `/skate-spots/{id}` | Skate spot detail with photos, comments, ratings, sessions |
 | `GET` | `/skate-spots/{id}/edit` | Edit spot form |
 | `GET` | `/skate-spots/{id}/weather` | HTMX weather card for a single spot |
+| `GET` | `/skate-spots/{id}/conditions-section` | HTMX condition report widget for a spot |
+| `POST` | `/skate-spots/{id}/condition-reports` | Submit condition report form (HTMX) |
+| `DELETE` | `/skate-spots/{id}/condition-reports/{report_id}` | Delete condition report (HTMX) |
 | `GET` | `/map` | Interactive map view |
 | `GET` | `/profile` | Current user's profile with stats and favorites (requires auth) |
 | `POST` | `/profile` | Update profile bio, avatar, and location (requires auth) |
@@ -267,6 +282,10 @@ Database schema changes are managed with [Alembic](https://alembic.sqlalchemy.or
 | `GET` | `/api/v1/skate-spots/{id}/comments/` | List comments for a skate spot |
 | `POST` | `/api/v1/skate-spots/{id}/comments/` | Create a comment on a skate spot |
 | `DELETE` | `/api/v1/skate-spots/{id}/comments/{comment_id}` | Delete a comment (owner or admin only) |
+| `POST` | `/api/v1/skate-spots/{id}/condition-reports` | Create a condition report for a spot (auth required, rate limited) |
+| `GET` | `/api/v1/skate-spots/{id}/condition-reports/latest` | Get the latest active condition report for a spot |
+| `GET` | `/api/v1/skate-spots/{id}/condition-reports` | List recent active condition reports for a spot |
+| `DELETE` | `/api/v1/condition-reports/{id}` | Delete a condition report (owner or admin only) |
 
 ### Social Feed Endpoints
 
@@ -438,12 +457,16 @@ skate-spots/
 │   │   └── models.py            # SQLAlchemy models
 │   ├── models/           # Pydantic data models
 │   │   ├── activity.py
+│   │   ├── check_in.py
+│   │   ├── condition_report.py
 │   │   ├── follow.py
 │   │   ├── rating.py
 │   │   ├── skate_spot.py
 │   │   └── user.py
 │   ├── repositories/     # Data access layer
 │   │   ├── activity_repository.py
+│   │   ├── check_in_repository.py
+│   │   ├── condition_report_repository.py
 │   │   ├── follow_repository.py
 │   │   ├── rating_repository.py
 │   │   ├── skate_spot_repository.py
@@ -451,13 +474,20 @@ skate-spots/
 │   ├── routers/          # FastAPI route handlers
 │   │   ├── activity.py          # Activity feed API routes
 │   │   ├── auth.py              # Authentication API
+│   │   ├── check_ins.py         # Check-in API routes
+│   │   ├── condition_reports.py # Condition report API routes
 │   │   ├── follows.py           # User follow/follower API routes
-│   │   ├── frontend.py          # HTML/HTMX routes
+│   │   ├── frontend/            # HTML/HTMX routes
+│   │   │   ├── check_ins.py     # Check-in HTMX widgets
+│   │   │   ├── condition_reports.py # Condition report HTMX widgets
+│   │   │   └── ... (other frontend modules)
 │   │   ├── geocoding.py         # Geocoding API routes
 │   │   ├── ratings.py           # Rating API routes
 │   │   └── skate_spots.py       # REST API routes
 │   └── services/         # Business logic layer
 │       ├── activity_service.py
+│       ├── check_in_service.py
+│       ├── condition_report_service.py
 │       ├── follow_service.py
 │       ├── geocoding_service.py
 │       ├── rating_service.py
@@ -471,9 +501,11 @@ skate-spots/
 │   ├── map.html          # Interactive map view
 │   ├── register.html     # Registration form
 │   ├── spot_card.html    # Spot card component
-│   └── partials/
-│       └── rating_section.html  # HTMX snippet for rating summary & form
-│   └── spot_form.html    # Create/edit form
+│   ├── spot_form.html    # Create/edit form
+│   └── partials/         # HTMX widget components
+│       ├── rating_section.html      # Rating summary & form
+│       ├── spot_check_ins.html      # Check-in widget
+│       └── spot_conditions.html     # Condition report widget
 ├── tests/                # Test suite (organized by app structure)
 │   ├── test_api/         # API integration tests
 │   │   ├── test_auth.py         # Authentication endpoint tests

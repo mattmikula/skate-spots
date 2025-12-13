@@ -232,6 +232,54 @@ class ActivityService:
         )
         return activity
 
+    def record_spot_condition_reported(
+        self,
+        user_id: str,
+        spot_id: str,
+        report_id: str,
+        *,
+        overall_status: str,
+        spot_name: str | None = None,
+        surface_quality: str | None = None,
+        crowdedness: str | None = None,
+        security: str | None = None,
+    ) -> ActivityFeedORM:
+        """Record that a user reported conditions at a spot."""
+
+        metadata: dict[str, object] = {
+            "spot_id": spot_id,
+            "overall_status": overall_status,
+        }
+        if spot_name:
+            metadata["spot_name"] = spot_name
+        if surface_quality:
+            metadata["surface_quality"] = surface_quality
+        if crowdedness:
+            metadata["crowdedness"] = crowdedness
+        if security:
+            metadata["security"] = security
+
+        activity = self.activity_repository.create_activity(
+            user_id=user_id,
+            activity_type=ActivityType.SPOT_CONDITION_REPORTED.value,
+            target_type=TargetType.CONDITION_REPORT.value,
+            target_id=report_id,
+            metadata=metadata,
+        )
+        owner_id = self.notification_service.notify_spot_owner(
+            spot_id,
+            activity,
+            metadata=metadata,
+            actor_id=user_id,
+        )
+        exclude = {owner_id} if owner_id else None
+        self.notification_service.notify_followers_of_activity(
+            activity,
+            metadata=metadata,
+            exclude_user_ids=exclude,
+        )
+        return activity
+
     def record_session_created(
         self, user_id: str, session_id: str, session_title: str | None = None
     ) -> ActivityFeedORM:

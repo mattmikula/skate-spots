@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from enum import Enum
 from uuid import uuid4
 
 from sqlalchemy import (
@@ -21,6 +22,46 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.database import Base
+
+
+class ConditionSurfaceQuality(str, Enum):
+    """Surface quality ratings for skate spots."""
+
+    EXCELLENT = "excellent"
+    GOOD = "good"
+    FAIR = "fair"
+    POOR = "poor"
+    TERRIBLE = "terrible"
+
+
+class ConditionCrowdedness(str, Enum):
+    """Crowdedness levels for skate spots."""
+
+    EMPTY = "empty"
+    QUIET = "quiet"
+    MODERATE = "moderate"
+    BUSY = "busy"
+    PACKED = "packed"
+
+
+class ConditionSecurity(str, Enum):
+    """Security/harassment levels for skate spots."""
+
+    CLEAR = "clear"
+    RELAXED = "relaxed"
+    WATCHFUL = "watchful"
+    STRICT = "strict"
+    HOSTILE = "hostile"
+
+
+class ConditionOverallStatus(str, Enum):
+    """Overall spot condition status."""
+
+    PRIME = "prime"
+    GOOD = "good"
+    OKAY = "okay"
+    ROUGH = "rough"
+    CLOSED = "closed"
 
 
 class UserORM(Base):
@@ -108,6 +149,11 @@ class UserORM(Base):
         back_populates="user",
         cascade="all, delete-orphan",
     )
+    condition_reports: Mapped[list[SpotConditionReportORM]] = relationship(
+        "SpotConditionReportORM",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
 
 
 class SkateSpotORM(Base):
@@ -175,6 +221,11 @@ class SkateSpotORM(Base):
         back_populates="spot",
         cascade="all, delete-orphan",
         uselist=False,
+    )
+    condition_reports: Mapped[list[SpotConditionReportORM]] = relationship(
+        "SpotConditionReportORM",
+        back_populates="spot",
+        cascade="all, delete-orphan",
     )
 
 
@@ -542,3 +593,60 @@ class WeatherSnapshotORM(Base):
     )
 
     spot: Mapped[SkateSpotORM] = relationship("SkateSpotORM", back_populates="weather_snapshot")
+
+
+class SpotConditionReportORM(Base):
+    """Database model representing a condition report for a skate spot."""
+
+    __tablename__ = "spot_condition_reports"
+    __table_args__ = (
+        CheckConstraint(
+            "surface_quality IN ('excellent', 'good', 'fair', 'poor', 'terrible')",
+            name="ck_spot_condition_reports_surface_quality",
+        ),
+        CheckConstraint(
+            "crowdedness IN ('empty', 'quiet', 'moderate', 'busy', 'packed')",
+            name="ck_spot_condition_reports_crowdedness",
+        ),
+        CheckConstraint(
+            "security IN ('clear', 'relaxed', 'watchful', 'strict', 'hostile')",
+            name="ck_spot_condition_reports_security",
+        ),
+        CheckConstraint(
+            "overall_status IN ('prime', 'good', 'okay', 'rough', 'closed')",
+            name="ck_spot_condition_reports_overall_status",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    spot_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("skate_spots.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    surface_quality: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    crowdedness: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    security: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    overall_status: Mapped[str] = mapped_column(String(20), nullable=False)
+    note: Mapped[str | None] = mapped_column(String(280), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=lambda: datetime.now(UTC)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
+
+    spot: Mapped[SkateSpotORM] = relationship("SkateSpotORM", back_populates="condition_reports")
+    user: Mapped[UserORM] = relationship("UserORM", back_populates="condition_reports")

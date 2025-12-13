@@ -19,6 +19,7 @@ class NotificationType(str, Enum):
     SPOT_COMMENTED = ActivityType.SPOT_COMMENTED.value
     SPOT_FAVORITED = ActivityType.SPOT_FAVORITED.value
     SPOT_CHECKED_IN = ActivityType.SPOT_CHECKED_IN.value
+    SPOT_CONDITION_REPORTED = ActivityType.SPOT_CONDITION_REPORTED.value
     SESSION_CREATED = ActivityType.SESSION_CREATED.value
     SESSION_RSVP = ActivityType.SESSION_RSVP.value
 
