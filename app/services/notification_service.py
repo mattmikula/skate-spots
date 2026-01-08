@@ -289,6 +289,7 @@ class NotificationService:
             NotificationType.SPOT_RATED: self._spot_rated_message,
             NotificationType.SPOT_FAVORITED: self._spot_favorited_message,
             NotificationType.SPOT_CHECKED_IN: self._spot_checked_in_message,
+            NotificationType.SPOT_CONDITION_REPORTED: self._spot_condition_reported_message,
             NotificationType.SESSION_CREATED: self._session_created_message,
             NotificationType.SESSION_RSVP: self._session_rsvp_message,
         }.get(notification_enum)
@@ -361,6 +362,31 @@ class NotificationService:
             (bool(spot_name), f'{name} checked in at "{spot_name}"'),
             (heading, f"{name} is heading to a spot"),
             (True, f"{name} checked in at a spot"),
+        )
+
+    def _spot_condition_reported_message(
+        self, name: str, metadata: dict, source: str | None
+    ) -> str:
+        spot_name = metadata.get("spot_name")
+        overall_status = metadata.get("overall_status")
+        has_spot_name = bool(spot_name)
+        has_status = bool(overall_status)
+        return self._select_message(
+            (
+                source == "spot_owner" and has_spot_name and has_status,
+                f'{name} reported "{overall_status}" conditions at your spot "{spot_name}"',
+            ),
+            (
+                source == "spot_owner" and has_spot_name,
+                f'{name} reported conditions at your spot "{spot_name}"',
+            ),
+            (source == "spot_owner", f"{name} reported conditions at your spot"),
+            (
+                has_spot_name and has_status,
+                f'{name} reported "{overall_status}" conditions at "{spot_name}"',
+            ),
+            (has_spot_name, f'{name} reported conditions at "{spot_name}"'),
+            (True, f"{name} reported spot conditions"),
         )
 
     def _session_created_message(self, name: str, metadata: dict, _source: str | None) -> str:

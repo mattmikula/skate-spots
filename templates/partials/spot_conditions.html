@@ -1,0 +1,169 @@
+<div
+    id="spot-conditions"
+    class="spot-conditions"
+    hx-get="/skate-spots/{{ spot_id }}/conditions-section"
+    hx-trigger="every 300s"
+    hx-target="this"
+    hx-swap="outerHTML"
+>
+    <header class="spot-conditions__header">
+        <h3 class="spot-conditions__title">Current Conditions</h3>
+        <button
+            class="spot-conditions__refresh"
+            type="button"
+            hx-get="/skate-spots/{{ spot_id }}/conditions-section"
+            hx-target="#spot-conditions"
+            hx-swap="outerHTML"
+        >
+            Refresh
+        </button>
+    </header>
+
+    {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% elif message %}
+    <div class="alert alert-success">{{ message }}</div>
+    {% endif %}
+
+    {% if latest_report and latest_report.is_active %}
+    <section class="spot-conditions__latest">
+        <div class="spot-conditions__report">
+            <div class="spot-conditions__report-header">
+                <span class="spot-conditions__reporter">
+                    {% set reporter = latest_report.reporter %}
+                    {{ (reporter.display_name or reporter.username) if reporter else "Someone" }}
+                </span>
+                <time class="spot-conditions__time" datetime="{{ latest_report.created_at.isoformat() }}">
+                    {{ latest_report.created_at.strftime("%b %d, %I:%M %p") }}
+                </time>
+            </div>
+
+            <div class="spot-conditions__badges">
+                <span class="badge badge-condition badge-condition--{{ latest_report.overall_status.value }}">
+                    {{ latest_report.overall_status.value|capitalize }}
+                </span>
+
+                {% if latest_report.surface_quality %}
+                <span class="badge badge-surface">
+                    Surface: {{ latest_report.surface_quality.value|capitalize }}
+                </span>
+                {% endif %}
+
+                {% if latest_report.crowdedness %}
+                <span class="badge badge-crowdedness">
+                    {{ latest_report.crowdedness.value|capitalize }}
+                </span>
+                {% endif %}
+
+                {% if latest_report.security %}
+                <span class="badge badge-security">
+                    Security: {{ latest_report.security.value|capitalize }}
+                </span>
+                {% endif %}
+            </div>
+
+            {% if latest_report.note %}
+            <p class="spot-conditions__note">{{ latest_report.note }}</p>
+            {% endif %}
+
+            {% if current_user and (latest_report.reporter.id|string) == current_user.id %}
+            <form
+                hx-delete="/skate-spots/{{ spot_id }}/condition-reports/{{ latest_report.id }}"
+                hx-target="#spot-conditions"
+                hx-swap="outerHTML"
+                hx-confirm="Delete this condition report?"
+                class="spot-conditions__delete-form"
+            >
+                <button type="submit" class="spot-conditions__delete-button">
+                    Delete report
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </section>
+    {% else %}
+    <p class="spot-conditions__empty">No recent condition reports. Be the first to share!</p>
+    {% endif %}
+
+    <section class="spot-conditions__action">
+        {% if current_user %}
+            <details class="spot-conditions__form-toggle">
+                <summary class="spot-conditions__toggle-summary">Report conditions</summary>
+                <form
+                    hx-post="/skate-spots/{{ spot_id }}/condition-reports"
+                    hx-target="#spot-conditions"
+                    hx-swap="outerHTML"
+                    class="spot-conditions__form"
+                >
+                    <label class="spot-conditions__label" for="overall-status">
+                        Overall status <span class="required">*</span>
+                    </label>
+                    <select id="overall-status" name="overall_status" class="spot-conditions__select" required>
+                        <option value="">-- Select --</option>
+                        <option value="prime">Prime - Perfect conditions!</option>
+                        <option value="good">Good - Skateable</option>
+                        <option value="okay">Okay - Some issues</option>
+                        <option value="rough">Rough - Challenging</option>
+                        <option value="closed">Closed - Not accessible</option>
+                    </select>
+
+                    <label class="spot-conditions__label" for="surface-quality">
+                        Surface quality (optional)
+                    </label>
+                    <select id="surface-quality" name="surface_quality" class="spot-conditions__select">
+                        <option value="">-- Select --</option>
+                        <option value="excellent">Excellent</option>
+                        <option value="good">Good</option>
+                        <option value="fair">Fair</option>
+                        <option value="poor">Poor</option>
+                        <option value="terrible">Terrible</option>
+                    </select>
+
+                    <label class="spot-conditions__label" for="crowdedness">
+                        Crowdedness (optional)
+                    </label>
+                    <select id="crowdedness" name="crowdedness" class="spot-conditions__select">
+                        <option value="">-- Select --</option>
+                        <option value="empty">Empty</option>
+                        <option value="quiet">Quiet</option>
+                        <option value="moderate">Moderate</option>
+                        <option value="busy">Busy</option>
+                        <option value="packed">Packed</option>
+                    </select>
+
+                    <label class="spot-conditions__label" for="security">
+                        Security (optional)
+                    </label>
+                    <select id="security" name="security" class="spot-conditions__select">
+                        <option value="">-- Select --</option>
+                        <option value="clear">Clear - No issues</option>
+                        <option value="relaxed">Relaxed</option>
+                        <option value="watchful">Watchful</option>
+                        <option value="strict">Strict - Watch out</option>
+                        <option value="hostile">Hostile - Getting kicked out</option>
+                    </select>
+
+                    <label class="spot-conditions__label" for="condition-note">
+                        Notes (optional)
+                    </label>
+                    <input
+                        id="condition-note"
+                        type="text"
+                        name="note"
+                        maxlength="280"
+                        class="spot-conditions__input"
+                        placeholder="Additional details about current conditions"
+                    >
+
+                    <button type="submit" class="spot-conditions__button">
+                        Submit report
+                    </button>
+                </form>
+            </details>
+        {% else %}
+            <p class="spot-conditions__login-prompt">
+                <a href="/login">Log in</a> to report current conditions.
+            </p>
+        {% endif %}
+    </section>
+</div>

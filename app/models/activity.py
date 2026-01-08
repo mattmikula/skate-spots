@@ -17,6 +17,7 @@ class ActivityType(str, Enum):
     SPOT_COMMENTED = "spot_commented"
     SPOT_FAVORITED = "spot_favorited"
     SPOT_CHECKED_IN = "spot_checked_in"
+    SPOT_CONDITION_REPORTED = "spot_condition_reported"
     SESSION_CREATED = "session_created"
     SESSION_RSVP = "session_rsvp"
 
@@ -29,6 +30,7 @@ class TargetType(str, Enum):
     COMMENT = "comment"
     FAVORITE = "favorite"
     CHECK_IN = "check_in"
+    CONDITION_REPORT = "condition_report"
     SESSION = "session"
     RSVP = "rsvp"
 

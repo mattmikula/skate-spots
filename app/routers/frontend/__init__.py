@@ -6,6 +6,7 @@ from . import (
     auth_pages,
     check_ins,
     comments,
+    condition_reports,
     favorites,
     feed,
     home,
@@ -26,6 +27,7 @@ router.include_router(profiles.router)
 router.include_router(spots.router)
 router.include_router(sessions.router)
 router.include_router(check_ins.router)
+router.include_router(condition_reports.router)
 router.include_router(ratings.router)
 router.include_router(favorites.router)
 router.include_router(comments.router)

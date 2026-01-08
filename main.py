@@ -16,6 +16,7 @@ from app.routers import (
     auth,
     check_ins,
     comments,
+    condition_reports,
     favorites,
     follows,
     frontend,
@@ -71,6 +72,7 @@ app.include_router(comments.router, prefix="/api/v1")
 app.include_router(sessions.router, prefix="/api/v1")
 app.include_router(geocoding.router, prefix="/api/v1")
 app.include_router(check_ins.router, prefix="/api/v1")
+app.include_router(condition_reports.router)  # Has its own prefix: /api/v1
 app.include_router(notifications.router, prefix="/api/v1")
 
 
